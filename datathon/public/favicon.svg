@@ -1,26 +1,107 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#0F172A"/>
+    <linearGradient id="shieldMetallicFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="18%" stop-color="#E2E8F0"/>
+      <stop offset="42%" stop-color="#94A3B8"/>
+      <stop offset="68%" stop-color="#CBD5E1"/>
+      <stop offset="85%" stop-color="#64748B"/>
+      <stop offset="100%" stop-color="#334155"/>
     </linearGradient>
-    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+
+    <linearGradient id="shieldInnerRimFav" x1="100%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#070D1E"/>
     </linearGradient>
+
+    <radialGradient id="shieldCanvasFav" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#0E1A34"/>
+      <stop offset="60%" stop-color="#070D1E"/>
+      <stop offset="100%" stop-color="#030610"/>
+    </radialGradient>
+
+    <linearGradient id="scleraLeftFav" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.95"/>
+      <stop offset="65%" stop-color="#0369A1" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#070D1E" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scleraRightFav" x1="100%" y1="50%" x2="0%" y2="50%">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.95"/>
+      <stop offset="65%" stop-color="#0369A1" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#070D1E" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="cyanGlowFav" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="intenseGlowFav" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="blur1"/>
+      <feGaussianBlur stdDeviation="2.5" result="blur2"/>
+      <feMerge><feMergeNode in="blur1"/><feMergeNode in="blur2"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <path d="M256 48 L400 110 V235 C400 340 330 425 256 464 C182 425 112 340 112 235 V110 Z" fill="url(#shieldGrad)"/>
-  <path d="M160 250 C195 190 317 190 352 250 C317 310 195 310 160 250" fill="white"/>
-  <circle cx="256" cy="250" r="42" fill="url(#eyeGrad)"/>
-  <circle cx="256" cy="250" r="15" fill="#0F172A"/>
-  <line x1="256" y1="145" x2="256" y2="195" stroke="white" stroke-width="6" stroke-linecap="round"/>
-  <line x1="170" y1="250" x2="214" y2="250" stroke="white" stroke-width="6" stroke-linecap="round"/>
-  <line x1="298" y1="250" x2="342" y2="250" stroke="white" stroke-width="6" stroke-linecap="round"/>
-  <line x1="220" y1="330" x2="245" y2="290" stroke="white" stroke-width="6" stroke-linecap="round"/>
-  <line x1="292" y1="290" x2="317" y2="330" stroke="white" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="256" cy="145" r="8" fill="#38BDF8"/>
-  <circle cx="170" cy="250" r="8" fill="#38BDF8"/>
-  <circle cx="342" cy="250" r="8" fill="#38BDF8"/>
-  <circle cx="220" cy="330" r="8" fill="#38BDF8"/>
-  <circle cx="317" cy="330" r="8" fill="#38BDF8"/>
+
+  <path d="M256 32 L434 102 V244 C434 362 350 444 256 480 C162 444 78 362 78 244 V102 Z" fill="url(#shieldMetallicFav)"/>
+  <path d="M256 44 L420 110 V240 C420 348 340 426 256 460 C172 426 92 348 92 240 V110 Z" fill="url(#shieldInnerRimFav)"/>
+  <path d="M256 48 L414 113 V238 C414 344 336 420 256 454 C176 420 98 344 98 238 V113 Z" fill="url(#shieldCanvasFav)" stroke="#1E293B" stroke-width="1.5"/>
+
+  <g stroke="#38BDF8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95">
+    <path d="M256 182 V106" />
+    <path d="M196 194 L124 148 V136" />
+    <path d="M210 176 L186 142 H164" />
+    <path d="M316 176 L340 142 H362" />
+    <path d="M316 194 L388 148 V136" />
+  </g>
+
+  <g fill="#38BDF8" filter="url(#cyanGlowFav)">
+    <circle cx="256" cy="102" r="7.5" /><circle cx="124" cy="132" r="7.5" />
+    <circle cx="158" cy="142" r="7.5" /><circle cx="368" cy="142" r="7.5" />
+    <circle cx="388" cy="132" r="7.5" />
+  </g>
+  <g fill="#070D1E">
+    <circle cx="256" cy="102" r="2.8" /><circle cx="124" cy="132" r="2.8" />
+    <circle cx="158" cy="142" r="2.8" /><circle cx="368" cy="142" r="2.8" />
+    <circle cx="388" cy="132" r="2.8" />
+  </g>
+
+  <g stroke="#38BDF8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95">
+    <path d="M182 324 L148 346" />
+    <path d="M224 330 V376 L206 398" />
+    <path d="M256 338 V414" />
+    <path d="M288 330 V376 L306 398" />
+  </g>
+
+  <g fill="#38BDF8" filter="url(#cyanGlowFav)">
+    <circle cx="144" cy="349" r="7.5" /><circle cx="202" cy="402" r="7.5" />
+    <circle cx="256" cy="418" r="7.5" /><circle cx="310" cy="402" r="7.5" />
+  </g>
+  <g fill="#070D1E">
+    <circle cx="144" cy="349" r="2.8" /><circle cx="202" cy="402" r="2.8" />
+    <circle cx="256" cy="418" r="2.8" /><circle cx="310" cy="402" r="2.8" />
+  </g>
+
+  <path d="M102 256 Q170 184 256 184 V328 Q170 328 102 256 Z" fill="url(#scleraLeftFav)"/>
+  <path d="M410 256 Q342 184 256 184 V328 Q342 328 410 256 Z" fill="url(#scleraRightFav)"/>
+  <path d="M96 256 C148 174 364 174 416 256 C364 338 148 338 96 256 Z" fill="none" stroke="url(#shieldMetallicFav)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M110 256 C156 186 356 186 402 256 C356 326 156 326 110 256 Z" fill="#050B18"/>
+  <path d="M110 256 Q170 194 234 194 V318 Q170 318 110 256 Z" fill="url(#scleraLeftFav)"/>
+  <path d="M402 256 Q342 194 278 194 V318 Q342 318 402 256 Z" fill="url(#scleraRightFav)"/>
+
+  <circle cx="256" cy="256" r="65" fill="#070E20" stroke="url(#shieldMetallicFav)" stroke-width="15"/>
+  <circle cx="256" cy="256" r="54.5" fill="#030814" stroke="#0284C7" stroke-width="3"/>
+
+  <path d="M302 302 L354 354" stroke="url(#shieldMetallicFav)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M302 302 L354 354" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round" opacity="0.65"/>
+
+  <g fill="none" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#intenseGlowFav)">
+    <path d="M230 286 V262 C230 220 282 220 282 262 V286" />
+    <path d="M236 286 V264 C236 228 276 228 276 264 V286" />
+    <path d="M242 286 V266 C242 236 270 236 270 266 V286" />
+    <path d="M248 286 V268 C248 244 264 244 264 268 V286" />
+    <path d="M253 286 V270 C253 252 259 252 259 270 V286" />
+  </g>
+
+  <path d="M256 34 L432 102 L414 112 L256 50 L98 112 L80 102 Z" fill="#FFFFFF" opacity="0.3"/>
 </svg>

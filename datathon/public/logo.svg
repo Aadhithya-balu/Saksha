@@ -1,84 +1,271 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-
   <defs>
-    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#0F172A"/>
+    <!-- Metallic Silver for Shield Border -->
+    <linearGradient id="shieldSilver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#FFFFFF"/>
+      <stop offset="20%"  stop-color="#D0D8E8"/>
+      <stop offset="45%"  stop-color="#8898B0"/>
+      <stop offset="70%"  stop-color="#C0CBD8"/>
+      <stop offset="88%"  stop-color="#607080"/>
+      <stop offset="100%" stop-color="#304050"/>
     </linearGradient>
 
-    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#2563EB"/>
+    <!-- Inner V-notch highlight on shield -->
+    <linearGradient id="shieldNotch" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#8898B0"/>
+      <stop offset="50%"  stop-color="#5B6B80"/>
+      <stop offset="100%" stop-color="#304050"/>
     </linearGradient>
+
+    <!-- Dark navy fill for shield interior -->
+    <radialGradient id="shieldFill" cx="50%" cy="40%" r="58%">
+      <stop offset="0%"   stop-color="#111E35"/>
+      <stop offset="55%"  stop-color="#08111F"/>
+      <stop offset="100%" stop-color="#040B18"/>
+    </radialGradient>
+
+    <!-- Magnifying glass silver ring -->
+    <linearGradient id="glassRing" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%"   stop-color="#FFFFFF"/>
+      <stop offset="30%"  stop-color="#C8D4E0"/>
+      <stop offset="65%"  stop-color="#7A8DA0"/>
+      <stop offset="100%" stop-color="#3A4A58"/>
+    </linearGradient>
+
+    <!-- Eye sclera - blue shading at left corner -->
+    <radialGradient id="eyeLeft" cx="20%" cy="50%" r="60%">
+      <stop offset="0%"   stop-color="#1565C0" stop-opacity="0.95"/>
+      <stop offset="60%"  stop-color="#0D47A1" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#040B18" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Eye sclera - blue shading at right corner -->
+    <radialGradient id="eyeRight" cx="80%" cy="50%" r="60%">
+      <stop offset="0%"   stop-color="#1565C0" stop-opacity="0.95"/>
+      <stop offset="60%"  stop-color="#0D47A1" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#040B18" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cyan glow filter for circuits -->
+    <filter id="cyanGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Bright glow for fingerprint lines -->
+    <filter id="fpGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip path for magnifying glass lens -->
+    <clipPath id="lensClip">
+      <circle cx="245" cy="248" r="52"/>
+    </clipPath>
   </defs>
 
-  <!-- Shield -->
-  <path
-    d="M256 48
-       L400 110
-       V235
-       C400 340 330 425 256 464
-       C182 425 112 340 112 235
-       V110
-       Z"
-    fill="url(#shieldGrad)"
-  />
+  <!-- ══════════════════════════════════════════
+       1. OUTER SHIELD — thick silver border
+       Shield: top-center 256,35 → sides → pointed bottom 256,478
+       ══════════════════════════════════════════ -->
+  <!-- Outer silver frame -->
+  <path d="M256 35
+           L435 108 V246
+           C435 358 355 442 256 478
+           C157 442 77 358 77 246
+           V108 Z"
+        fill="url(#shieldSilver)"/>
 
-  <!-- Eye -->
-  <path
-    d="M160 250
-    C195 190 317 190 352 250
-    C317 310 195 310 160 250"
-    fill="white"
-  />
+  <!-- Inner navy fill (creates the thick border look) -->
+  <path d="M256 55
+           L416 122 V244
+           C416 346 342 422 256 455
+           C170 422 96 346 96 244
+           V122 Z"
+        fill="url(#shieldFill)"/>
 
-  <!-- Iris -->
-  <circle
-    cx="256"
-    cy="250"
-    r="42"
-    fill="url(#eyeGrad)"
-  />
+  <!-- ── V-NOTCH at top-center (the characteristic shield divot) ── -->
+  <!-- This creates the two upper quadrant plates with a center notch -->
+  <path d="M256 55 L200 90 L218 108 L256 88 L294 108 L312 90 Z"
+        fill="url(#shieldNotch)" opacity="0.7"/>
 
-  <!-- AI Core -->
-  <circle
-    cx="256"
-    cy="250"
-    r="15"
-    fill="#0F172A"
-  />
+  <!-- Left quadrant dividing line (subtle) -->
+  <path d="M256 88 L256 150" stroke="#7A8DA0" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
 
-  <!-- Circuit Lines -->
-  <line x1="256" y1="145" x2="256" y2="195"
-        stroke="white"
-        stroke-width="6"
+  <!-- ══════════════════════════════════════════
+       2. CIRCUIT TRACES — UPPER (from top of eye outward)
+       ══════════════════════════════════════════ -->
+  <!-- Top-center upward trace -->
+  <line x1="256" y1="175" x2="256" y2="98"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Upper-left branch: goes left from near upper-left eye region -->
+  <polyline points="210,190  170,155  134,155"
+            stroke="#38BDF8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <!-- Small horizontal spur left -->
+  <line x1="163" y1="155" x2="134" y2="155"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <!-- Tiny vertical spur up-left -->
+  <line x1="170" y1="155" x2="170" y2="133"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Upper-right branch (mirror) -->
+  <polyline points="302,190  342,155  378,155"
+            stroke="#38BDF8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <line x1="349" y1="155" x2="378" y2="155"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <line x1="342" y1="155" x2="342" y2="133"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- ══════════════════════════════════════════
+       3. CIRCUIT NODES — UPPER (glowing dots)
+       ══════════════════════════════════════════ -->
+  <g filter="url(#cyanGlow)">
+    <!-- Top center -->
+    <circle cx="256" cy="95"  r="7" fill="#38BDF8"/>
+    <!-- Left branch tips -->
+    <circle cx="134" cy="155" r="7" fill="#38BDF8"/>
+    <circle cx="170" cy="130" r="7" fill="#38BDF8"/>
+    <!-- Right branch tips -->
+    <circle cx="378" cy="155" r="7" fill="#38BDF8"/>
+    <circle cx="342" cy="130" r="7" fill="#38BDF8"/>
+  </g>
+  <!-- Dark center dot inside each node -->
+  <g fill="#040B18">
+    <circle cx="256" cy="95"  r="2.5"/>
+    <circle cx="134" cy="155" r="2.5"/>
+    <circle cx="170" cy="130" r="2.5"/>
+    <circle cx="378" cy="155" r="2.5"/>
+    <circle cx="342" cy="130" r="2.5"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       4. EYE SHAPE — outer eyelid outline
+       Wide almond: left tip ~95,255  right tip ~417,255
+       Top arc peaks at ~256,175   bottom arc at ~256,335
+       ══════════════════════════════════════════ -->
+  <!-- Eye eyelid silver outline -->
+  <path d="M95 256
+           C140 168 372 168 417 256
+           C372 344 140 344 95 256 Z"
+        fill="none"
+        stroke="url(#shieldSilver)"
+        stroke-width="14"
         stroke-linecap="round"/>
 
-  <line x1="170" y1="250" x2="214" y2="250"
-        stroke="white"
-        stroke-width="6"
+  <!-- Eye interior dark fill -->
+  <path d="M109 256
+           C150 180 362 180 403 256
+           C362 332 150 332 109 256 Z"
+        fill="#06101E"/>
+
+  <!-- Blue sclera shading in corners -->
+  <path d="M109 256
+           C150 180 362 180 403 256
+           C362 332 150 332 109 256 Z"
+        fill="url(#eyeLeft)"/>
+  <path d="M109 256
+           C150 180 362 180 403 256
+           C362 332 150 332 109 256 Z"
+        fill="url(#eyeRight)"/>
+
+  <!-- ══════════════════════════════════════════
+       5. MAGNIFYING GLASS — silver ring + handle
+       Center: 245,248  Radius: 65 (outer), 52 (inner)
+       Handle: goes bottom-right at ~45deg
+       ══════════════════════════════════════════ -->
+  <!-- Outer silver ring (thicker border) -->
+  <circle cx="245" cy="248" r="67"
+          fill="none"
+          stroke="url(#glassRing)"
+          stroke-width="18"/>
+  <!-- Inner ring accent (thin cyan ring inside glass) -->
+  <circle cx="245" cy="248" r="57"
+          fill="#050D1C"
+          stroke="#1E5C8A"
+          stroke-width="2.5"/>
+
+  <!-- Handle — thick silver bar going lower-right -->
+  <line x1="296" y1="299" x2="358" y2="361"
+        stroke="url(#glassRing)"
+        stroke-width="24"
         stroke-linecap="round"/>
+  <!-- Handle inner highlight -->
+  <line x1="296" y1="299" x2="358" y2="361"
+        stroke="#E0E8F0"
+        stroke-width="10"
+        stroke-linecap="round"
+        opacity="0.55"/>
 
-  <line x1="298" y1="250" x2="342" y2="250"
-        stroke="white"
-        stroke-width="6"
-        stroke-linecap="round"/>
+  <!-- ══════════════════════════════════════════
+       6. FINGERPRINT — inside magnifying glass lens
+       Concentric U-shaped loops, glowing cyan
+       Lens clipped to circle cx=245, cy=248, r=52
+       ══════════════════════════════════════════ -->
+  <g clip-path="url(#lensClip)" filter="url(#fpGlow)">
+    <!-- Fingerprint loops — U-shapes opening downward, stacked -->
+    <!-- Outermost loop -->
+    <path d="M213 280 V255 C213 207 277 207 277 255 V280"
+          fill="none" stroke="#38BDF8" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M219 280 V256 C219 215 271 215 271 256 V280"
+          fill="none" stroke="#38BDF8" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M225 280 V257 C225 223 265 223 265 257 V280"
+          fill="none" stroke="#38BDF8" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M231 280 V258 C231 231 259 231 259 258 V280"
+          fill="none" stroke="#38BDF8" stroke-width="3.2" stroke-linecap="round"/>
+    <!-- Center core arch -->
+    <path d="M237 280 V260 C237 240 253 240 253 260 V280"
+          fill="none" stroke="#38BDF8" stroke-width="3.2" stroke-linecap="round"/>
+    <!-- Central dot -->
+    <circle cx="245" cy="242" r="4" fill="#38BDF8" opacity="0.8"/>
+  </g>
 
-  <line x1="220" y1="330" x2="245" y2="290"
-        stroke="white"
-        stroke-width="6"
-        stroke-linecap="round"/>
+  <!-- ══════════════════════════════════════════
+       7. CIRCUIT TRACES — LOWER (from bottom of eye)
+       ══════════════════════════════════════════ -->
+  <!-- Center bottom down -->
+  <line x1="256" y1="338" x2="256" y2="425"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 
-  <line x1="292" y1="290" x2="317" y2="330"
-        stroke="white"
-        stroke-width="6"
-        stroke-linecap="round"/>
+  <!-- Lower-left branch -->
+  <polyline points="200,335  172,365  148,365"
+            stroke="#38BDF8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <line x1="172" y1="365" x2="172" y2="390"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 
-  <!-- Circuit Nodes -->
-  <circle cx="256" cy="145" r="8" fill="#38BDF8"/>
-  <circle cx="170" cy="250" r="8" fill="#38BDF8"/>
-  <circle cx="342" cy="250" r="8" fill="#38BDF8"/>
-  <circle cx="220" cy="330" r="8" fill="#38BDF8"/>
-  <circle cx="317" cy="330" r="8" fill="#38BDF8"/>
+  <!-- Lower-right branch (mirror) -->
+  <polyline points="312,335  340,365  364,365"
+            stroke="#38BDF8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <line x1="340" y1="365" x2="340" y2="390"
+        stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
 
+  <!-- ══════════════════════════════════════════
+       8. CIRCUIT NODES — LOWER
+       ══════════════════════════════════════════ -->
+  <g filter="url(#cyanGlow)">
+    <circle cx="256" cy="428" r="7" fill="#38BDF8"/>
+    <circle cx="148" cy="365" r="7" fill="#38BDF8"/>
+    <circle cx="172" cy="393" r="7" fill="#38BDF8"/>
+    <circle cx="364" cy="365" r="7" fill="#38BDF8"/>
+    <circle cx="340" cy="393" r="7" fill="#38BDF8"/>
+  </g>
+  <g fill="#040B18">
+    <circle cx="256" cy="428" r="2.5"/>
+    <circle cx="148" cy="365" r="2.5"/>
+    <circle cx="172" cy="393" r="2.5"/>
+    <circle cx="364" cy="365" r="2.5"/>
+    <circle cx="340" cy="393" r="2.5"/>
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       9. SHIELD TOP GLINT — highlight on upper shield rim
+       ══════════════════════════════════════════ -->
+  <path d="M256 38 L430 108 L414 118 L256 54 L98 118 L82 108 Z"
+        fill="#FFFFFF" opacity="0.22"/>
 </svg>
