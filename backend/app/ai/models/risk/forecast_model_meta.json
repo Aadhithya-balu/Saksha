@@ -1,1 +1,1 @@
-{"feature_names": ["crime_count", "month_sin", "month_cos", "quarter", "season_summer", "season_monsoon", "season_post_monsoon", "lag_1", "lag_2", "lag_3", "lag_6", "rolling_mean_3", "rolling_mean_6", "rolling_std_3", "ema_3", "growth_rate", "momentum"], "rmse": 0.37681651066464755}
+{"feature_names": ["crime_count", "month_sin", "month_cos", "quarter", "season_summer", "season_monsoon", "season_post_monsoon", "lag_1", "lag_2", "lag_3", "lag_6", "rolling_mean_3", "rolling_mean_6", "rolling_std_3", "ema_3", "growth_rate", "momentum"], "rmse": 0.3727319850003132}

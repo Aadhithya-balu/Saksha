@@ -210,7 +210,7 @@ function App() {
             <div className="text-left">
               <p className="text-lg font-bold tracking-wide text-[var(--text-primary)] leading-none">SAKSHA</p>
               <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-[var(--text-muted)] mt-1">
-                Karnataka State Police
+                Crime Intelligence Platform
               </p>
             </div>
           </div>
@@ -315,8 +315,8 @@ function App() {
 
         {/* Footer */}
         <footer className="h-9 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 pl-6 pr-6 pb-[env(safe-area-inset-bottom)] mb-[64px] md:mb-0 flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] select-none shrink-0 no-print">
-          <span>SAKSHA v2.0 &middot; Karnataka State Police</span>
-          <span className="hidden sm:inline">CLASSIFIED &middot; STAMP: 2026-SCRB-KSP</span>
+          <span>SAKSHA v2.0 &middot; Crime Intelligence Platform</span>
+          <span className="hidden sm:inline">CLASSIFIED &middot; STAMP: 2026-SCI</span>
         </footer>
       </div>
 

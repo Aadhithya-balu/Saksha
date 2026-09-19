@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * SecureBackdrop — the SAKSHA login environment.
+ * SecureBackdrop — the SAKSHA login/landing environment.
  *
  * Layered, extremely low-contrast intelligence ambience:
- *   1. Radial lighting focused on the authentication area
+ *   1. Radial lighting focused on the content area
  *   2. A very fine technical grid
- *   3. A stylized Karnataka landmass silhouette
+ *   3. Faint coordinate reference marks (no specific location)
  *   4. A slow constellation of connected nodes (canvas)
  *
  * All layers are theme-aware (they resolve --lp-* tokens) and
@@ -27,19 +27,6 @@ interface Pulse {
   y: number;
   r: number;
 }
-
-/* Stylized Karnataka silhouette (abstract, recognizable intent) */
-const KARNATAKA_PATH =
-  'M132 4 L148 18 L154 44 L144 66 L152 92 L146 116 L158 140 L152 168 L136 192 ' +
-  'L112 208 L84 214 L60 204 L38 186 L26 160 L20 132 L14 104 L10 76 L22 52 L44 40 L74 34 L100 20 Z';
-
-const DISTRICT_MARKS: Array<[number, number]> = [
-  [48, 62],
-  [128, 178],
-  [34, 186],
-  [138, 84],
-  [96, 214],
-];
 
 const hexToRgb = (hex: string): [number, number, number] => {
   const h = hex.trim().replace('#', '');
@@ -87,7 +74,7 @@ const SecureBackdrop: React.FC = () => {
         vx: (Math.random() - 0.5) * 0.16,
         vy: (Math.random() - 0.5) * 0.16,
         r: 1 + Math.random() * 1.3,
-        a: 0.25 + Math.random() * 0.35,
+        a: 0.2 + Math.random() * 0.28,
       }));
       pulses = [];
     };
@@ -107,7 +94,7 @@ const SecureBackdrop: React.FC = () => {
             ctx.beginPath();
             ctx.moveTo(n1.x, n1.y);
             ctx.lineTo(n2.x, n2.y);
-            ctx.strokeStyle = `rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${((1 - dist / 132) * 0.13).toFixed(3)})`;
+            ctx.strokeStyle = `rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${((1 - dist / 132) * 0.1).toFixed(3)})`;
             ctx.lineWidth = 1;
             ctx.stroke();
           }
@@ -196,24 +183,32 @@ const SecureBackdrop: React.FC = () => {
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
-      {/* Radial lighting around the authentication area */}
+      {/* Radial lighting around the content area */}
       <div className="absolute inset-0 lp-glow-a" />
       {/* Very fine technical grid */}
       <div className="absolute inset-0 lp-grid-layer" />
-      {/* Karnataka landmass — large screens only */}
+      {/* Faint coordinate reference marks — large screens only, subtle */}
       <svg
-        viewBox="0 0 200 230"
-        className="lp-karnataka hidden lg:block absolute right-[5%] top-1/2 -translate-y-1/2 h-[72vh] w-auto"
+        viewBox="0 0 1000 700"
+        className="hidden lg:block absolute inset-0 h-full w-full"
+        fill="none"
         role="presentation"
+        style={{ color: 'var(--lp-accent)', opacity: 0.05 }}
       >
-        <path d={KARNATAKA_PATH} />
-        {DISTRICT_MARKS.map(([cx, cy]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.6" fill="currentColor" stroke="none" opacity="0.9" />
-        ))}
+        {/* Edge measurement ticks */}
+        <path d="M0 40H40 M0 140H24 M0 220H34 M0 320H22 M0 420H36 M0 520H26 M956 660H1000 M856 660H1000 M736 660H1000 M600 660H1000 M440 660H1000 M280 660H1000" stroke="currentColor" strokeWidth="1" />
+        <path d="M40 0V40 M140 0V24 M220 0V34 M320 0V22 M420 0V36 M520 0V26 M956 0V40 M976 40H1000 M960 120H980 M968 200H990 M944 280H1000 M958 360H982 M966 440H988 M950 540H1000 M960 620H984" stroke="currentColor" strokeWidth="1" />
+        {/* Sparse scatter reference points */}
+        <circle cx="248" cy="180" r="2" fill="currentColor" />
+        <circle cx="742" cy="210" r="1.5" fill="currentColor" />
+        <circle cx="180" cy="520" r="1.5" fill="currentColor" />
+        <circle cx="820" cy="470" r="2" fill="currentColor" />
+        <circle cx="390" cy="86" r="1.5" fill="currentColor" />
+        <circle cx="610" cy="612" r="1.5" fill="currentColor" />
       </svg>
       {/* Slow intelligence-node constellation */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-      {/* Vignette keeps focus on the auth module */}
+      {/* Vignette keeps focus on the content */}
       <div className="absolute inset-0 lp-vignette" />
     </div>
   );

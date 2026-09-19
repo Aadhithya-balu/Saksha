@@ -29,19 +29,6 @@ const CLEARANCE_LABELS: Record<string, string> = {
   VIEWER: 'OBSERVER ACCESS',
 };
 
-const ERROR_BOX_STYLES: Record<string, { background: string; borderColor: string; color: string }> = {
-  error: {
-    background: 'var(--lp-red-soft)',
-    borderColor: 'rgba(224, 96, 85, 0.35)',
-    color: 'var(--lp-red)',
-  },
-  warning: {
-    background: 'var(--lp-amber-soft)',
-    borderColor: 'rgba(223, 162, 63, 0.4)',
-    color: 'var(--lp-amber)',
-  },
-};
-
 export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
   const login = useAuthStore((state) => state.login);
 
@@ -110,23 +97,22 @@ export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
 
   return (
     <form
-      className="flex w-full flex-col gap-4 text-left"
+      className="lx-form flex w-full flex-col text-left"
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
       {/* Live region for validation / auth errors */}
-      <div aria-live="polite" className="flex min-h-[18px] items-start">
+      <div aria-live="polite" className="lx-error-slot flex items-start">
         {authError && (
           <div
-            className="lp-shake flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-[11.5px] leading-snug"
-            style={ERROR_BOX_STYLES[authError.tone]}
+            className={`lx-error lp-shake ${authError.tone === 'warning' ? 'lx-error-warn' : ''} w-full`}
           >
             {authError.tone === 'warning' ? (
-              <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <AlertTriangle className="h-4 w-4" />
             ) : (
-              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <AlertCircle className="h-4 w-4" />
             )}
             <span>{authError.message}</span>
           </div>
@@ -134,19 +120,12 @@ export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
       </div>
 
       {/* Account username */}
-      <div>
-        <label
-          htmlFor="saksha-account-username"
-          className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em]"
-          style={{ color: 'var(--lp-text-3)' }}
-        >
+      <div className="lx-field">
+        <label htmlFor="saksha-account-username" className="lx-label">
           Account Username
         </label>
-        <div className="group relative">
-          <UserRound
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors duration-200"
-            style={{ color: 'var(--lp-text-3)' }}
-          />
+        <div className="lx-input-wrap">
+          <UserRound className="lx-input-icon h-[18px] w-[18px]" />
           <input
             ref={usernameRef}
             id="saksha-account-username"
@@ -166,25 +145,18 @@ export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
                 passwordRef.current?.focus();
               }
             }}
-            className="lp-input h-11 rounded-lg pl-10 pr-3 font-mono text-sm"
+            className="lx-input pr-3"
           />
         </div>
       </div>
 
       {/* Password */}
-      <div>
-        <label
-          htmlFor="saksha-account-password"
-          className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em]"
-          style={{ color: 'var(--lp-text-3)' }}
-        >
+      <div className="lx-field">
+        <label htmlFor="saksha-account-password" className="lx-label">
           Password
         </label>
-        <div className="group relative">
-          <KeyRound
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors duration-200"
-            style={{ color: 'var(--lp-text-3)' }}
-          />
+        <div className="lx-input-wrap">
+          <KeyRound className="lx-input-icon h-[18px] w-[18px]" />
           <input
             ref={passwordRef}
             id="saksha-account-password"
@@ -204,24 +176,20 @@ export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
                 void submit();
               }
             }}
-            className="lp-input h-11 rounded-lg pl-10 pr-11 font-mono text-sm"
+            className="lx-input pr-12"
           />
           <button
             type="button"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             disabled={busy}
             onClick={() => setShowPassword((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
-            style={{ color: 'var(--lp-text-3)' }}
+            className="lx-input-toggle"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
           </button>
         </div>
-        <p
-          className="mt-1.5 flex items-start gap-1.5 font-mono text-[8.5px] uppercase tracking-[0.12em] leading-relaxed"
-          style={{ color: 'var(--lp-text-3)' }}
-        >
-          <KeyRound className="mt-0.5 h-3 w-3 shrink-0" style={{ color: 'var(--lp-accent-hi)' }} />
+        <p className="lx-hint">
+          <KeyRound className="h-3 w-3 shrink-0" style={{ color: 'var(--lx-accent-hi)' }} />
           Format: 8+ characters with letters &amp; number — or a 6-digit numeric PIN
         </p>
       </div>
@@ -230,55 +198,37 @@ export const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
       <button
         type="submit"
         disabled={busy || !username.trim() || !password}
-        className="lp-primary-btn relative h-12 w-full cursor-pointer rounded-xl font-sans text-xs font-bold uppercase tracking-[0.18em] transition-all duration-200"
-        style={
-          status === 'granted'
-            ? {
-                background: 'linear-gradient(135deg, rgba(55,201,142,0.22), rgba(55,201,142,0.1))',
-                border: '1px solid rgba(55,201,142,0.5)',
-                color: 'var(--lp-green)',
-              }
-            : {
-                background: 'linear-gradient(135deg, var(--lp-accent), #2467c2)',
-                border: '1px solid transparent',
-                color: '#f2f6fc',
-                opacity: !username.trim() || !password ? 0.45 : 1,
-                boxShadow: busy ? 'none' : '0 8px 24px rgba(31, 92, 179, 0.32)',
-              }
-        }
+        className={`lx-cta ${status === 'granted' ? 'lx-cta-granted' : ''}`}
       >
-        <span className="flex items-center justify-center gap-2">
+        <span className="flex items-center justify-center gap-2.5">
           {status === 'idle' && (
             <>
-              <LogIn className="h-4 w-4" strokeWidth={2} />
+              <LogIn className="h-[18px] w-[18px]" strokeWidth={2} />
               Sign In
             </>
           )}
           {status === 'verifying' && (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-[18px] w-[18px] animate-spin" />
               Verifying Credentials…
             </>
           )}
           {status === 'granted' && (
             <>
-              <ShieldCheck className="h-4 w-4" />
+              <ShieldCheck className="h-[18px] w-[18px]" />
               Identity Verified
             </>
           )}
           {status === 'initializing' && (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-[18px] w-[18px] animate-spin" />
               Secure Session Initializing…
             </>
           )}
         </span>
       </button>
 
-      <p
-        className="font-mono text-[8.5px] leading-relaxed uppercase tracking-[0.12em]"
-        style={{ color: 'var(--lp-text-3)' }}
-      >
+      <p className="lx-hint">
         For accounts provisioned by an administrator, use the username and temporary
         password issued at creation. You can change it later from Settings.
       </p>
