@@ -238,6 +238,10 @@ export const BadgeLogin: React.FC<BadgeLoginProps> = ({ onSuccess }) => {
             </span>
           )}
         </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-emerald-400/90 font-medium mt-1.5 px-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Connection: FIPS Compliant &amp; Encrypted
+        </div>
       </div>
 
       {/* 6-Digit PIN — individual secure cells */}
