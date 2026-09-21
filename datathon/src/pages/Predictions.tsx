@@ -8,6 +8,7 @@ import { Cpu, RefreshCw, ShieldAlert, Sparkles, Sun, CloudRain, Wind, Snowflake,
 import { getAnomalies, getRiskScores, getModelInfo, getSeasonBreakdown, getEmergingTrends, trainRiskModels, type AnomalyRecord, type RiskScoresResponse, type ModelInfo, type SeasonData, type EmergingTypology } from '../services/api';
 import { getIntelligenceStatus, getPredictionLabel, getConfidenceLabel } from '../services/intelligenceStatus';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { useUserScope } from '../hooks/useUserScope';
 
 const SEASON_ICONS: Record<string, React.ReactNode> = {
   Summer: <Sun className="w-4 h-4 text-amber-400" />,
@@ -31,6 +32,7 @@ const TREND_META: Record<EmergingTypology['direction'], { icon: React.ReactNode;
 
 export const Predictions: React.FC = () => {
   const { isAdmin } = useRBAC();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const [riskScores, setRiskScores] = useState<RiskScoresResponse | null>(null);
   const [anomalies, setAnomalies] = useState<AnomalyRecord[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
@@ -450,6 +452,11 @@ export const Predictions: React.FC = () => {
               }).filter((b) => b.kind !== 'UNKNOWN');
               return (
                 <div key={row.district} className="p-3.5 bg-[var(--bg-secondary)]/45 border border-[var(--border-primary)] rounded-btn flex gap-3 relative overflow-hidden">
+                  {!canSelectDistrict && row.district === scopeDistrict && (
+                    <span className="absolute top-2 right-2 rounded-full bg-[var(--accent-blue)]/15 border border-[var(--accent-blue)]/30 px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wider text-[var(--accent-blue)]">
+                      Your district
+                    </span>
+                  )}
                   <ShieldAlert className="w-5 h-5 text-[#C94A2A] shrink-0" />
                   <div className="min-w-0 flex-1">
                     <span className="text-[var(--text-primary)] font-bold uppercase text-[10.5px]">{row.district} risk score {row.risk_score}%</span>
