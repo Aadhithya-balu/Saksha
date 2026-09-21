@@ -91,3 +91,29 @@ cache invalidation after criminal writes; removed dead `language`/`setLanguage`
 from `appStore` (i18n store is single source); Notifications page connects
 realtime SSE on mount/disconnect on unmount + SystemHealth "Standby" for idle
 streams.
+
+## Recent sessions summary (district scoping + UI honesty pass)
+
+Completed: server-side district scoping enforced end-to-end (`app/auth/scope.py`,
+fails closed with 403 when a district-bound user has no district) across
+firs/crime-cases/criminals/victims/evidence, then dashboard, officers,
+interventions, ai-risk-scores, alerts (+redzone `rank_categories` district
+param), legacy crimes, network graph/search/path, intelligence,
+sociological, investigation detail/chat, and investigation-hub search (MO
+matches filtered per-doc via `_mo_doc_district`); dashboard static endpoints
+gained a `district` query param (cache keys include it);
+`network /search` no longer fabricates `risk_score`; `get_fir` risk gauge is
+honest rule-based (`RULE-SQL-V2` label on the FIR risk card); criminal
+risk/repeat-offender fallbacks no longer invent `45/MEDIUM/0.72` or
+`0.2+0.15×FIRs` — they return null and the UI renders "Unavailable".
+Frontend UI-honesty pass: removed fabricated FIR hotspot metrics, Overview
+quick-action exports, Anomalies feature breakdown + `SP-0088` escalation,
+Predictions fake model metadata, hardcoded CorrelationChart `r="0.29"` legend
+(now shows computed r), ActiveAlerts3D `Devaraja/75/82`, alertStore seeded fake
+alerts; added FIR/investigation-dossier/evidence deep-links
+(`selected_entity_id`), `hooks/useTitle` per-page tab titles, removed inert
+Officers "Filter" button and the dead `ContextSelector`/`ChatContextOptions`
+(backend `ChatRequest` accepts no scope fields). Landing/Login remain
+byte-locked. UI checklist audits (§6-39) all verified or fixed; every change
+gated on `tsc -p tsconfig.app.json --noEmit`, `eslint`, `npm run build`, and
+Landing/Login SHA-256 checks.
