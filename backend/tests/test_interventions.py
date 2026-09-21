@@ -27,6 +27,7 @@ def io_client(client, db_session):
         full_name="Intervention IO",
         hashed_password=hash_password("Password123!"),
         role_id=role.id,
+        district="Bengaluru Urban",
         is_active=True,
     )
     db_session.add(user)

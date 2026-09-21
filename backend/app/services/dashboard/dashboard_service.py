@@ -193,26 +193,40 @@ def get_filtered_district_comparison(
     return [{"district": dist, "count": count} for dist, count in rows]
 
 
-def get_officer_stats(db: Session) -> dict[str, Any]:
-    total_officers = db.query(Officer).count()
-    active_officers = db.query(Officer).filter(Officer.status == "active").count()
-    investigating_officers = (
+def _officer_count(db: Session, district: str | None = None) -> int:
+    query = db.query(Officer)
+    if district:
+        query = query.filter(Officer.district == district)
+    return query.count()
+
+
+def get_officer_stats(db: Session, district: str | None = None) -> dict[str, Any]:
+    total_officers = _officer_count(db, district)
+    active_offices = db.query(Officer).filter(Officer.status == "active")
+    if district:
+        active_offices = active_offices.filter(Officer.district == district)
+    active_officers = active_offices.count()
+
+    investigating_query = (
         db.query(Officer)
         .join(CrimeCase, CrimeCase.assigned_officer_id == Officer.id)
         .filter(CrimeCase.status == "open")
-        .distinct()
-        .count()
     )
-    
+    if district:
+        investigating_query = investigating_query.join(
+            Location, CrimeCase.location_id == Location.id
+        ).filter(Location.district == district)
+    investigating_officers = investigating_query.distinct().count()
+
     # Enforce realistic allocations
     active_officers = max(active_officers, investigating_officers)
     if total_officers == 0:
         return {
-            "total_officers": 45,
-            "active_officers": 42,
-            "on_duty": 36,
-            "off_duty": 6,
-            "investigating_officers": 28,
+            "total_officers": 0,
+            "active_officers": 0,
+            "on_duty": 0,
+            "off_duty": 0,
+            "investigating_officers": 0,
         }
 
     on_duty = int(active_officers * 0.85)
@@ -227,19 +241,30 @@ def get_officer_stats(db: Session) -> dict[str, Any]:
     }
 
 
-def get_evidence_stats(db: Session) -> dict[str, Any]:
-    collected = db.query(Evidence).filter(Evidence.status == "Collected").count()
-    pending = db.query(Evidence).filter(Evidence.status == "Pending").count()
-    verified = db.query(Evidence).filter(Evidence.status == "Verified").count()
-    rejected = db.query(Evidence).filter(Evidence.status == "Rejected").count()
+def _evidence_status_query(db: Session, status: str, district: str | None = None):
+    query = db.query(Evidence).filter(Evidence.status == status)
+    if district:
+        query = (
+            query.join(CrimeCase, Evidence.case_id == CrimeCase.id)
+            .join(Location, CrimeCase.location_id == Location.id)
+            .filter(Location.district == district)
+        )
+    return query
+
+
+def get_evidence_stats(db: Session, district: str | None = None) -> dict[str, Any]:
+    collected = _evidence_status_query(db, "Collected", district).count()
+    pending = _evidence_status_query(db, "Pending", district).count()
+    verified = _evidence_status_query(db, "Verified", district).count()
+    rejected = _evidence_status_query(db, "Rejected", district).count()
 
     total_evidence = collected + pending + verified + rejected
     if total_evidence == 0:
         return {
-            "collected": 34,
-            "pending": 8,
-            "verified": 22,
-            "rejected": 4,
+            "collected": 0,
+            "pending": 0,
+            "verified": 0,
+            "rejected": 0,
         }
 
     return {
@@ -250,13 +275,15 @@ def get_evidence_stats(db: Session) -> dict[str, Any]:
     }
 
 
-def get_recent_incidents(db: Session, limit: int = 5) -> list[dict[str, Any]]:
+def get_recent_incidents(db: Session, limit: int = 5, district: str | None = None) -> list[dict[str, Any]]:
     cases = (
         db.query(CrimeCase)
         .options(joinedload(CrimeCase.category), joinedload(CrimeCase.location))
-        .order_by(CrimeCase.reported_at.desc())
-        .limit(limit)
-        .all()
+    )
+    if district:
+        cases = cases.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == district)
+    cases = (
+        cases.order_by(CrimeCase.reported_at.desc()).limit(limit).all()
     )
     return [
         {
@@ -271,13 +298,22 @@ def get_recent_incidents(db: Session, limit: int = 5) -> list[dict[str, Any]]:
     ]
 
 
-def get_forecast_data(db: Session) -> dict[str, Any]:
-    total_crimes = db.query(CrimeCase).count()
-    last_week_crimes = db.query(CrimeCase).filter(CrimeCase.occurred_at >= datetime.now() - timedelta(days=7)).count()
-    prev_week_crimes = db.query(CrimeCase).filter(
-        CrimeCase.occurred_at >= datetime.now() - timedelta(days=14),
-        CrimeCase.occurred_at < datetime.now() - timedelta(days=7)
-    ).count()
+def _case_count_in_window(db: Session, district: str | None, occurred_before=None, occurred_after=None) -> int:
+    query = db.query(CrimeCase)
+    if district:
+        query = query.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == district)
+    if occurred_before is not None:
+        query = query.filter(CrimeCase.occurred_at < occurred_before)
+    if occurred_after is not None:
+        query = query.filter(CrimeCase.occurred_at >= occurred_after)
+    return query.count()
+
+
+def get_forecast_data(db: Session, district: str | None = None) -> dict[str, Any]:
+    total_crimes = _case_count_in_window(db, district)
+    now = datetime.now()
+    last_week_crimes = _case_count_in_window(db, district, occurred_after=now - timedelta(days=7))
+    prev_week_crimes = _case_count_in_window(db, district, occurred_before=now - timedelta(days=7), occurred_after=now - timedelta(days=14))
 
     expected_change = 0.0
     if prev_week_crimes > 0:
@@ -318,9 +354,12 @@ def get_forecast_data(db: Session) -> dict[str, Any]:
     }
 
 
-def get_risk_prediction(db: Session) -> dict[str, Any]:
-    total_crimes = db.query(CrimeCase).count()
-    open_crimes = db.query(CrimeCase).filter(CrimeCase.status == "open").count()
+def get_risk_prediction(db: Session, district: str | None = None) -> dict[str, Any]:
+    total_crimes = _case_count_in_window(db, district)
+    open_query = db.query(CrimeCase).filter(CrimeCase.status == "open")
+    if district:
+        open_query = open_query.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == district)
+    open_crimes = open_query.count()
     open_ratio = open_crimes / total_crimes if total_crimes > 0 else 0.5
     
     crime_risk_percent = round(35 + (open_ratio * 40) + (min(total_crimes, 50) / 50 * 15), 1)
@@ -356,11 +395,14 @@ SEASON_MAP = {
 SEASON_ORDER = ["Summer", "Monsoon", "Post-Monsoon", "Winter"]
 
 
-def get_season_breakdown(db: Session) -> dict[str, Any]:
+def get_season_breakdown(db: Session, district: str | None = None) -> dict[str, Any]:
 
     rows = db.query(CrimeCase.occurred_at, Location.district).join(
         Location, CrimeCase.location_id == Location.id
-    ).all()
+    )
+    if district:
+        rows = rows.filter(Location.district == district)
+    rows = rows.all()
 
     season_counts: dict[str, int] = {s: 0 for s in SEASON_ORDER}
     season_districts: dict[str, Counter[str]] = defaultdict(Counter)
