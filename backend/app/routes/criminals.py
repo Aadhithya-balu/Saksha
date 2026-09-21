@@ -159,20 +159,20 @@ def _criminal_risk_worker(criminal_id: str, fir_count: int) -> dict:
             res = score_criminal_risk(db, criminal_id)
             if "error" in res:
                 return {
-                    "risk_score": 45,
-                    "risk_band": "MEDIUM",
-                    "confidence": 0.72,
-                    "top_factors": ["Historical pattern link", "Geographic activity correlation"],
+                    "risk_score": None,
+                    "risk_band": None,
+                    "confidence": None,
+                    "top_factors": [],
                 }
             return res
         finally:
             db.close()
     except Exception:
         return {
-            "risk_score": 45,
-            "risk_band": "MEDIUM",
-            "confidence": 0.72,
-            "top_factors": ["Fallback active - model unavailable"],
+            "risk_score": None,
+            "risk_band": None,
+            "confidence": None,
+            "top_factors": [],
         }
 
 
@@ -186,18 +186,18 @@ def _repeat_offender_worker(criminal_id: str, fir_count: int) -> dict:
             res = predict_repeat_offender(db, criminal_id)
             if "error" in res:
                 return {
-                    "will_reoffend": fir_count >= 3,
-                    "probability": min(0.95, 0.2 + fir_count * 0.15),
-                    "risk_factors": ["Multiple FIR connections" if fir_count >= 2 else "Single crime record"],
+                    "will_reoffend": None,
+                    "probability": None,
+                    "risk_factors": [],
                 }
             return res
         finally:
             db.close()
     except Exception:
         return {
-            "will_reoffend": fir_count >= 3,
-            "probability": min(0.95, 0.2 + fir_count * 0.15),
-            "risk_factors": ["Database link analysis fallback"],
+            "will_reoffend": None,
+            "probability": None,
+            "risk_factors": [],
         }
 
 
@@ -331,16 +331,16 @@ def get_criminal(criminal_id: uuid.UUID, db: Session = Depends(get_db), current_
     except Exception:
         if not risk_res:
             risk_res = {
-                "risk_score": 45,
-                "risk_band": "MEDIUM",
-                "confidence": 0.72,
-                "top_factors": ["Historical pattern link", "Geographic activity correlation"],
+                "risk_score": None,
+                "risk_band": None,
+                "confidence": None,
+                "top_factors": [],
             }
         if not repeat_res:
             repeat_res = {
-                "will_reoffend": fir_count >= 3,
-                "probability": min(0.95, 0.2 + fir_count * 0.15),
-                "risk_factors": ["Database link analysis fallback"],
+                "will_reoffend": None,
+                "probability": None,
+                "risk_factors": [],
             }
         if not similar_res.get("similar"):
             similar_res = {"similar": []}

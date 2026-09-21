@@ -715,7 +715,7 @@ export const FIRPage: React.FC = () => {
                           <p className="text-[8px] text-[var(--text-muted)] truncate">
                             {selectedFir.investigating_officer.rank ||
                               "Officer"}{" "}
-                            â€¢ {selectedFir.investigating_officer.station}
+                            • {selectedFir.investigating_officer.station}
                           </p>
                         </div>
                       </div>
@@ -779,7 +779,7 @@ export const FIRPage: React.FC = () => {
                           </p>
                           {v.gender && v.age && (
                             <span className="text-[var(--text-muted)] text-[8px] uppercase">
-                              {v.gender} â€¢ AGE: {v.age}
+                              {v.gender} • AGE: {v.age}
                             </span>
                           )}
                         </div>
