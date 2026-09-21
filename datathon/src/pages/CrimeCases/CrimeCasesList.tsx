@@ -12,6 +12,8 @@ import { Search, Plus, Eye, Edit2, Trash2, ShieldAlert, X, AlertTriangle } from 
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeStore } from '../../store/realtimeStore';
 import CrimeInsightsBar from '../../components/crimeCases/CrimeInsightsBar';
+import PageHeader from '../../components/ui/PageHeader';
+import { useUserScope } from '../../hooks/useUserScope';
 import { useTranslation } from '../../i18n';
 
 interface CrimeCasesListProps {
@@ -20,12 +22,61 @@ interface CrimeCasesListProps {
   onEditCase: (id: string) => void;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  assigned: 'Assigned',
+  investigating: 'Under investigation',
+  'evidence collected': 'Evidence collected',
+  'charge sheet filed': 'Charge sheet filed',
+  closed: 'Closed',
+};
+
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+const STATUS_TONE: Record<string, { color: string; background: string }> = {
+  open: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  assigned: { color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' },
+  investigating: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  'evidence collected': { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  'charge sheet filed': { color: 'var(--accent-blue-light)', background: 'var(--accent-blue-subtle)' },
+  closed: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+};
+
+const PRIORITY_TONE: Record<string, { color: string; background: string }> = {
+  critical: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  high: { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  medium: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  low: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+};
+
+const NEEDS_ATTENTION_STATUSES = new Set(['open', 'assigned', 'investigating']);
+
+const daysSince = (iso?: string | null) =>
+  iso ? Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 86400000)) : 0;
+
+const sortAttentionFirst = (rows: CrimeCaseDetailRecord[]) =>
+  [...rows].sort(
+    (a, b) =>
+      (a.priority === 'critical' ? 0 : a.priority === 'high' ? 1 : a.priority === 'medium' ? 2 : 3) -
+        (b.priority === 'critical' ? 0 : b.priority === 'high' ? 1 : b.priority === 'medium' ? 2 : 3) ||
+      String(a.case_number).localeCompare(String(b.case_number)),
+  );
+
+const needsAttention = (c: CrimeCaseDetailRecord) =>
+  NEEDS_ATTENTION_STATUSES.has(c.status) && (c.progress ?? 0) < 40;
+
 const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   onSelectCase,
   onCreateCase,
   onEditCase
 }) => {
   const t = useTranslation();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const user = useAuthStore((state) => state.user);
   const canWrite = user?.role === 'ADMIN' || user?.role === 'IO' || user?.role === 'SCRB';
   const canDelete = user?.role === 'ADMIN';
@@ -35,7 +86,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [districtFilter, setDistrictFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState<string>(() => scopeDistrict || '');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +100,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
       const result = await getCrimeCaseInsights({
         status: statusFilter || undefined,
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
       setInsights(result);
@@ -64,10 +115,10 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     try {
       const response = await getCrimeCases(search || undefined, statusFilter || undefined, 1, 20, {
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
-      setCases(response.results);
+      setCases(sortAttentionFirst(response.results));
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch crime cases');
     } finally {
@@ -100,17 +151,17 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     try {
       const response = await getCrimeCases(search || undefined, statusFilter || undefined, 1, 20, {
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
-      setCases(response.results);
+      setCases(sortAttentionFirst(response.results));
       setError(null);
     } catch { /* silent */ }
     try {
       const result = await getCrimeCaseInsights({
         status: statusFilter || undefined,
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
       setInsights(result);
@@ -167,38 +218,14 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     }
   };
 
-  const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'open':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
-      case 'assigned':
-        return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30';
-      case 'investigating':
-        return 'bg-purple-500/10 text-purple-400 border border-purple-500/30';
-      case 'evidence collected':
-        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30';
-      case 'charge sheet filed':
-        return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
-      case 'closed':
-        return 'bg-[#0E9E78]/10 text-[#0E9E78] border border-[#0E9E78]/30';
-      default:
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/30';
-    }
+  const getStatusStyle = (status: string) => STATUS_TONE[status.toLowerCase()] || {
+    color: 'var(--text-secondary)',
+    background: 'var(--bg-tertiary)',
   };
 
-  const getPriorityStyle = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'low':
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/20';
-      case 'medium':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
-      case 'high':
-        return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
-      case 'critical':
-        return 'bg-[#C94A2A]/15 text-[#C94A2A] border border-[#C94A2A]/40 font-bold';
-      default:
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/20';
-    }
+  const getPriorityStyle = (priority: string) => PRIORITY_TONE[priority.toLowerCase()] || {
+    color: 'var(--text-secondary)',
+    background: 'var(--bg-tertiary)',
   };
   const formatCaseDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '—';
@@ -220,21 +247,35 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header telemetry area */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 bg-secondary-bg border border-border-color rounded-card shadow-glow-blue/5">
-        <div>
-          <h2 className="text-sm uppercase tracking-[0.2em] font-bold text-[var(--text-primary)]">{t.cc_title}</h2>
-          <p className="text-[10px] text-[var(--text-muted)] mt-1">{t.cc_subtitle}: {user?.role}</p>
-        </div>
-        {canWrite && (
-          <button
-            onClick={onCreateCase}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1E6FD9] hover:bg-[#1E6FD9]/80 transition-colors rounded text-xs text-[var(--text-primary)] cursor-pointer uppercase font-semibold"
-          >
-            <Plus className="w-4 h-4" /> {t.cc_create}
-          </button>
-        )}
-      </div>
+      {/* Header — plain-language entry with operating-area chip */}
+      <PageHeader
+        title={t.cc_title}
+        subtitle={t.cc_subtitle}
+        icon={<ShieldAlert className="w-5 h-5" />}
+        actions={
+          <>
+            {scopeDistrict && (
+              <span
+                className="sk-header-chip hidden sm:inline-flex"
+                data-accent="cyan"
+                title="Your operating area — set from your profile"
+              >
+                <Search className="w-3 h-3" />
+                {scopeDistrict}
+              </span>
+            )}
+            {canWrite && (
+              <button
+                onClick={onCreateCase}
+                className="sk-btn cursor-pointer"
+                style={{ background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' }}
+              >
+                <Plus className="w-4 h-4" /> {t.cc_create}
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Visual Crime Telemetry & Insights Ribbon */}
       <CrimeInsightsBar
@@ -247,7 +288,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
           setSearch('');
           setStatusFilter('');
           setCategoryFilter('');
-          setDistrictFilter('');
+          setDistrictFilter(canSelectDistrict ? '' : scopeDistrict || '');
           setPriorityFilter('');
         }}
       />
@@ -255,58 +296,67 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder={t.cc_search_hint.toUpperCase()}
+            placeholder={t.cc_search_hint}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-primary)] uppercase placeholder-[var(--text-muted)] focus:border-[#1E6FD9]/60 focus:outline-none"
+            className="sk-input w-full pl-9 pr-3 py-1.5"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full md:w-44 px-3 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-primary)] focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
+          className="sk-select w-full md:w-44 px-3 py-1.5 cursor-pointer"
         >
           <option value="">{t.cc_all_status}</option>
-          <option value="open">OPEN</option>
-          <option value="assigned">ASSIGNED</option>
-          <option value="investigating">INVESTIGATING</option>
-          <option value="evidence collected">EVIDENCE COLLECTED</option>
-          <option value="charge sheet filed">CHARGE SHEET FILED</option>
-          <option value="closed">CLOSED</option>
+          <option value="open">Open</option>
+          <option value="assigned">Assigned</option>
+          <option value="investigating">Under investigation</option>
+          <option value="evidence collected">Evidence collected</option>
+          <option value="charge sheet filed">Charge sheet filed</option>
+          <option value="closed">Closed</option>
         </select>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full md:w-48 px-3 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-primary)] focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
+          className="sk-select w-full md:w-48 px-3 py-1.5 cursor-pointer"
         >
           <option value="">{t.cc_all_categories}</option>
           {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.name.toUpperCase()}</option>
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
           ))}
         </select>
-        <select
-          value={districtFilter}
-          onChange={(e) => setDistrictFilter(e.target.value)}
-          className="w-full md:w-44 px-3 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-primary)] focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
-        >
-          <option value="">{t.cc_all_districts}</option>
-          {districts.map((dist) => (
-            <option key={dist} value={dist}>{dist.toUpperCase()}</option>
-          ))}
-        </select>
+        {canSelectDistrict ? (
+          <select
+            value={districtFilter}
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            className="sk-select w-full md:w-44 px-3 py-1.5 cursor-pointer"
+          >
+            <option value="">{t.cc_all_districts}</option>
+            {districts.map((dist) => (
+              <option key={dist} value={dist}>{dist}</option>
+            ))}
+          </select>
+        ) : scopeDistrict ? (
+          <div
+            className="sk-select w-full md:w-44 px-3 py-1.5 !cursor-not-allowed opacity-90 select-none"
+            title="Your data scope is fixed to your operating area"
+          >
+            {scopeDistrict}
+          </div>
+        ) : null}
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
-          className="w-full md:w-40 px-3 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-primary)] focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
+          className="sk-select w-full md:w-40 px-3 py-1.5 cursor-pointer"
         >
           <option value="">{t.cc_all_priorities}</option>
-          <option value="low">LOW</option>
-          <option value="medium">MEDIUM</option>
-          <option value="high">HIGH</option>
-          <option value="critical">CRITICAL</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
         </select>
         {(search || statusFilter || categoryFilter || districtFilter || priorityFilter) && (
           <button
@@ -314,12 +364,12 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
               setSearch('');
               setStatusFilter('');
               setCategoryFilter('');
-              setDistrictFilter('');
+              setDistrictFilter(canSelectDistrict ? '' : scopeDistrict || '');
               setPriorityFilter('');
             }}
-            className="px-4 py-2 bg-secondary-bg border border-border-color rounded font-mono text-xs text-[var(--text-muted)] hover:text-[#1E6FD9] hover:border-[#1E6FD9]/60 transition-colors uppercase cursor-pointer"
+            className="sk-btn sk-btn-secondary cursor-pointer uppercase"
           >
-{t.cc_reset}
+            {t.cc_reset}
           </button>
         )}
       </div>
@@ -367,13 +417,19 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                       {formatCaseDate(c.occurred_at)}
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${getStatusStyle(c.status)}`}>
-                        {c.status}
+                      <span className="sk-chip px-2 py-0.5" style={getStatusStyle(c.status)}>
+                        {STATUS_LABEL[c.status] || c.status.replace(/_/g, ' ')}
                       </span>
+                      {needsAttention(c) && (
+                        <div className="mt-1 flex items-center justify-center gap-1 text-[9px] text-[var(--accent-coral-light)]">
+                          <span className="w-1 h-1 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+                          {daysSince(c.reported_at)} days open
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${getPriorityStyle(c.priority)}`}>
-                        {c.priority}
+                      <span className="sk-chip px-2 py-0.5" style={getPriorityStyle(c.priority)}>
+                        {PRIORITY_LABEL[c.priority] || c.priority}
                       </span>
                     </td>
                     <td className="p-4 min-w-[150px]">
