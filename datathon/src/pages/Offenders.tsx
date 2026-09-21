@@ -309,7 +309,7 @@ export const Offenders: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-[#0E9E78] animate-pulse" />
                 <span className="text-[10px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                  Cryptographic System Audits
+                  Session Activity Log
                 </span>
               </div>
               <button
@@ -339,8 +339,8 @@ export const Offenders: React.FC = () => {
                   >
                     <div className="flex justify-between text-[var(--text-muted)] select-none">
                       <span>
-                        {new Date(log.timestamp).toLocaleTimeString()} - IP:{" "}
-                        {log.ipAddress}
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                        {log.ipAddress ? ` - IP: ${log.ipAddress}` : ""}
                       </span>
                       <span className="font-bold uppercase tracking-wider">
                         {log.actionType}

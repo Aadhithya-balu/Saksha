@@ -112,6 +112,17 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
   const [loading, setLoading] = useState<boolean>(false);
   const realtimeStatus = useRealtimeStore((state) => state.status);
 
+  // Sector threat index is derived from real hotspot intelligence (top 5 by
+  // model score). No fabricated sector rows.
+  const sectorThreatData = useMemo(
+    () =>
+      [...hotspots]
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        .slice(0, 5)
+        .map((h) => ({ name: h.name, score: Math.round(h.score ?? 0), category: h.category || 'Unclassified' })),
+    [hotspots],
+  );
+
   // Fetch filter dropdown options once on mount
   useEffect(() => {
     const loadDropdownOptions = async () => {
@@ -1146,7 +1157,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           </div>
           <div className="mt-4 px-3 py-2 rounded-lg bg-[var(--bg-tertiary)]/30 border border-[var(--border-secondary)] flex justify-between items-center text-xs text-[var(--text-muted)]">
             <span>Deployment rate: <b className="text-[var(--text-primary)]">{officerStats && officerStats.active_officers ? `${Math.round((officerStats.on_duty / officerStats.active_officers) * 100)}%` : '0%'}</b></span>
-            <span>Force efficiency: <b className="text-[var(--text-primary)]">94.2%</b></span>
+            <span>Active force: <b className="text-[var(--text-primary)]">{officerStats?.active_officers ?? 0}</b></span>
           </div>
         </div>
 
@@ -1184,7 +1195,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
       {/* Secondary intelligence views */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="min-h-[300px]"><SpatiotemporalHeatmap /></div>
-        <div className="min-h-[300px]"><SpatialCube3D /></div>
+        <div className="min-h-[300px]"><SpatialCube3D data={sectorThreatData} /></div>
       </div>
     </div>
   );

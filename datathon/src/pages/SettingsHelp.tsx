@@ -308,7 +308,7 @@ const SystemTab: React.FC = () => {
 
   const handleClearLogs = () => {
     clearLogs();
-    addLog(user?.name ?? '', user?.badgeId ?? '', 'AUTH', 'Purged cryptographic session audit traces');
+    addLog(user?.name ?? '', user?.badgeId ?? '', 'AUTH', 'Cleared local session activity log');
     setConfirmClear(false);
   };
 
@@ -363,8 +363,8 @@ const SystemTab: React.FC = () => {
 
         <div className="flex items-center justify-between pt-3 border-t border-[var(--border-primary)]">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Audit Traces Database</p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Permanently removes local session logs</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Session Activity Log</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Clears local session notes only; the server audit trail is unaffected</p>
           </div>
           {confirmClear ? (
             <div className="flex items-center gap-2">
