@@ -3,6 +3,7 @@ import { useRBAC } from '../../hooks/useRBAC';
 import { Search, Plus, Filter, HardDrive, FileText, UploadCloud, Cpu, Download, Sparkles, Send, ExternalLink } from 'lucide-react';
 import { apiRequest, chatQueryStream } from '../../services/api';
 import { CardSkeleton } from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
 import { MarkdownRenderer } from '../../components/chat/MarkdownRenderer';
 
 interface Evidence {
@@ -15,6 +16,15 @@ interface Evidence {
   storage_path: string | null;
   created_at: string;
 }
+
+const EVIDENCE_STATUS_TONE: Record<string, { color: string; background: string }> = {
+  ['Analyzed']: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+  ['Pending']: { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  ['Assigned']: { color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' },
+  ['Under Analysis']: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  ['Assignment Rejected']: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  ['Returned']: { color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' },
+};
 
 const EvidencePage: React.FC = () => {
   const { isSCRB, isInspector, isIO, isForensic, isAdmin } = useRBAC();
@@ -270,52 +280,54 @@ const EvidencePage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full gap-6">
-      {/* Header Panel */}
-      <div className="flex items-center justify-between p-6 bg-[var(--bg-surface)]/80 border border-border-color rounded-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#C94A2A]/10 rounded-full blur-[80px]" />
-        <div className="z-10">
-          <h1 className="text-2xl font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-3">
-            <HardDrive className="w-7 h-7 text-[#C94A2A]" />
-            Digital Evidence Handling
-          </h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-2 font-mono">Secure repository for case evidence, chain of custody, and AI analysis.</p>
-        </div>
-        <div className="z-10 flex gap-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search evidence..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-56 bg-secondary-bg border border-border-color rounded-btn px-4 py-2 pl-10 text-sm font-mono text-[var(--text-primary)] focus:border-[#C94A2A] outline-none"
-            />
-            <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
-          </div>
-          <div className="relative">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-44 bg-secondary-bg border border-border-color rounded-btn px-4 py-2 pr-9 text-sm font-mono text-[var(--text-primary)] focus:border-[#C94A2A] outline-none">
-              <option value="">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Assigned">Assigned</option>
-              <option value="Under Analysis">Under Analysis</option>
-              <option value="Analyzed">Analyzed</option>
-              <option value="Returned">Returned</option>
-              <option value="Assignment Rejected">Rejected</option>
-            </select>
-            <Filter className="w-4 h-4 text-[var(--text-muted)] absolute right-3 top-2.5 pointer-events-none" />
-          </div>
-          {canWrite && (
-            <button 
-              onClick={() => {
-                setCurrentEvidence({ title: '', description: '', evidence_type: 'Digital', case_id: '' });
-                setIsFormOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#C94A2A] hover:bg-[#A83D22] border border-transparent rounded-btn text-sm font-mono text-[var(--text-primary)] font-bold transition-all shadow-glow-orange"
-            >
-              <Plus className="w-4 h-4" /> Log Evidence
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Header — plain-language, effortless scan */}
+      <PageHeader
+        title="Evidence Files"
+        subtitle="Case exhibits, chain of custody, and analysis results."
+        icon={<HardDrive className="w-5 h-5" />}
+        actions={
+          <>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search evidence…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="sk-input w-56 pl-9 pr-3 py-1.5"
+              />
+              <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="sk-select appearance-none w-44 px-3 py-1.5 pr-8 cursor-pointer"
+              >
+                <option value="">All statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Assigned">Assigned</option>
+                <option value="Under Analysis">Under analysis</option>
+                <option value="Analyzed">Analysed</option>
+                <option value="Returned">Returned</option>
+                <option value="Assignment Rejected">Rejected</option>
+              </select>
+              <Filter className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3 top-2.5 pointer-events-none" />
+            </div>
+            {canWrite && (
+              <button
+                onClick={() => {
+                  setCurrentEvidence({ title: '', description: '', evidence_type: 'Digital', case_id: '' });
+                  setIsFormOpen(true);
+                }}
+                className="sk-btn cursor-pointer"
+                style={{ background: 'var(--accent-coral)', borderColor: 'var(--accent-coral)', color: '#fff' }}
+              >
+                <Plus className="w-4 h-4" /> Log Evidence
+              </button>
+            )}
+          </>
+        }
+      />
 
       {error && (
         <div className="px-4 py-3 bg-[#C94A2A]/10 border border-[#C94A2A]/30 rounded text-[var(--accent-coral)] text-xs font-mono">
@@ -354,7 +366,10 @@ const EvidencePage: React.FC = () => {
                 <p className="text-xs text-[var(--text-secondary)] line-clamp-2 break-words" title={item.description}>{item.description}</p>
                 
                 <div className="mt-auto pt-4 border-t border-border-color flex justify-between items-center">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${item.status === 'Analyzed' ? 'bg-[#0E9E78]/20 text-[#0E9E78]' : 'bg-[#D4820A]/20 text-[#D4820A]'}`}>
+                  <span
+                    className="sk-chip px-2 py-0.5"
+                    style={EVIDENCE_STATUS_TONE[item.status] || { color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}
+                  >
                     {item.status}
                   </span>
                   {item.storage_path && (

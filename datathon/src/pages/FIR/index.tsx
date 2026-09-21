@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { ExportMenu } from "../../components/reports";
 import { CardSkeleton } from "../../components/ui/Skeleton";
+import PageHeader from "../../components/ui/PageHeader";
+import { useUserScope } from "../../hooks/useUserScope";
 
 const DISTRICTS = [
   "Bengaluru Urban",
@@ -73,6 +75,7 @@ const DISTRICTS = [
 export const FIRPage: React.FC = () => {
   const t = useTranslation();
   const { user } = useAuthStore();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const { addLog } = useAuditStore();
 
   // Page States
@@ -86,10 +89,10 @@ export const FIRPage: React.FC = () => {
   const [showIntelligence, setShowIntelligence] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Search & Filters State
+  // Search & Filters State — district defaults to the operator's own district
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [districtFilter, setDistrictFilter] = useState("");
+  const [districtFilter, setDistrictFilter] = useState<string>(() => scopeDistrict || "");
 
   // Fetch FIR List
   const loadFIRList = async () => {
@@ -117,7 +120,7 @@ export const FIRPage: React.FC = () => {
 
   useEffect(() => {
     void loadFIRList();
-  }, [searchQuery, statusFilter, districtFilter]);
+  }, [searchQuery, statusFilter, districtFilter, scopeDistrict, canSelectDistrict]);
 
   // Auto-open the enrolment form when reached from a dashboard Quick Action
   useEffect(() => {
@@ -135,7 +138,7 @@ export const FIRPage: React.FC = () => {
       const response = await listFIRs({
         search: searchQuery || undefined,
         status: statusFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         page_size: 100,
       });
       setFirs(response.results || []);
@@ -341,32 +344,38 @@ export const FIRPage: React.FC = () => {
 
   return (
     <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
-      {/* Top Header HUD */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-muted)] pb-3 shrink-0">
-        <div>
-          <h2 className="text-md font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#1E6FD9] animate-pulse" />
-            {t.fir_title}
-          </h2>
-          <p className="text-[9.5px] font-mono text-[var(--text-muted)] mt-0.5">
-            {t.fir_subtitle}
-          </p>
-          {error && (
-            <p className="text-[9px] font-mono text-amber-400 uppercase mt-1">
-              {error}
-            </p>
-          )}
-        </div>
-
-        {/* Create FIR Button */}
-        {(user?.role === "ADMIN" || user?.role === "IO") && !showForm && (
-          <button
-            onClick={handleCreateNewClick}
-            className="px-3 py-1.5 bg-[#1E6FD9] hover:bg-[#1E6FD9]/80 border border-[#1E6FD9]/20 text-[var(--text-primary)] font-mono text-[10px] uppercase font-bold rounded-btn transition-colors cursor-pointer flex items-center gap-1.5 shadow-glow-blue select-none shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {t.fir_create_new}
-          </button>
+      {/* Top Header */}
+      <div className="pb-3 shrink-0 flex flex-col gap-2">
+        <PageHeader
+          title={t.fir_title}
+          subtitle={t.fir_subtitle}
+          icon={<FileText className="w-5 h-5" />}
+          actions={
+            <>
+              {scopeDistrict && (
+                <span
+                  className="sk-header-chip hidden sm:inline-flex"
+                  data-accent="cyan"
+                  title="Your operating area — set from your profile"
+                >
+                  <MapPin className="w-3 h-3" />
+                  {scopeDistrict}
+                </span>
+              )}
+              {(user?.role === "ADMIN" || user?.role === "IO") && !showForm && (
+                <button
+                  onClick={handleCreateNewClick}
+                  className="sk-btn cursor-pointer"
+                  style={{ background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' }}
+                >
+                  <Plus className="w-4 h-4" /> {t.fir_create_new}
+                </button>
+              )}
+            </>
+          }
+        />
+        {error && (
+          <p className="text-xs font-medium text-[var(--accent-coral-light)]">{error}</p>
         )}
       </div>
 
@@ -407,19 +416,41 @@ export const FIRPage: React.FC = () => {
                   <option value="closed">Resolved</option>
                 </select>
 
-                {/* District selector */}
-                <select
-                  value={districtFilter}
-                  onChange={(e) => setDistrictFilter(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
-                >
-                  <option value="">All Districts</option>
-                  {DISTRICTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                {/* District selector — locked for district-scoped operators */}
+                {canSelectDistrict ? (
+                  <select
+                    value={districtFilter}
+                    onChange={(e) => setDistrictFilter(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+                  >
+                    <option value="">All Districts</option>
+                    {DISTRICTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                ) : scopeDistrict ? (
+                  <div
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] !cursor-not-allowed opacity-90 select-none"
+                    title="Your data scope is fixed to your operating area"
+                  >
+                    {scopeDistrict}
+                  </div>
+                ) : (
+                  <select
+                    value={districtFilter}
+                    onChange={(e) => setDistrictFilter(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+                  >
+                    <option value="">All Districts</option>
+                    {DISTRICTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
