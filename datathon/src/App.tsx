@@ -291,7 +291,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="sk-app flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
