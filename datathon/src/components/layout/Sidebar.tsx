@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRBAC } from '../../hooks/useRBAC';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, type UserRole } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useTranslation } from '../../i18n';
@@ -45,12 +45,27 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
+  /** Optional: only show for these roles. Absent = all roles. */
+  roles?: UserRole[];
 }
 
 interface NavGroup {
   label: string;
   items: NavItem[];
 }
+
+const ALL_ROLES: UserRole[] = ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO', 'FORENSIC', 'VIEWER'];
+
+/** Role-first primary destinations (5-7) — task-based per role. */
+const PRIMARY_BY_ROLE: Record<UserRole, string[]> = {
+  ADMIN: ['dashboard', 'admin', 'crime_cases', 'reports', 'notifications', 'ai_chat'],
+  SP: ['dashboard', 'crime_cases', 'command_center', 'hotspot', 'notifications', 'reports'],
+  INSPECTOR: ['dashboard', 'crime_cases', 'investigation', 'fir', 'hotspot', 'notifications'],
+  SCRB: ['dashboard', 'command_center', 'network', 'anomaly', 'predictive', 'reports'],
+  IO: ['dashboard', 'crime_cases', 'investigation', 'evidence', 'ai_chat', 'notifications'],
+  FORENSIC: ['dashboard', 'evidence', 'crime_cases', 'face_recognition', 'ai_chat', 'reports'],
+  VIEWER: ['dashboard', 'crime_cases', 'reports', 'notifications', 'docs'],
+};
 
 const ROLE_ACCENT: Record<string, string> = {
   ADMIN: 'coral',
@@ -74,69 +89,93 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const setMobileMenuOpen = useAppStore((s) => s.setMobileMenuOpen);
   const t = useTranslation();
 
-  const navGroups: NavGroup[] = [
+  const role = (user?.role ?? 'VIEWER') as UserRole;
+  const visible = (item: NavItem) =>
+    (item.id === 'admin' ? isAdmin : true) &&
+    (!item.roles || item.roles.includes(role));
+
+  const catalog: NavGroup[] = [
     {
-      label: 'COMMAND',
+      label: 'HOME',
       items: [
-        { id: 'dashboard', label: t.nav_dashboard, path: '/dashboard', icon: <LayoutDashboard /> },
-        { id: 'command_center', label: t.nav_command_center, path: '/command-center', icon: <Crosshair /> },
-        { id: 'notifications', label: t.nav_notifications, path: '/notifications', icon: <Bell /> },
-        { id: 'anomaly', label: t.nav_anomaly, path: '/anomalies', icon: <AlertTriangle /> },
-        { id: 'strategic', label: t.nav_strategic, path: '/strategic', icon: <Shield /> },
-        { id: 'intelligence_fusion', label: t.nav_intelligence_fusion, path: '/intelligence-fusion', icon: <Radar /> },
+        { id: 'dashboard', label: t.nav_dashboard, path: '/dashboard', icon: <LayoutDashboard />, roles: ALL_ROLES },
+        { id: 'notifications', label: t.nav_notifications, path: '/notifications', icon: <Bell />, roles: ALL_ROLES },
       ],
     },
     {
       label: 'INVESTIGATIONS',
       items: [
-        { id: 'crime_cases', label: t.nav_crime_cases, path: '/crime-cases', icon: <FolderOpen /> },
-        { id: 'investigation', label: t.nav_investigation, path: '/investigation', icon: <Crosshair /> },
-        { id: 'fir', label: t.nav_fir, path: '/firs', icon: <FileWarning /> },
-        { id: 'evidence', label: t.nav_evidence, path: '/evidence', icon: <ShieldCheck /> },
-        { id: 'investigation_intelligence', label: t.nav_intelligence_engine, path: '/intelligence-engine', icon: <Sparkles /> },
+        { id: 'crime_cases', label: t.nav_crime_cases, path: '/crime-cases', icon: <FolderOpen />, roles: ALL_ROLES },
+        { id: 'investigation', label: t.nav_investigation, path: '/investigation', icon: <Crosshair />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO', 'FORENSIC'] },
+        { id: 'fir', label: t.nav_fir, path: '/firs', icon: <FileWarning />, roles: ALL_ROLES },
+        { id: 'evidence', label: t.nav_evidence, path: '/evidence', icon: <ShieldCheck />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO', 'FORENSIC'] },
       ],
     },
     {
-      label: 'ANALYTICS',
+      label: 'INTELLIGENCE',
       items: [
-        { id: 'hotspot', label: t.nav_hotspot, path: '/hotspots', icon: <Map /> },
-        { id: 'network', label: t.nav_network, path: '/network', icon: <Network /> },
-        { id: 'predictive', label: t.nav_predictive, path: '/predictions', icon: <Brain /> },
-        { id: 'sociological', label: t.nav_sociological, path: '/sociological', icon: <Globe2 /> },
-        { id: 'identity', label: t.nav_identity, path: '/identity-resolution', icon: <FileWarning /> },
-        { id: 'reports', label: t.nav_reports, path: '/reports', icon: <BarChart3 /> },
+        { id: 'command_center', label: t.nav_command_center, path: '/command-center', icon: <Crosshair />, roles: ALL_ROLES },
+        { id: 'network', label: t.nav_network, path: '/network', icon: <Network />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO', 'FORENSIC'] },
+        { id: 'identity', label: t.nav_identity, path: '/identity-resolution', icon: <FileWarning />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO'] },
+        { id: 'criminals', label: t.nav_criminals, path: '/criminals', icon: <Users />, roles: ALL_ROLES },
+        { id: 'victims', label: t.nav_victims, path: '/victims', icon: <Heart />, roles: ALL_ROLES },
+        { id: 'offenders', label: t.nav_offenders, path: '/offenders', icon: <ShieldAlert />, roles: ALL_ROLES },
       ],
     },
     {
-      label: 'REGISTRY',
+      label: 'ANALYSIS',
       items: [
-        { id: 'offenders', label: t.nav_offenders, path: '/offenders', icon: <ShieldAlert /> },
-        { id: 'criminals', label: t.nav_criminals, path: '/criminals', icon: <Users /> },
-        { id: 'victims', label: t.nav_victims, path: '/victims', icon: <Heart /> },
-        { id: 'officers', label: t.nav_officers, path: '/officers', icon: <UserCog /> },
+        { id: 'hotspot', label: t.nav_hotspot, path: '/hotspots', icon: <Map />, roles: ALL_ROLES },
+        { id: 'anomaly', label: t.nav_anomaly, path: '/anomalies', icon: <AlertTriangle />, roles: ALL_ROLES },
+        { id: 'predictive', label: t.nav_predictive, path: '/predictions', icon: <Brain />, roles: ALL_ROLES },
+        { id: 'investigation_intelligence', label: t.nav_intelligence_engine, path: '/intelligence-engine', icon: <Sparkles />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO'] },
+        { id: 'intelligence_fusion', label: t.nav_intelligence_fusion, path: '/intelligence-fusion', icon: <Radar />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO'] },
+        { id: 'sociological', label: t.nav_sociological, path: '/sociological', icon: <Globe2 />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB'] },
+        { id: 'strategic', label: t.nav_strategic, path: '/strategic', icon: <Shield />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB'] },
       ],
     },
     {
-      label: 'TOOLS',
+      label: 'ASSISTANCE',
       items: [
-        { id: 'ai_chat', label: t.nav_ai_chat, path: '/ai-chat', icon: <MessageSquare /> },
-        { id: 'face_recognition', label: t.nav_face_recognition, path: '/face-recognition', icon: <ScanFace /> },
-        { id: 'docs', label: t.nav_docs, path: '/docs', icon: <BookOpen /> },
-        { id: 'settings_help', label: t.nav_settings, path: '/settings', icon: <Settings /> },
-        { id: 'admin', label: t.nav_admin, path: '/admin', icon: <ShieldAlert /> },
+        { id: 'ai_chat', label: t.nav_ai_chat, path: '/ai-chat', icon: <MessageSquare />, roles: ALL_ROLES },
+        { id: 'face_recognition', label: t.nav_face_recognition, path: '/face-recognition', icon: <ScanFace />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO', 'FORENSIC'] },
+      ],
+    },
+    {
+      label: 'REPORTS',
+      items: [
+        { id: 'reports', label: t.nav_reports, path: '/reports', icon: <BarChart3 />, roles: ALL_ROLES },
+      ],
+    },
+    {
+      label: 'SYSTEM',
+      items: [
+        { id: 'officers', label: t.nav_officers, path: '/officers', icon: <UserCog />, roles: ['ADMIN', 'SP', 'INSPECTOR', 'SCRB', 'IO'] },
+        { id: 'admin', label: t.nav_admin, path: '/admin', icon: <ShieldAlert />, roles: ['ADMIN'] },
+        { id: 'docs', label: t.nav_docs, path: '/docs', icon: <BookOpen />, roles: ALL_ROLES },
+        { id: 'settings_help', label: t.nav_settings, path: '/settings', icon: <Settings />, roles: ALL_ROLES },
       ],
     },
   ];
 
-  const filteredNavGroups = navGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (item.id === 'admin') return isAdmin;
-        return true;
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const pinnedIds = PRIMARY_BY_ROLE[role] ?? [];
+  const allCatalogItems = catalog.flatMap((g) => g.items);
+  const pinnedItems = pinnedIds
+    .map((id) => allCatalogItems.find((item) => item.id === id))
+    .filter((item): item is NavItem => Boolean(item))
+    .filter(visible);
+
+  const filteredNavGroups = [
+    ...(pinnedItems.length > 0
+      ? [{ label: 'HOME', items: pinnedItems }]
+      : []),
+    ...catalog
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => visible(item) && !pinnedIds.includes(item.id)),
+      }))
+      .filter((group) => group.items.length > 0),
+  ];
 
   const handleLogout = () => {
     useAuthStore.getState().logout();
