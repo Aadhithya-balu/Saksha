@@ -30,7 +30,6 @@ import {
   Activity,
   FolderOpen,
   UserCheck,
-  ArrowRight,
   Brain,
 } from "lucide-react";
 import { ExportMenu } from "../../components/reports";
@@ -117,6 +116,14 @@ export const FIRPage: React.FC = () => {
       setIsLoadingList(false);
     }
   };
+
+  useEffect(() => {
+    const redirectId = sessionStorage.getItem('selected_entity_id');
+    if (redirectId && /^[0-9a-f-]{36}$/i.test(redirectId)) {
+      sessionStorage.removeItem('selected_entity_id');
+      setSelectedFirId(redirectId);
+    }
+  }, []);
 
   useEffect(() => {
     void loadFIRList();
@@ -302,6 +309,16 @@ export const FIRPage: React.FC = () => {
       exportData,
       `CONFIDENTIAL - ${user.badgeId} - ${user.role}`,
       format,
+    );
+  };
+
+  const handleOpenLinkedCase = () => {
+    const caseId = selectedFir?.crime_case?.id;
+    if (!caseId) return;
+    window.dispatchEvent(
+      new CustomEvent('navigate-tab', {
+        detail: { tab: 'crime_cases', targetId: caseId },
+      }),
     );
   };
 
@@ -640,7 +657,18 @@ export const FIRPage: React.FC = () => {
                 <div className="md:col-span-4 space-y-4 flex flex-col">
                   {/* Case link card */}
                   {selectedFir.crime_case ? (
-                    <div className="bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] rounded-lg p-4 flex-1">
+                    <div
+                      onClick={handleOpenLinkedCase}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleOpenLinkedCase();
+                        }
+                      }}
+                      className="bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] rounded-lg p-4 flex-1 cursor-pointer transition-colors hover:bg-[var(--bg-tertiary)]/30 hover:border-[#1E6FD9]/40"
+                    >
                       <span className="block text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2.5 flex items-center justify-between">
                         Incident Link
                         <span className="px-1.5 py-0.5 bg-[#1E6FD9]/15 text-[#1E6FD9] border border-[#1E6FD9]/30 rounded text-[7.5px] font-bold">
@@ -769,75 +797,11 @@ export const FIRPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Dynamic widgets grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-                {/* AI Risk Meter */}
-                <FIRRiskScore
-                  score={selectedFir.ai_risk_score}
-                  reasons={selectedFir.ai_analysis_reasons}
-                />
-
-                {/* Hotspot prediction mini panel */}
-                <div className="bg-[var(--bg-tertiary)]/30 border border-border-color p-5 rounded-card flex flex-col justify-between overflow-hidden relative">
-                  <div className="flex items-center justify-between border-b border-[var(--border-primary)] pb-3 mb-4 font-mono">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-rose-500" />
-                      <span className="text-[10px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                        Linked Hotspot Metrics
-                      </span>
-                    </div>
-                    <span className="text-[8px] text-[var(--text-muted)] uppercase">
-                      GRID DECK.GL COORDS
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 font-mono text-xs items-center">
-                    {/* Location specs */}
-                    <div className="space-y-3">
-                      <div>
-                        <span className="text-[8px] text-[var(--text-muted)] uppercase block">
-                          District Precinct
-                        </span>
-                        <span className="text-[var(--text-primary)] font-bold block mt-0.5 uppercase tracking-wide">
-                          {selectedFir.investigating_officer?.district ||
-                            (selectedFir.crime_case ? `Location ID: ${selectedFir.crime_case.location_id.slice(0, 8)}` : "State HQ")}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[8px] text-[var(--text-muted)] uppercase block">
-                          Coordinates
-                        </span>
-                        <span className="text-[var(--text-primary)] block mt-0.5 text-[10px] select-all">
-                          {"12.9716"}
-                          ,{" "}
-                          {"77.5946"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Stats metrics */}
-                    <div className="p-3 bg-[var(--bg-secondary)]/50 border border-[var(--border-primary)] rounded space-y-2 text-center">
-                      <span className="text-[7.5px] text-[var(--text-muted)] uppercase tracking-widest block font-bold">
-                        {t.fir_risk_index}
-                      </span>
-                      <span className="text-xl font-extrabold text-red-400 block leading-none">
-                        82%
-                      </span>
-                      <span className="text-[8px] text-emerald-400 font-semibold block uppercase">
-                        TRENDING UPWARD
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="border border-[var(--border-primary)] p-2.5 rounded bg-[var(--bg-secondary)]/20 text-[9.5px] font-mono leading-relaxed text-[var(--text-secondary)] flex items-center justify-between gap-3 mt-3">
-                    <span>
-                      Target beat patrol recommendation generated. Dispatching
-                      auto-telemetry alerts.
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-[#1E6FD9] shrink-0" />
-                  </div>
-                </div>
-              </div>
+              {/* AI Risk Meter */}
+              <FIRRiskScore
+                score={selectedFir.ai_risk_score}
+                reasons={selectedFir.ai_analysis_reasons}
+              />
 
               {/* Uploads and timeline grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">

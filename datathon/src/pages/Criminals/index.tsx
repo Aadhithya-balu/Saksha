@@ -831,7 +831,7 @@ export const Criminals: React.FC = () => {
                         <Activity className="w-3.5 h-3.5" /> AI Risk Profile Scorer
                       </span>
                       <span className="text-[7.5px] font-mono font-bold text-[var(--text-muted)] uppercase">
-                        CONFIDENCE: {Math.round((criminalDetails.ai_risk.confidence || 0.72) * 100)}%
+                        CONFIDENCE: {criminalDetails.ai_risk.confidence != null ? `${Math.round(criminalDetails.ai_risk.confidence * 100)}%` : 'Unavailable'}
                       </span>
                     </div>
 
@@ -845,21 +845,20 @@ export const Criminals: React.FC = () => {
                             cy="32" 
                             r="28" 
                             fill="transparent" 
-                            stroke={criminalDetails.ai_risk.risk_score > 75 ? '#C94A2A' : '#1E6FD9'} 
+stroke={criminalDetails.ai_risk.risk_score != null && criminalDetails.ai_risk.risk_score > 75 ? '#C94A2A' : '#1E6FD9'} 
                             strokeWidth="4" 
-                            strokeDasharray={2 * Math.PI * 28}
-                            strokeDashoffset={2 * Math.PI * 28 * (1 - (criminalDetails.ai_risk.risk_score || 45) / 100)}
+                            strokeDashoffset={2 * Math.PI * 28 * (1 - (criminalDetails.ai_risk.risk_score ?? 0) / 100)}
                             strokeLinecap="round"
                           />
                         </svg>
                         <span className="absolute font-mono font-bold text-xs text-[var(--text-primary)]">
-                          {criminalDetails.ai_risk.risk_score}%
+                          {criminalDetails.ai_risk.risk_score != null ? `${criminalDetails.ai_risk.risk_score}%` : '—'}
                         </span>
                       </div>
 
                       <div className="flex-grow font-mono">
                         <span className={`inline-block text-[8px] px-1.5 py-0.5 border rounded font-bold uppercase ${getRiskBandColor(criminalDetails.ai_risk.risk_band)}`}>
-                          {criminalDetails.ai_risk.risk_band || 'MEDIUM'}
+                          {criminalDetails.ai_risk.risk_band || 'Unavailable'}
                         </span>
                         <div className="mt-2 text-[8px] text-[var(--text-muted)] uppercase font-bold">Top risk factors:</div>
                         <ul className="list-disc pl-3 text-[9px] text-[var(--text-secondary)] mt-1 space-y-0.5">
@@ -894,13 +893,13 @@ export const Criminals: React.FC = () => {
                       <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
                         <span>Re-offense Probability:</span>
                         <span className="font-bold text-[var(--text-primary)]">
-                          {Math.round((criminalDetails.ai_repeat.probability || 0.3) * 100)}%
+                          {criminalDetails.ai_repeat.probability != null ? `${Math.round(criminalDetails.ai_repeat.probability * 100)}%` : 'Unavailable'}
                         </span>
                       </div>
                       <div className="w-full bg-[var(--bg-tertiary)] h-1.5 rounded-full overflow-hidden mt-1.5">
                         <div 
                           className={`h-full rounded-full ${criminalDetails.ai_repeat.will_reoffend ? 'bg-[#C94A2A]' : 'bg-[#0E9E78]'}`}
-                          style={{ width: `${(criminalDetails.ai_repeat.probability || 0.3) * 100}%` }}
+                          style={{ width: `${(criminalDetails.ai_repeat.probability != null ? criminalDetails.ai_repeat.probability * 100 : 0)}%` }}
                         />
                       </div>
 
@@ -943,7 +942,7 @@ export const Criminals: React.FC = () => {
                         </div>
                         <div className="flex justify-between items-center mt-2.5">
                           <span className="text-[8px] text-[#0E9E78] font-bold">
-                            {Math.round((sim.similarity || 0.6) * 100)}% Match
+                            {sim.similarity != null ? `${Math.round(sim.similarity * 100)}%` : 'Unavailable'} Match
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-[var(--text-secondary)] group-hover:text-[#1E6FD9]" />
                         </div>

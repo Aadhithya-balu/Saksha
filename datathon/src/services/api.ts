@@ -1065,14 +1065,6 @@ export async function chatQuery(message: string, sessionId?: string, options?: {
   });
 }
 
-/** Optional entity scoping for AI chat answers (selected via the chat UI). */
-export interface ChatContextOptions {
-  firId?: string;
-  criminalId?: string;
-  evidenceId?: string;
-  caseId?: string;
-}
-
 export interface ChatStreamChunk {
   type: 'status' | 'token' | 'final' | 'error' | 'meta' | 'notice';
   content: any;

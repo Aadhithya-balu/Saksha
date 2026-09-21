@@ -43,10 +43,7 @@ export const Anomalies: React.FC = () => {
           severity: item.score >= 0.8 ? 'HIGH' : 'WATCH',
           timestamp: item.filed_at || new Date().toISOString(),
           status: 'PENDING',
-          featureBreakdown: {
-            'Anomaly Score': Math.round(item.score * 100),
-            'Category Severity': Math.max(40, Math.round(item.score * 90)),
-          },
+          featureBreakdown: {},
         }));
         setAlerts(mappedAlerts);
         setSelectedAlertId(mappedAlerts[0]?.id ?? null);
@@ -76,16 +73,16 @@ export const Anomalies: React.FC = () => {
     setEscalating(alert.id);
     try {
       await createNotification({
-        recipient_id: 'SP-0088',
         subject: `Anomaly Escalation: ${alert.firNumber}`,
         notification_type: 'escalation',
         category: 'case_escalation',
-        title: `Anomaly Escalated to SP — ${alert.firNumber}`,
+        title: `Anomaly Escalated for SP Review — ${alert.firNumber}`,
         message: `An anomaly detected in ${alert.district} (${alert.station}) has been escalated for SP review.\n\nType: ${alert.crimeType}\nScore: ${alert.anomalyScore}%\nDetails: ${alert.offenceDetails}`,
         priority: 'high',
         severity: alert.severity === 'HIGH' ? 'critical' : 'high',
         related_case_number: alert.firNumber,
         related_fir_number: alert.firNumber,
+        is_broadcast: true,
       });
       setAlerts((current) => current.map((a) => a.id === alert.id ? { ...a, status: 'ESCALATED', severity: 'HIGH', assignedOfficer: user?.name ?? 'Unknown officer' } : a));
     } catch {
@@ -301,21 +298,6 @@ export const Anomalies: React.FC = () => {
                   <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed bg-[var(--bg-secondary)] p-3 rounded border border-[var(--border-primary)]">
                     {activeAlert.offenceDetails}
                   </p>
-                </div>
-
-                {/* Scoring factors checklist */}
-                <div>
-                  <span className="text-[8.5px] font-bold text-[var(--text-muted)] uppercase tracking-widest block mb-2.5">
-                    AI Feature Explanations
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-[9.5px] font-mono">
-                    {Object.entries(activeAlert.featureBreakdown).map(([feat, score]) => (
-                      <div key={feat} className="p-2 bg-[var(--bg-secondary)]/30 border border-[var(--border-primary)]/60 rounded flex justify-between items-center">
-                        <span className="text-[var(--text-secondary)] truncate max-w-[120px]">{feat}</span>
-                        <span className="text-red-400 font-bold font-mono">{score}% weight</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Case files assignments details */}

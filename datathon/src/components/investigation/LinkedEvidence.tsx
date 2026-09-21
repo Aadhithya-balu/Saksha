@@ -6,6 +6,10 @@ interface Props {
   evidence: InvestigationEvidence[];
 }
 
+const navigateTo = (tab: string, targetId?: string) => {
+  window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab, targetId } }));
+};
+
 const typeConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   digital: { icon: <FileDigit className="w-3.5 h-3.5" />, color: 'text-cyan-400 bg-cyan-950/40 border-cyan-800/60' },
   physical: { icon: <Package className="w-3.5 h-3.5" />, color: 'text-amber-400 bg-amber-950/40 border-amber-800/60' },
@@ -57,7 +61,16 @@ const LinkedEvidence: React.FC<Props> = ({ evidence }) => {
           return (
             <div
               key={item.id}
-              className="p-3.5 bg-[var(--bg-tertiary)]/30 border border-[var(--border-primary)] rounded-xl hover:border-emerald-800/40 transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigateTo('evidence', item.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigateTo('evidence', item.id);
+                }
+              }}
+              className="p-3.5 bg-[var(--bg-tertiary)]/30 border border-[var(--border-primary)] rounded-xl hover:border-emerald-800/40 transition-colors cursor-pointer"
             >
               {/* Header */}
               <div className="flex justify-between items-start mb-2">
@@ -108,7 +121,10 @@ const LinkedEvidence: React.FC<Props> = ({ evidence }) => {
                   </span>
                 </div>
                 <button
-                  onClick={() => handleDownload(item.id, `KSP_Evidence_${item.id.slice(0, 8)}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleDownload(item.id, `KSP_Evidence_${item.id.slice(0, 8)}`);
+                  }}
                   disabled={isDownloading}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E6FD9]/15 hover:bg-[#1E6FD9]/25 text-[#1E6FD9] border border-[#1E6FD9]/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 shadow-xs disabled:opacity-50"
                 >

@@ -18,19 +18,20 @@ export const ActiveAlerts3D: React.FC<ActiveAlerts3DProps> = ({ alertRows = [], 
     const list: AlertItem[] = [];
 
     alertRows.forEach((r) => {
-      let shortName = r.name || 'Station';
-      if (shortName.includes('Market')) shortName = 'Devaraja';
-      const scoreVal = r.score ?? r.weight ?? (r.baseScore ?? 75);
-      const catVal = r.category || r.type || 'Beat Patrol';
-      list.push({ label: `${r.name} - ${catVal}`, shortLabel: shortName.replace(/police station/i, 'PS'), score: scoreVal });
+      const shortName = r.name || 'Station';
+      const rawScore = r.score ?? r.weight ?? r.baseScore;
+      if (typeof rawScore !== 'number' || !Number.isFinite(rawScore)) return;
+      const catVal = r.category || r.type || 'Unclassified';
+      list.push({ label: `${r.name} - ${catVal}`, shortLabel: shortName.replace(/police station/i, 'PS'), score: rawScore });
     });
 
     anomalies.forEach((a) => {
       let shortName = 'Anomaly';
       if (a.label?.includes('logins') || a.reason?.includes('logins')) shortName = 'Multi Login';
       else if (a.reason?.includes('dossiers') || a.label?.includes('dossiers')) shortName = 'Bulk Export';
-      const aScore = typeof a.score === 'number' ? (a.score <= 1 ? Math.round(a.score * 100) : Math.round(a.score)) : 82;
-      list.push({ label: a.label || a.reason || 'System Anomaly', shortLabel: shortName, score: aScore });
+      const rawAnomaly = typeof a.score === 'number' && Number.isFinite(a.score) ? (a.score <= 1 ? Math.round(a.score * 100) : Math.round(a.score)) : null;
+      if (rawAnomaly === null) return;
+      list.push({ label: a.label || a.reason || 'System Anomaly', shortLabel: shortName, score: rawAnomaly });
     });
 
     return list.slice(0, 5);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRBAC } from '../../hooks/useRBAC';
 import { usePolling } from '../../hooks/usePolling';
-import { Search, Plus, Filter, ShieldCheck, Mail, Phone, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, ShieldCheck, Mail, Phone, Edit, Trash2 } from 'lucide-react';
 import { apiRequest } from '../../services/api';
 import { CardSkeleton } from '../../components/ui/Skeleton';
 import { PersonAvatar } from '../../components/ui/PersonAvatar';
@@ -140,9 +140,6 @@ const OfficersPage: React.FC = () => {
             />
             <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-secondary-bg hover:bg-[var(--bg-tertiary)]/10 border border-border-color rounded-btn text-sm font-mono text-[var(--text-primary)] transition-all">
-            <Filter className="w-4 h-4" /> Filter
-          </button>
           {isAdmin && (
             <button 
               onClick={openCreate}

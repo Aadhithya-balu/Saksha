@@ -6,9 +6,10 @@ import type { GraphNode } from './CriminalGraph3D';
 interface AIGraphInsightsModalProps {
   insights: AIGraphInsightData[];
   onSelectNodeIn3D?: (node: GraphNode) => void;
+  nodes?: GraphNode[];
 }
 
-export const AIGraphInsightsModal: React.FC<AIGraphInsightsModalProps> = ({ insights, onSelectNodeIn3D }) => {
+export const AIGraphInsightsModal: React.FC<AIGraphInsightsModalProps> = ({ insights, onSelectNodeIn3D, nodes }) => {
   return (
     <div className="h-full flex flex-col gap-4 p-4 bg-[var(--bg-surface)] border border-[var(--border-secondary)] rounded-card font-mono overflow-y-auto">
       {/* Header */}
@@ -70,25 +71,23 @@ export const AIGraphInsightsModal: React.FC<AIGraphInsightsModalProps> = ({ insi
             {insight.target_node_ids && insight.target_node_ids.length > 0 && (
               <div className="flex items-center gap-2 text-[10px] pt-1">
                 <span className="text-[var(--text-muted)] uppercase">Target Nodes:</span>
-                {insight.target_node_ids.map((nid) => (
-                  <button
-                    key={nid}
-                    onClick={() =>
-                      onSelectNodeIn3D?.({
-                        id: nid,
-                        name: `Node ${nid}`,
-                        category: 'suspect',
-                        riskScore: 85,
-                        details: insight.title,
-                        casesCount: 3,
-                      })
-                    }
-                    className="px-2 py-0.5 bg-[var(--bg-tertiary)] hover:bg-[var(--accent-blue)]/20 border border-[var(--border-secondary)] text-[#60A5FA] rounded transition-colors cursor-pointer flex items-center gap-1 uppercase font-bold"
-                  >
-                    <Crosshair className="w-3 h-3" />
-                    <span>{nid}</span>
-                  </button>
-                ))}
+                {insight.target_node_ids.map((nid) => {
+                  const targetNode = nodes?.find((n) => n.id === nid);
+                  return (
+                    <button
+                      key={nid}
+                      onClick={() => {
+                        if (targetNode) onSelectNodeIn3D?.(targetNode);
+                      }}
+                      disabled={!targetNode}
+                      title={targetNode ? `Select ${targetNode.name}` : `Node ${nid} not present in the current graph data`}
+                      className="px-2 py-0.5 bg-[var(--bg-tertiary)] hover:bg-[var(--accent-blue)]/20 border border-[var(--border-secondary)] text-[#60A5FA] rounded transition-colors cursor-pointer flex items-center gap-1 uppercase font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Crosshair className="w-3 h-3" />
+                      <span>{targetNode ? targetNode.name : nid}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

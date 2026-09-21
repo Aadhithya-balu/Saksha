@@ -126,6 +126,12 @@ const EvidencePage: React.FC = () => {
       if (statusFilter) params.set('status', statusFilter);
       const data = await apiRequest<{ results: Evidence[] }>(`/evidence?${params.toString()}`);
       setEvidenceList(data.results || []);
+      const redirectId = sessionStorage.getItem('selected_entity_id');
+      if (redirectId) {
+        sessionStorage.removeItem('selected_entity_id');
+        const match = data.results?.find((r) => r.id === redirectId);
+        if (match) void openDetail(match.id);
+      }
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to fetch evidence');
@@ -464,7 +470,7 @@ const EvidencePage: React.FC = () => {
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border ${sc.bg} ${sc.text} ${sc.border}`}>{evidenceDetail.status}</span>
                       <span className="px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase bg-[#C94A2A]/10 text-[#C94A2A] border border-[#C94A2A]/20">{evidenceDetail.evidence_type}</span>
-                      <span className="text-[8.5px] font-mono text-[var(--text-muted)]">ID: {evidenceDetail.id}</span>
+                      <span className="text-[8.5px] font-mono text-[var(--text-muted)]">ID: {evidenceDetail.id.slice(0, 8)}...</span>
                     </div>
                   </div>
                 </div>

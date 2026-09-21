@@ -106,27 +106,11 @@ export const Predictions: React.FC = () => {
       if (isMounted) setLoading(false);
     });
 
-    // 1. Load risk scores + anomalies (primary data) — modelInfo is embedded in risk response
     void getRiskScores()
       .then((riskResponse) => {
         if (!isMounted) return;
         setRiskScores(riskResponse);
         setSectionsLoaded(prev => ({ ...prev, risk: true }));
-        // Derive modelInfo from the risk response instead of a separate /model-info call
-        if (riskResponse.prediction_mode || riskResponse.model_version) {
-          setModelInfo(prev => prev ?? {
-            model_name: 'SAKSHA District Risk & Forecast',
-            risk_model_loaded: riskResponse.risk_model_loaded ?? false,
-            forecast_model_loaded: false,
-            version: riskResponse.model_version ?? 'unknown',
-            risk_algorithm: 'RandomForest',
-            forecast_algorithm: 'XGBoost',
-            trained_on: null,
-            training_rows: 0,
-            risk_metrics: {},
-            forecast_metrics: {},
-          });
-        }
       })
       .catch(() => {
         if (isMounted) {

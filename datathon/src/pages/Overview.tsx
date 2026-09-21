@@ -506,7 +506,6 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
       case 'Register FIR':
         downloadSecureDossier('FIR Registration Template', {
           documentTitle: 'Karnataka State Police FIR Form',
-          formCode: 'KSP-FIR-2026',
           requiredData: ['Complainant details', 'Incident location coordinates', 'Accused descriptions', 'Offence description', 'IPC sections apply']
         }, `TEMPLATE-FIR-${badgeId}`);
         break;
@@ -514,7 +513,6 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
       case 'Add Missing Person':
         downloadSecureDossier('Missing Person Registry Form', {
           documentTitle: 'Missing Person Incident Report',
-          formCode: 'KSP-MPR-25',
           requiredData: ['Missing date', 'Full name', 'Age/Gender', 'Identification marks', 'Last seen coordinates', 'Contact person phone']
         }, `TEMPLATE-MPR-${badgeId}`);
         break;
@@ -522,46 +520,44 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
       case 'Create Alert':
         downloadSecureDossier('Active Security Broadcast Template', {
           documentTitle: 'Statewide Security Advisory Alert',
-          formCode: 'KSP-SAB-09',
           alertFields: ['Advisory level', 'Target zones list', 'Incident reference code', 'Special instructions for beat officers']
         }, `TEMPLATE-ALERT-${badgeId}`);
         break;
 
       case 'Assign Case':
-        downloadSecureDossier('Case Assignment Briefing sheet', {
-          documentTitle: 'Officer Case Assignment Form',
-          formCode: 'KSP-CAB-77',
-          details: {
-            assignedCaseId: 'CR-9022/2026/BNG',
-            classification: 'Cyber Extortion and Biometric Forgery',
-            status: 'PENDING ASSIGNMENT',
-            brief: 'Verify coordinates projection overlays and request suspect relationship matrix'
-          }
-        }, `ASSIGNMENT-CASE-${badgeId}`);
+        {
+          const assignmentTarget = recentIncidents.find((i) => i.status === 'open') ?? recentIncidents[0];
+          downloadSecureDossier('Case Assignment Briefing sheet', {
+            documentTitle: 'Officer Case Assignment Form',
+            details: {
+              assignedCaseId: assignmentTarget?.case_number ?? 'No live case currently available',
+              classification: assignmentTarget ? (assignmentTarget.crime_type || 'Unclassified') : 'Unavailable',
+              status: assignmentTarget ? (assignmentTarget.status || 'Unknown') : 'Unavailable',
+              actionDistrict: scopeDistrict || 'All districts'
+            }
+          }, `ASSIGNMENT-CASE-${badgeId}`);
+        }
         break;
 
       case 'Generate Report':
         downloadSecureDossier('General Dashboard Telemetry', {
-          totalCrimeCases: summary ? summary.total_crimes : 11,
-          openCases: summary ? summary.open_crimes : 11,
-          totalRegisteredFirs: summary ? summary.total_firs : 11,
-          totalTrackedOffenders: summary ? summary.total_criminals : 5,
+          totalCrimeCases: summary?.total_crimes ?? 0,
+          openCases: summary?.open_crimes ?? 0,
+          totalRegisteredFirs: summary?.total_firs ?? 0,
+          totalTrackedOffenders: summary?.total_criminals ?? 0,
           caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : '0%',
-          activeHotspotsCount: hotspots.length > 0 ? hotspots.length : 3,
-          onDutyOfficers: officerStats ? officerStats.on_duty : 2,
-          threatLevel: riskPrediction ? riskPrediction.threat_level : 'Medium'
+          activeHotspotsCount: hotspots.length,
+          onDutyOfficers: officerStats?.on_duty ?? 0,
+          threatLevel: riskPrediction?.threat_level ?? 'Unknown'
         }, `CONFIDENTIAL-REPORT-${badgeId}`);
         break;
 
       case 'Resource Allocation':
         downloadSecureDossier('Resource Allocation Matrix', {
           documentTitle: 'Beat Patrol Allocation Log',
-          formCode: 'KSP-RAM-08',
           details: {
-            activeSectorsCount: 14,
-            vehiclesDeployed: 22,
-            officersAssigned: 84,
-            lastAllocationStamp: new Date().toISOString()
+            activeSectorsCount: hotspots.length,
+            officersOnDuty: officerStats?.on_duty ?? 'Unavailable'
           }
         }, `ALLOCATION-LOG-${badgeId}`);
         break;
