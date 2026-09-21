@@ -910,7 +910,425 @@
 }
 
 /* ------------------------------------------------------------
-   17. RESPONSIVE — density on small screens
+   18. APP SHELL — sidebar, header, mobile rail
+   ------------------------------------------------------------ */
+.sk-app .sk-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(180deg, var(--bg-secondary), color-mix(in srgb, var(--bg-secondary) 92%, var(--bg-primary)));
+  border-right: 1px solid var(--border-muted);
+}
+.sk-app .sk-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-muted);
+  flex-shrink: 0;
+}
+.sk-app .sk-sidebar-logo .sk-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent-blue-subtle);
+  border: 1px solid var(--accent-blue-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-blue-light);
+}
+.sk-app .sk-sidebar-logo .sk-word {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.sk-app .sk-sidebar-logo .sk-sublabel {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.sk-app .sk-clearance {
+  margin: 10px 12px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+}
+.sk-app .sk-clearance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sk-app .sk-clearance .sk-clear-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sk-app .sk-clearance .sk-clear-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-blue-light);
+}
+.sk-app .sk-clearance .sk-clear-val[data-accent='purple'] { color: var(--accent-purple-light); }
+.sk-app .sk-clearance .sk-clear-val[data-accent='muted']  { color: var(--text-secondary); }
+.sk-app .sk-clearance .sk-clear-id {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sk-app .sk-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 8px 14px;
+}
+.sk-app .sk-nav-group {
+  margin-bottom: 16px;
+}
+.sk-app .sk-nav-group-label {
+  padding: 0 8px;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--text-disabled);
+  text-transform: uppercase;
+}
+.sk-app .sk-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  border: 1px solid transparent;
+}
+.sk-app .sk-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.sk-app .sk-nav-item.is-active {
+  background: var(--accent-blue-subtle);
+  color: var(--accent-blue-light);
+}
+.sk-app .sk-nav-item .sk-nav-rail {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent-blue);
+  opacity: 0;
+}
+.sk-app .sk-nav-item.is-active .sk-nav-rail {
+  opacity: 1;
+}
+.sk-app .sk-nav-item .sk-nav-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.sk-app .sk-nav-item.is-collapsed {
+  justify-content: center;
+  padding: 9px 0;
+}
+.sk-app .sk-nav-item .sk-nav-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-coral);
+}
+
+.sk-app .sk-sidebar-foot {
+  border-top: 1px solid var(--border-muted);
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+.sk-app .sk-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-muted);
+}
+.sk-app .sk-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-blue-subtle);
+  border: 1px solid var(--accent-blue-subtle);
+  color: var(--accent-blue-light);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sk-app .sk-sidebar-user .sk-user-meta {
+  min-width: 0;
+  flex: 1;
+}
+.sk-app .sk-sidebar-user .sk-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-app .sk-sidebar-user .sk-user-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* Header */
+.sk-app .sk-header {
+  position: relative;
+  height: var(--header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-muted);
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.sk-app .sk-crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sk-app .sk-crumb .sk-crumb-root {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.sk-app .sk-crumb .sk-crumb-sep {
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.sk-app .sk-crumb .sk-crumb-current {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-app .sk-header-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.sk-app .sk-header-search:hover {
+  border-color: var(--border-focus);
+}
+.sk-app .sk-header-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-primary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sk-app .sk-header-chip[data-accent='coral'] { color: var(--accent-coral-light); }
+.sk-app .sk-header-chip[data-accent='amber'] { color: var(--accent-amber-light); }
+.sk-app .sk-header-chip[data-accent='teal']  { color: var(--accent-teal-light); }
+.sk-app .sk-header-chip[data-accent='cyan']  { color: var(--accent-cyan-light); }
+.sk-app .sk-header-chip[data-accent='blue']  { color: var(--accent-blue-light); }
+.sk-app .sk-header-chip .sk-chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Mobile rail */
+.sk-app .sk-mobile-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 210;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 58px;
+  border-top: 1px solid var(--border-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ------------------------------------------------------------
+   19. COMMAND PALETTE
+   ------------------------------------------------------------ */
+.sk-app .sk-cmd-sheet {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glow-blue);
+  overflow: hidden;
+}
+.sk-app .sk-cmd-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.sk-app .sk-cmd-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.sk-app .sk-cmd-input::placeholder {
+  color: var(--text-muted);
+}
+.sk-app .sk-cmd-cat {
+  padding: 8px 16px 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+.sk-app .sk-cmd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+.sk-app .sk-cmd-item[data-active='true'] {
+  background: var(--accent-blue-subtle);
+}
+.sk-app .sk-cmd-item .sk-cmd-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.sk-app .sk-cmd-item[data-active='true'] .sk-cmd-icon {
+  color: var(--accent-blue-light);
+}
+.sk-app .sk-cmd-item .sk-cmd-main {
+  flex: 1;
+  min-width: 0;
+}
+.sk-app .sk-cmd-item .sk-cmd-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.sk-app .sk-cmd-item[data-active='true'] .sk-cmd-label {
+  color: var(--text-primary);
+}
+.sk-app .sk-cmd-item .sk-cmd-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-app .sk-cmd-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-primary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.sk-app .sk-cmd-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xs);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* ------------------------------------------------------------
+   20. RESPONSIVE — density on small screens
    ------------------------------------------------------------ */
 @media (max-width: 768px) {
   .sk-app .sk-kpi {
