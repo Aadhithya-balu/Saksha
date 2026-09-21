@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_district_scope, enforce_record_district
 from app.database.postgres import get_db
 from app.models.fir import FIR, FIRCriminalLink, FIRVictimLink
 from app.models.crime import CrimeCase
@@ -62,8 +63,12 @@ def list_firs(
         query = query.filter(FIR.filed_at >= start_date)
     if end_date:
         query = query.filter(FIR.filed_at <= end_date)
-    if district:
-        query = query.join(CrimeCase).join(Location).filter(Location.district == district)
+
+    # District-bound roles are always narrowed to their own district; the
+    # client-supplied value can never widen scope.
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        query = query.join(CrimeCase).join(Location).filter(Location.district == effective_district)
 
     total = query.count()
     results = query.order_by(FIR.filed_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
@@ -75,7 +80,10 @@ def get_fir(fir_id: uuid.UUID, db: Session = Depends(get_db), current_user: User
     fir = db.query(FIR).filter(FIR.id == fir_id).first()
     if not fir:
         raise HTTPException(status_code=404, detail="FIR not found")
-    
+
+    case_location = fir.crime_case.location if (fir.crime_case and fir.crime_case.location) else None
+    enforce_record_district(current_user, case_location.district if case_location else None, db)
+
     crime_case = fir.crime_case
     officer = fir.investigating_officer
     criminals = [link.criminal for link in fir.criminal_links if link.criminal]

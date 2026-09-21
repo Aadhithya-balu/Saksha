@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_any_record_district, enforce_district_scope
 from app.database.postgres import get_db
+from app.models.crime import CrimeCase
+from app.models.fir import FIR, FIRVictimLink
+from app.models.location import Location
 from app.models.victim import Victim
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
@@ -37,7 +41,19 @@ def list_victims(
                 Victim.address.ilike(f"%{q}%")
             )
         )
-        
+
+    # District-bound roles only see victims linked to a FIR in their district.
+    effective_district = enforce_district_scope(current_user, None, db)
+    if effective_district:
+        query = (
+            query.join(FIRVictimLink, FIRVictimLink.victim_id == Victim.id)
+            .join(FIR, FIR.id == FIRVictimLink.fir_id)
+            .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+            .distinct()
+        )
+
     total = query.count()
     query = query.order_by(Victim.created_at.desc())
     results = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -47,7 +63,18 @@ def list_victims(
 @router.get("/{victim_id}")
 def get_victim(victim_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     victim = victim_crud.get(db, victim_id)
-    
+
+    # District-bound roles may only open a victim linked to a FIR in their district.
+    enforce_any_record_district(
+        current_user,
+        [
+            link.fir.crime_case.location.district
+            for link in victim.fir_links
+            if link.fir and link.fir.crime_case and link.fir.crime_case.location
+        ],
+        db,
+    )
+
     # Retrieve linked FIRs
     linked_firs = []
     for link in victim.fir_links:

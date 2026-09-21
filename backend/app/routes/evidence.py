@@ -13,7 +13,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_INSPECTOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST, require_roles
+from app.auth.scope import enforce_district_scope, enforce_record_district
 from app.database.postgres import get_db
+from app.models.crime import CrimeCase
+from app.models.location import Location
 from app.models.evidence import Evidence
 from app.models.evidence_metadata import EvidenceMetadata
 from app.models.evidence_timeline import EvidenceTimeline
@@ -143,7 +146,16 @@ def list_evidence(
         query = query.filter(Evidence.evidence_type == evidence_type)
     if assigned_to:
         query = query.filter(Evidence.assigned_to == assigned_to)
-        
+
+    # District-bound roles only see evidence attached to a case in their district.
+    effective_district = enforce_district_scope(current_user, None, db)
+    if effective_district:
+        query = (
+            query.join(CrimeCase, CrimeCase.id == Evidence.case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+        )
+
     total = query.count()
     items = query.order_by(Evidence.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
     
@@ -157,7 +169,16 @@ def list_evidence(
 @router.get("/{evidence_id}", response_model=EvidenceDetailOut)
 def get_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     evidence = evidence_crud.get(db, evidence_id)
-    
+    if evidence is None:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+
+    case = db.query(CrimeCase).filter(CrimeCase.id == evidence.case_id).first()
+    enforce_record_district(
+        current_user,
+        case.location.district if (case and case.location) else None,
+        db,
+    )
+
     # Track View Event
     add_timeline_event(db, evidence_id, "Evidence Viewed", current_user)
     

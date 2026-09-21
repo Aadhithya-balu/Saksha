@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_CRIME_ANALYST, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_district_scope, enforce_record_district, is_multi_district
 from app.database.postgres import get_db
 from app.models.crime import CrimeCase
 from app.models.fir import FIR
@@ -144,10 +145,15 @@ def list_cases(
         query = query.filter(CrimeCase.category_id == category_id)
     if priority:
         query = query.filter(CrimeCase.priority == priority)
-    if district:
-        query = query.join(Location, CrimeCase.location_id == Location.id).filter(
-            (Location.district == district) | (Location.station == district)
-        )
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        query = query.join(Location, CrimeCase.location_id == Location.id)
+        if is_multi_district(current_user):
+            query = query.filter(
+                (Location.district == effective_district) | (Location.station == effective_district)
+            )
+        else:
+            query = query.filter(Location.district == effective_district)
     if q:
         query = query.filter(
             (CrimeCase.case_number.ilike(f"%{q}%")) | (CrimeCase.description.ilike(f"%{q}%"))
@@ -299,10 +305,15 @@ def crime_case_insights(
         base = base.filter(CrimeCase.category_id == category_id)
     if priority:
         base = base.filter(CrimeCase.priority == priority)
-    if district:
-        base = base.join(Location, CrimeCase.location_id == Location.id).filter(
-            (Location.district == district) | (Location.station == district)
-        )
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        base = base.join(Location, CrimeCase.location_id == Location.id)
+        if is_multi_district(current_user):
+            base = base.filter(
+                (Location.district == effective_district) | (Location.station == effective_district)
+            )
+        else:
+            base = base.filter(Location.district == effective_district)
 
     rows = base.all()
 
@@ -355,6 +366,8 @@ def get_case(
     )
     if not case:
         raise HTTPException(status_code=404, detail="Crime case not found")
+
+    enforce_record_district(current_user, case.location.district if case.location else None, db)
 
     # 1. Fetch linked FIRs from existing table
     firs_list = db.query(FIR).filter(FIR.crime_case_id == case.id).all()

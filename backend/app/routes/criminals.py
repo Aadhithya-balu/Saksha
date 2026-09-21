@@ -6,8 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_any_record_district, enforce_district_scope
 from app.database.postgres import get_db
 from app.models.criminal import Criminal
+from app.models.crime import CrimeCase
+from app.models.fir import FIR, FIRCriminalLink
+from app.models.location import Location
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.criminal import CriminalCreate, CriminalOut, CriminalUpdate, MOProfile
@@ -54,11 +58,28 @@ def list_criminals(
                 Criminal.mo_summary.ilike(f"%{q}%"),
             )
         )
-    
+
+    # District-bound roles only see criminals linked to a FIR in their district.
+    effective_district = enforce_district_scope(current_user, None, db)
+    if effective_district:
+        query = _apply_criminal_district_filter(query, effective_district)
+
     total = query.count()
     query = query.order_by(Criminal.created_at.desc())
     results = query.offset((page - 1) * page_size).limit(page_size).all()
     return {"total": total, "page": page, "page_size": page_size, "results": results}
+
+
+def _apply_criminal_district_filter(query, district: str):
+    """Restrict a Criminal query to those named in a FIR in ``district``."""
+    return (
+        query.join(FIRCriminalLink, FIRCriminalLink.criminal_id == Criminal.id)
+        .join(FIR, FIR.id == FIRCriminalLink.fir_id)
+        .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+        .join(Location, Location.id == CrimeCase.location_id)
+        .filter(Location.district == district)
+        .distinct()
+    )
 
 
 @router.get("/repeat-offenders", response_model=list[CriminalOut])
@@ -70,10 +91,22 @@ def repeat_offenders(db: Session = Depends(get_db), current_user: User = Depends
     from sqlalchemy import func
     from app.models.fir import FIRCriminalLink
 
-    rows = (
+    query = (
         db.query(Criminal)
         .join(FIRCriminalLink, FIRCriminalLink.criminal_id == Criminal.id)
-        .group_by(Criminal.id)
+    )
+
+    effective_district = enforce_district_scope(current_user, None, db)
+    if effective_district:
+        query = (
+            query.join(FIR, FIR.id == FIRCriminalLink.fir_id)
+            .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+        )
+
+    rows = (
+        query.group_by(Criminal.id)
         .having(func.count(FIRCriminalLink.id) >= 3)
         .all()
     )
@@ -236,6 +269,17 @@ def _recommendations_worker(criminal_id: str) -> list:
 @router.get("/{criminal_id}")
 def get_criminal(criminal_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     criminal = criminal_crud.get(db, criminal_id)
+
+    # District-bound roles may only open a criminal linked to a FIR in their district.
+    enforce_any_record_district(
+        current_user,
+        [
+            link.fir.crime_case.location.district
+            for link in criminal.fir_links
+            if link.fir and link.fir.crime_case and link.fir.crime_case.location
+        ],
+        db,
+    )
 
     # Retrieve linked FIRs
     linked_firs = []
