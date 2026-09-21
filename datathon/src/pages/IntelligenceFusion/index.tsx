@@ -23,6 +23,7 @@ import {
 } from '../../services/api';
 import IntelligencePatternsFeed from '../../components/intelligence/IntelligencePatternsFeed';
 import IntelligenceInvestigationDrawer from '../../components/intelligence/IntelligenceInvestigationDrawer';
+import { useUserScope } from '../../hooks/useUserScope';
 
 const KARNATAKA_DISTRICTS = [
   'Bengaluru Urban',
@@ -102,6 +103,7 @@ const StatCard: React.FC<{ label: string; value: string; hint?: string; accent?:
 );
 
 const IntelligenceFusion: React.FC = () => {
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const [patterns, setPatterns] = useState<UnifiedIntelligenceResult[]>(() => {
     try {
       const saved = sessionStorage.getItem('saksha_fusion_patterns');
@@ -141,7 +143,9 @@ const IntelligenceFusion: React.FC = () => {
     return sessionStorage.getItem('saksha_fusion_generated_at');
   });
 
-  const [district, setDistrict] = useState<string>(() => sessionStorage.getItem('saksha_fusion_district') || '');
+  const [district, setDistrict] = useState<string>(() =>
+    canSelectDistrict ? sessionStorage.getItem('saksha_fusion_district') || scopeDistrict || '' : scopeDistrict || '',
+  );
   const [category, setCategory] = useState<string>(() => sessionStorage.getItem('saksha_fusion_category') || '');
   const [timeWindow, setTimeWindow] = useState<number>(() => Number(sessionStorage.getItem('saksha_fusion_timewindow')) || 30);
   const [sensitivity, setSensitivity] = useState<SensitivityKey>(() => {
@@ -356,17 +360,24 @@ const IntelligenceFusion: React.FC = () => {
           <span className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wider text-[var(--text-muted)] w-full sm:w-auto sm:mr-1">
             <SlidersHorizontal className="w-3 h-3" /> Analysis scope
           </span>
-          <select
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            className={selectCls}
-            aria-label="District"
-          >
-            <option value="">All districts</option>
-            {KARNATAKA_DISTRICTS.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+          {canSelectDistrict ? (
+            <select
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className={selectCls}
+              aria-label="District"
+            >
+              <option value="">All districts</option>
+              {KARNATAKA_DISTRICTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[10.5px] font-medium text-[var(--text-primary)]">
+              <MapPin className="w-3 h-3 text-[var(--accent-blue)]" />
+              {scopeDistrict}
+            </span>
+          )}
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
