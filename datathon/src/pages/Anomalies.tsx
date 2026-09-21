@@ -87,7 +87,7 @@ export const Anomalies: React.FC = () => {
         related_case_number: alert.firNumber,
         related_fir_number: alert.firNumber,
       });
-      setAlerts((current) => current.map((a) => a.id === alert.id ? { ...a, status: 'ESCALATED', severity: 'HIGH', assignedOfficer: user?.name || 'Inspector System' } : a));
+      setAlerts((current) => current.map((a) => a.id === alert.id ? { ...a, status: 'ESCALATED', severity: 'HIGH', assignedOfficer: user?.name ?? 'Unknown officer' } : a));
     } catch {
       // silently fail — button remains functional for retry
     } finally {
@@ -356,7 +356,7 @@ export const Anomalies: React.FC = () => {
                 </button>
                 {activeAlert.status === 'PENDING' && (
                   <button
-                    onClick={() => reviewAlert(activeAlert.id, user?.name || 'Inspector System')}
+                    onClick={() => reviewAlert(activeAlert.id, user?.name ?? 'Unknown officer')}
                     className="flex-1 py-2.5 bg-[#0E9E78] hover:bg-[#0E9E78]/80 text-[var(--text-primary)] rounded-btn tracking-wider font-semibold cursor-pointer text-center select-none flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />

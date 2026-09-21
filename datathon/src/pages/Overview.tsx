@@ -405,23 +405,16 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     if (riskScores?.grid_predictions && riskScores.grid_predictions.length > 0) {
       return riskScores.grid_predictions;
     }
-    return [
-      { district: 'Bengaluru Urban', risk_score: 94.2, risk_band: 'CRITICAL', confidence: 0.94 },
-      { district: 'Mysuru', risk_score: 82.5, risk_band: 'HIGH', confidence: 0.89 },
-      { district: 'Belagavi', risk_score: 76.0, risk_band: 'HIGH', confidence: 0.85 },
-      { district: 'Dakshina Kannada', risk_score: 68.4, risk_band: 'MEDIUM', confidence: 0.82 },
-    ];
+    // No fabricated fallback: if the risk engine has not returned data for the
+    // authorised scope, the UI shows an honest empty state instead.
+    return [];
   }, [riskScores]);
 
   const alertRows = useMemo(() => {
     if (hotspots && hotspots.length > 0) {
       return hotspots.slice(0, 3);
     }
-    return [
-      { name: 'Jayanagar Police Station', score: 94, category: 'Theft & Burglaries' },
-      { name: 'Whitefield Police Station', score: 88, category: 'Cyber Crime' },
-      { name: 'KR Puram Police Station', score: 82, category: 'Property Offenses' },
-    ];
+    return [];
   }, [hotspots]);
 
   const resetFilters = () => {
@@ -435,8 +428,8 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
   };
 
   const handleExportOverview = (format: 'pdf' | 'docx' | 'txt' | 'csv' | 'xlsx') => {
-    const officerName = user?.name || 'Inspector System';
-    const badgeId = user?.badgeId || 'SCRB-7740';
+    const officerName = user?.name ?? 'Unknown officer';
+    const badgeId = user?.badgeId ?? '';
 
     addLog(
       officerName,
@@ -446,14 +439,14 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     );
 
     downloadSecureDossier('General Dashboard Telemetry', {
-      totalCrimeCases: summary ? summary.total_crimes : 11,
-      openCases: summary ? summary.open_crimes : 11,
-      totalRegisteredFirs: summary ? summary.total_firs : 11,
-      totalTrackedOffenders: summary ? summary.total_criminals : 5,
+      totalCrimeCases: summary?.total_crimes ?? 0,
+      openCases: summary?.open_crimes ?? 0,
+      totalRegisteredFirs: summary?.total_firs ?? 0,
+      totalTrackedOffenders: summary?.total_criminals ?? 0,
       caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : '0%',
-      activeHotspotsCount: hotspots.length > 0 ? hotspots.length : 3,
-      onDutyOfficers: officerStats ? officerStats.on_duty : 2,
-      threatLevel: riskPrediction ? riskPrediction.threat_level : 'Medium'
+      activeHotspotsCount: hotspots.length,
+      onDutyOfficers: officerStats?.on_duty ?? 0,
+      threatLevel: riskPrediction?.threat_level ?? 'Unknown'
     }, `CONFIDENTIAL-REPORT-${badgeId}`, format);
   };
 
@@ -468,8 +461,8 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
   const [openAction, setOpenAction] = useState<string | null>(null);
 
   const handleQuickActionNavigate = (actionName: string) => {
-    const officerName = user?.name || 'Inspector System';
-    const badgeId = user?.badgeId || 'SCRB-7740';
+    const officerName = user?.name ?? 'Unknown officer';
+    const badgeId = user?.badgeId ?? '';
     const targetTab = QUICK_ACTION_TARGETS[actionName];
     if (!targetTab) return;
 
@@ -488,8 +481,8 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
   };
 
   const handleQuickActionDownload = (actionName: string) => {
-    const officerName = user?.name || 'Inspector System';
-    const badgeId = user?.badgeId || 'SCRB-7740';
+    const officerName = user?.name ?? 'Unknown officer';
+    const badgeId = user?.badgeId ?? '';
 
     addLog(
       officerName,
@@ -1022,9 +1015,9 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
         <div className="xl:col-span-4 sk-panel sk-panel-pad min-h-[280px] flex flex-col">
           <h4 className="sk-panel-title mb-2">Risk Outlook — next 7 days</h4>
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)] pb-2.5 mb-3">
-            <span>Confidence <b className="text-[var(--text-primary)]">{Math.round((riskPrediction?.confidence_score ?? 0.88) * 100)}%</b></span>
-            <span>Threat <b className="uppercase text-[var(--tone-warning-text)]">{riskPrediction?.threat_level ?? 'Medium'}</b></span>
-            <span>Trend <b className="uppercase text-[var(--text-primary)]">{riskPrediction?.trend ?? 'Stable'}</b></span>
+            <span>Confidence <b className="text-[var(--text-primary)]">{riskPrediction ? `${Math.round(riskPrediction.confidence_score * 100)}%` : '—'}</b></span>
+            <span>Threat <b className="uppercase text-[var(--tone-warning-text)]">{riskPrediction?.threat_level ?? '—'}</b></span>
+            <span>Trend <b className="uppercase text-[var(--text-primary)]">{riskPrediction?.trend ?? '—'}</b></span>
           </div>
 
           <div className="flex-1 flex flex-col gap-3.5 justify-center">

@@ -213,7 +213,7 @@ export const GlobalAIAssistant: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-12 right-6 z-[100] w-14 h-14 rounded-full bg-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/85 text-[var(--text-primary)] shadow-glow-blue flex items-center justify-center transition-all hover:scale-110 cursor-pointer group"
+          className="fixed bottom-20 right-6 md:bottom-8 z-[100] w-14 h-14 rounded-full bg-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/85 text-[var(--text-primary)] shadow-glow-blue flex items-center justify-center transition-all hover:scale-110 cursor-pointer group"
           title="SAKSHA AI Assistant"
         >
           <Sparkles className="w-6 h-6 group-hover:animate-pulse" />
@@ -223,7 +223,7 @@ export const GlobalAIAssistant: React.FC = () => {
 
       {/* Slide-over Panel */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end pointer-events-none">
+        <div className="fixed inset-0 z-[300] flex justify-end pointer-events-none">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"

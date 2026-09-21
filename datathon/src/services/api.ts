@@ -614,7 +614,9 @@ export const mapBackendRoleToUiRole = (role: string): UserRole => {
     case 'viewer':
       return 'VIEWER';
     default:
-      return 'SCRB';
+      // Fail closed: an unrecognised backend role must not be granted
+      // analyst-level clearance. Least privilege is read-only.
+      return 'VIEWER';
   }
 };
 

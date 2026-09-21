@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Search, Filter, X, RotateCcw } from 'lucide-react';
 import { useNotificationStore } from '../../store/notificationStore';
 
@@ -28,19 +28,27 @@ const STATUSES = [
   { value: 'broadcast', label: 'Broadcast' },
 ];
 
-const DEMO_SENDERS = [
-  { value: 'SCRB-7740', label: 'SCRB-7740 (Crime Analyst)' },
-  { value: 'IO-3921', label: 'IO-3921 (Investigator)' },
-  { value: 'SP-0088', label: 'SP-0088 (Superintendent)' },
-  { value: 'admin', label: 'Admin' },
-];
-
 export const NotificationFilters: React.FC = () => {
   const {
     searchQuery, setSearch,
     filterCategory, filterPriority, filterStatus, filterSender,
     setFilter, clearFilters,
   } = useNotificationStore();
+
+  const notifications = useNotificationStore((s) => s.notifications);
+
+  // Sender options are derived from real notifications actually in the feed,
+  // never from a hardcoded list of people.
+  const senders = useMemo(() => {
+    const seen = new Map<string, string>();
+    notifications.forEach((n) => {
+      if (!n.sender_badge) return;
+      if (!seen.has(n.sender_badge)) {
+        seen.set(n.sender_badge, n.sender_name ? `${n.sender_badge} (${n.sender_name})` : n.sender_badge);
+      }
+    });
+    return Array.from(seen, ([value, label]) => ({ value, label }));
+  }, [notifications]);
 
   const hasActiveFilters = filterCategory || filterPriority || filterStatus || filterSender;
 
@@ -109,7 +117,7 @@ export const NotificationFilters: React.FC = () => {
           className="px-2.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg text-[9px] font-mono text-[var(--text-secondary)] outline-none focus:border-[var(--accent-blue)] cursor-pointer"
         >
           <option value="">All Senders</option>
-          {DEMO_SENDERS.map(s => (
+          {senders.map(s => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
