@@ -66,6 +66,7 @@ import {
   PenLine,
   Download,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import { PageSkeleton } from '../components/ui/Skeleton';
 
@@ -114,7 +115,7 @@ const DEFAULT_RECENT_INCIDENTS: RecentIncidentType[] = [
 
 export const Overview: React.FC = () => {
   const { user } = useAuthStore();
-  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
+  const { district: scopeDistrict, canSelectDistrict, persona, personaDescriptor } = useUserScope();
   const { addLog } = useAuditStore();
 
   // Base dashboard state
@@ -585,6 +586,102 @@ export const Overview: React.FC = () => {
     }
   };
 
+  const relativeWhen = (iso?: string | null) => {
+    if (!iso) return 'Recently reported';
+    try {
+      const diff = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    } catch {
+      return 'Recently reported';
+    }
+  };
+
+  // Deterministic, role-aware guidance — no fabricated metrics.
+  const PERSONA_GUIDANCE: Record<string, string> = {
+    investigator: 'Open the cases that need attention, keep evidence documented, and review each dossier before closing it out.',
+    analyst: 'Keep an eye on emerging patterns, the risk outlook, and repeated offenders rising in your scope.',
+    authority: 'Watch the district picture, force readiness, and where incidents and risk are climbing.',
+    forensic: 'Track exhibits through the chain of custody and clear the verification queue.',
+    admin: 'Keep the platform healthy — users, roles, audit trail, and system readiness.',
+    viewer: 'Read-only picture of incidents, risk, and operational posture.',
+  };
+
+  // AT A GLANCE — role-ordered KPI selection (3–5 cards, no congestion).
+  const KPI_SETS: Record<string, ('total' | 'solved' | 'active' | 'hotspots' | 'highrisk' | 'missing' | 'repeat')[]> = {
+    investigator: ['active', 'hotspots', 'missing', 'solved'],
+    analyst: ['repeat', 'hotspots', 'highrisk', 'total'],
+    authority: ['active', 'total', 'hotspots', 'solved', 'highrisk'],
+    admin: ['total', 'active', 'hotspots', 'repeat'],
+    forensic: ['active', 'hotspots', 'highrisk'],
+    viewer: ['total', 'active', 'hotspots'],
+    default: ['total', 'solved', 'active', 'hotspots', 'highrisk', 'missing', 'repeat'],
+  };
+  const kpiOrder = KPI_SETS[persona] || KPI_SETS.default;
+  const kpiCards: Record<string, { title: string; value: number; icon: React.ReactNode; trend: 'up' | 'down' | 'stable'; trendValue: string; subtext: string; glowColor: 'blue' | 'teal' | 'amber' | 'coral' | 'purple' | 'indigo' | 'emerald'; tab: string }> = {
+    total: { title: 'Total Crimes', value: totalCrimes, icon: <Shield className="w-4 h-4" />, trend: 'stable', trendValue: 'On record', subtext: 'crimes registered', glowColor: 'blue', tab: 'crime_cases' },
+    solved: { title: 'Solved Crimes', value: solvedCrimes, icon: <CheckCircle2 className="w-4 h-4" />, trend: 'stable', trendValue: `${summary?.resolution_rate_percent ?? 0}%`, subtext: 'resolution rate', glowColor: 'teal', tab: 'fir' },
+    active: { title: 'Active Cases', value: openCrimes, icon: <ShieldAlert className="w-4 h-4" />, trend: 'stable', trendValue: 'Open', subtext: 'under investigation', glowColor: 'coral', tab: 'crime_cases' },
+    hotspots: { title: 'Crime Hotspots', value: crimeHotspotCount, icon: <MapPin className="w-4 h-4" />, trend: 'stable', trendValue: 'Live', subtext: 'zones under watch', glowColor: 'amber', tab: 'hotspot' },
+    highrisk: { title: 'High Risk Areas', value: highRiskCount, icon: <NavIcon className="w-4 h-4" />, trend: 'stable', trendValue: 'Active', subtext: 'priority risk areas', glowColor: 'purple', tab: 'hotspot' },
+    missing: { title: 'Missing Persons', value: missingPersonsCount, icon: <Users className="w-4 h-4" />, trend: 'stable', trendValue: 'Tracked', subtext: 'active inquiries', glowColor: 'indigo', tab: 'victims' },
+    repeat: { title: 'Repeat Offenders', value: repeatOffenderCount, icon: <UserMinus className="w-4 h-4" />, trend: 'stable', trendValue: 'Listed', subtext: 'on surveillance watch', glowColor: 'emerald', tab: 'offenders' },
+  };
+  const visibleKpis = kpiOrder.map((key) => kpiCards[key]);
+
+  // NEEDS YOUR ATTENTION — derived strictly from live-fetched records.
+  const attentionItems = useMemo(() => {
+    if (!summary) return [];
+    const items: Array<{ key: string; tone: string; title: string; when: string; why: string; action: string; tab: string }> = [];
+    recentIncidents
+      .filter((i) => i.priority === 'critical' || i.priority === 'high')
+      .filter((i) => i.status === 'open' || i.status === 'investigating')
+      .slice(0, 3)
+      .forEach((i) =>
+        items.push({
+          key: `case-${i.case_number}`,
+          tone: i.priority === 'critical' ? 'coral' : 'amber',
+          title: `${i.case_number} · ${i.crime_type}`,
+          when: relativeWhen(i.time),
+          why: i.priority === 'critical' ? 'Critical priority · open case' : 'High priority · open case',
+          action: 'Open dossier',
+          tab: 'crime_cases',
+        }),
+      );
+    const threat = riskPrediction?.threat_level;
+    if (threat && /high|very high/i.test(threat)) {
+      items.push({
+        key: 'threat',
+        tone: 'coral',
+        title: `Rising risk across ${scopeDistrict || 'Karnataka'}`,
+        when: 'Next 7 days',
+        why: 'Predictive risk model',
+        action: 'View risk outlook',
+        tab: 'predictive',
+      });
+    }
+    if (evidenceStats && evidenceStats.pending > 0) {
+      items.push({
+        key: 'evidence',
+        tone: 'purple',
+        title: `${evidenceStats.pending} exhibit${evidenceStats.pending === 1 ? '' : 's'} awaiting verification`,
+        when: 'Now',
+        why: 'Evidence registry',
+        action: 'Open evidence',
+        tab: 'evidence',
+      });
+    }
+    return items.slice(0, 4);
+  }, [summary, recentIncidents, riskPrediction, evidenceStats, scopeDistrict]);
+
+  const navigate = (tab: string) =>
+    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab } }));
+
   return (
     <div className="flex flex-col gap-6">
       {loading && !summary && <PageSkeleton />}
@@ -592,7 +689,7 @@ export const Overview: React.FC = () => {
       {/* Page header */}
       <PageHeader
         title={`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}${user ? `, ${user.name.split(' ')[0]}` : ''}`}
-        subtitle="Crime Intelligence & Analytical Platform · Karnataka State Police"
+        subtitle={`${personaDescriptor || 'Overview'} · Karnataka State Police${scopeDistrict ? ` · ${scopeDistrict}` : ' · all districts'}`}
         icon={<LayoutDashboard className="w-5 h-5" />}
         actions={
           <>
@@ -619,6 +716,19 @@ export const Overview: React.FC = () => {
           style={{ backgroundColor: 'var(--tone-warning-bg)', border: '1px solid var(--tone-warning-border)', color: 'var(--tone-warning-text)' }}>
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* For your job — deterministic persona guidance */}
+      {personaDescriptor && (
+        <div className="sk-panel sk-panel-pad !py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[var(--accent-blue)] bg-[var(--accent-blue-subtle)]">
+            <ArrowRight className="w-4 h-4" />
+          </div>
+          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+            <span className="font-semibold text-[var(--text-primary)]">For you · {personaDescriptor} workspace.</span>{' '}
+            {PERSONA_GUIDANCE[persona] || PERSONA_GUIDANCE.viewer}
+          </p>
         </div>
       )}
 
@@ -717,78 +827,83 @@ export const Overview: React.FC = () => {
         )}
       </div>
 
-      {/* Primary KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <StatCard
-          title="Total Crimes"
-          value={totalCrimes}
-          icon={<Shield className="w-4 h-4" />}
-          trend="up"
-          trendValue="8.6%"
-          subtext="vs last month"
-          glowColor="blue"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'crime_cases' } }))}
-        />
-        <StatCard
-          title="Solved Crimes"
-          value={solvedCrimes}
-          icon={<CheckCircle2 className="w-4 h-4" />}
-          trend="up"
-          trendValue={`${summary?.resolution_rate_percent ?? 0}%`}
-          subtext="resolution rate"
-          glowColor="teal"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'fir' } }))}
-        />
-        <StatCard
-          title="Active Cases"
-          value={openCrimes}
-          icon={<ShieldAlert className="w-4 h-4" />}
-          trend="down"
-          trendValue="5.3%"
-          subtext="under investigation"
-          glowColor="coral"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'crime_cases' } }))}
-        />
-        <StatCard
-          title="Crime Hotspots"
-          value={crimeHotspotCount}
-          icon={<MapPin className="w-4 h-4" />}
-          trend="stable"
-          trendValue="Live"
-          subtext="active zones tracked"
-          glowColor="amber"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'hotspot' } }))}
-        />
-        <StatCard
-          title="High Risk Areas"
-          value={highRiskCount}
-          icon={<NavIcon className="w-4 h-4" />}
-          trend="up"
-          trendValue="2 New"
-          subtext="monitored regions"
-          glowColor="indigo"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'hotspot' } }))}
-        />
-        <StatCard
-          title="Missing Persons"
-          value={missingPersonsCount}
-          icon={<Users className="w-4 h-4" />}
-          trend="down"
-          trendValue="7.2%"
-          subtext="active inquiries"
-          glowColor="purple"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'victims' } }))}
-        />
-        <StatCard
-          title="Repeat Offenders"
-          value={repeatOffenderCount}
-          icon={<UserMinus className="w-4 h-4" />}
-          trend="up"
-          trendValue="5 New"
-          subtext="surveillance lists"
-          glowColor="emerald"
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'offenders' } }))}
-        />
+      {/* AT A GLANCE — role-ordered, non-congested */}
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">At a glance</span>
+          <span className="h-px w-16 bg-[var(--border-secondary)] hidden sm:inline-block" />
+        </div>
+      </div>
+      <div className={visibleKpis.length > 5 ? 'grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3' : 'grid grid-cols-2 sm:grid-cols-4 gap-3'}>
+        {visibleKpis.map((kpi) => (
+          <StatCard
+            key={kpi.title}
+            title={kpi.title}
+            value={kpi.value}
+            icon={kpi.icon}
+            trend={kpi.trend}
+            trendValue={kpi.trendValue}
+            subtext={kpi.subtext}
+            glowColor={kpi.glowColor}
+            onClick={() => navigate(kpi.tab)}
+          />
+        ))}
+      </div>
+
+      {/* NEEDS YOUR ATTENTION — what / when / why / action */}
+      <div className="sk-panel sk-panel-pad !p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="w-4 h-4 text-[var(--accent-coral)] shrink-0" />
+          <h4 className="sk-panel-title !mb-0">Needs your attention</h4>
+          {attentionItems.length > 0 && (
+            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+              Live — from the records
+            </span>
+          )}
+        </div>
+        {attentionItems.length === 0 ? (
+          <div className="flex items-center gap-2 px-3 py-3 rounded-lg bg-[var(--bg-tertiary)]/40 border border-dashed border-[var(--border-secondary)] text-[13px] text-[var(--text-muted)]">
+            <CheckCircle2 className="w-4 h-4 text-[var(--accent-teal)] shrink-0" />
+            Nothing urgent right now — current filters show no critical or high-priority open cases.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {attentionItems.map((item) => (
+              <div
+                key={item.key}
+                className="flex items-center gap-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 px-3 py-2.5"
+              >
+                <span
+                  className="w-1.5 self-stretch rounded-full shrink-0"
+                  style={{ background: item.tone === 'coral' ? 'var(--accent-coral)' : item.tone === 'amber' ? 'var(--accent-amber)' : 'var(--accent-purple)' }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">{item.title}</div>
+                  <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] mt-0.5">
+                    <span className="whitespace-nowrap">{item.when}</span>
+                    <span className="text-[var(--border-strong)]">·</span>
+                    <span className="truncate">{item.why}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate(item.tab)}
+                  className="sk-btn sk-btn-secondary cursor-pointer shrink-0 !h-8 whitespace-nowrap"
+                >
+                  {item.action} <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* DISTRICT ACTIVITY — one strong paired view for the home posture */}
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">District activity</span>
+          <span className="h-px w-16 bg-[var(--border-secondary)] hidden sm:inline-block" />
+        </div>
       </div>
 
       {/* Trends + category mix */}
@@ -814,7 +929,7 @@ export const Overview: React.FC = () => {
         <div className="lg:col-span-7 sk-panel sk-panel-pad min-h-[320px] flex flex-col">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-[var(--accent-blue)] shrink-0" />
-            <h4 className="sk-panel-title">Recent Incidents</h4>
+            <h4 className="sk-panel-title">Recent Activity</h4>
             <span
               className={`ml-auto inline-flex items-center gap-1.5 text-xs font-medium ${
                 realtimeStatus === 'connected' ? 'text-[var(--tone-success-text)]' : 'text-[var(--text-muted)]'
@@ -865,12 +980,12 @@ export const Overview: React.FC = () => {
                         <td>
                           <span className={`sk-chip ${incident.status === 'open' ? 'sk-chip-error' : incident.status === 'investigating' ? 'sk-chip-info' : 'sk-chip-success'}`}>
                             <span className="sk-dot" />
-                            {incident.status}
+                            {incident.status === 'open' ? 'Open' : incident.status === 'closed' ? 'Closed' : 'Under investigation'}
                           </span>
                         </td>
                         <td className="text-right">
                           <span className={`sk-chip ${incident.priority === 'critical' ? 'sk-chip-error' : incident.priority === 'high' ? 'sk-chip-warning' : 'sk-chip-neutral'}`}>
-                            {incident.priority}
+                            {incident.priority === 'critical' ? 'Critical' : incident.priority === 'high' ? 'High' : incident.priority === 'medium' ? 'Medium' : 'Low'}
                           </span>
                         </td>
                       </tr>
@@ -887,7 +1002,7 @@ export const Overview: React.FC = () => {
           <div className="sk-panel sk-panel-pad">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-[var(--accent-purple)]" />
-              <h4 className="sk-panel-title">AI Incident Forecast</h4>
+              <h4 className="sk-panel-title">Outlook — next incidents</h4>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
@@ -917,7 +1032,7 @@ export const Overview: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-5 items-stretch">
         {/* Predictive risk ranking */}
         <div className="xl:col-span-4 sk-panel sk-panel-pad min-h-[280px] flex flex-col">
-          <h4 className="sk-panel-title mb-2">Predictive Risk Score · 7 Days</h4>
+          <h4 className="sk-panel-title mb-2">Risk Outlook — next 7 days</h4>
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)] pb-2.5 mb-3">
             <span>Confidence <b className="text-[var(--text-primary)]">{Math.round((riskPrediction?.confidence_score ?? 0.88) * 100)}%</b></span>
             <span>Threat <b className="uppercase text-[var(--tone-warning-text)]">{riskPrediction?.threat_level ?? 'Medium'}</b></span>
@@ -1024,7 +1139,7 @@ export const Overview: React.FC = () => {
         <div className="sk-panel sk-panel-pad">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-[var(--accent-blue)]" />
-            <h4 className="sk-panel-title">Force Status</h4>
+            <h4 className="sk-panel-title">Force readiness</h4>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/40 border border-[var(--border-primary)] text-center">
