@@ -4,12 +4,14 @@ import { getAnomalies, createNotification } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { ShieldAlert, CheckCircle, Search, MapPin, HardDrive, Loader2, FolderOpen } from 'lucide-react';
 import { TableSkeleton } from '../components/ui/Skeleton';
+import { useUserScope } from '../hooks/useUserScope';
 
 export const Anomalies: React.FC = () => {
   const [alerts, setAlerts] = useState<CrimeAlert[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
+  const { district: scopeDistrict } = useUserScope();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<'ALL' | 'HIGH' | 'WATCH'>('ALL');
@@ -24,7 +26,10 @@ export const Anomalies: React.FC = () => {
     getAnomalies()
       .then((response) => {
         if (!isMounted) return;
-        const mappedAlerts = response.anomalies.map<CrimeAlert>((item) => ({
+        const scoped = scopeDistrict
+          ? response.anomalies.filter((item) => (item.district || '').toLowerCase() === scopeDistrict.toLowerCase())
+          : response.anomalies;
+        const mappedAlerts = scoped.map<CrimeAlert>((item) => ({
           id: item.case_id,
           firNumber: item.case_id,
           caseUuid: item.case_uuid,
@@ -59,7 +64,7 @@ export const Anomalies: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [scopeDistrict]);
 
   useEffect(() => {
     return fetchAnomalies();
@@ -122,6 +127,14 @@ export const Anomalies: React.FC = () => {
           />
           <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
         </div>
+
+        {/* Scope indicator */}
+        {scopeDistrict && (
+          <span className="order-last md:order-none inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
+            <MapPin className="w-3 h-3 text-[var(--accent-blue)]" />
+            Focus: {scopeDistrict} · {alerts.length} alerts
+          </span>
+        )}
 
         {/* Filters */}
         <div className="w-full md:w-auto flex flex-wrap items-center gap-3">
