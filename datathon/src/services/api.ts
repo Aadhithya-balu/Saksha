@@ -1608,6 +1608,56 @@ export async function deleteFIR(firId: string) {
   });
 }
 
+export interface FIRAttachmentRecord {
+  id: string;
+  name: string;
+  size: number;
+  mime_type?: string;
+  uploaded_at?: string;
+  uploaded_by?: string;
+  has_file?: boolean;
+}
+
+export async function uploadFIRAttachment(firId: string, file: File): Promise<FIRAttachmentRecord[]> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiRequest<FIRAttachmentRecord[]>(`/firs/${firId}/attachments`, {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function deleteFIRAttachment(firId: string, attachmentId: string): Promise<FIRAttachmentRecord[]> {
+  return apiRequest<FIRAttachmentRecord[]>(`/firs/${firId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function downloadFIRAttachment(firId: string, attachmentId: string, filename?: string): Promise<void> {
+  const tokens = getStoredTokens();
+  const response = await fetch(`${API_BASE_URL}/firs/${firId}/attachments/${attachmentId}/download`, {
+    headers: {
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download attachment (${response.statusText})`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'attachment';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 500);
+}
+
 export async function addInvestigationNote(caseId: string, content: string) {
   return apiRequest<{ message: string; content: string }>(`/crime-cases/${caseId}/notes`, {
     method: 'POST',

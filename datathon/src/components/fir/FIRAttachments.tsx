@@ -1,13 +1,17 @@
 import React, { useState, useRef } from "react";
-import { type FIRDetailRecord, updateFIR } from "../../services/api";
-import { FileText, UploadCloud, Trash2, ShieldAlert } from "lucide-react";
+import {
+  type FIRDetailRecord,
+  type FIRAttachmentRecord,
+  uploadFIRAttachment,
+  deleteFIRAttachment,
+  downloadFIRAttachment,
+} from "../../services/api";
+import { FileText, UploadCloud, Trash2, ShieldAlert, Download } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useAuditStore } from "../../store/auditStore";
-import { downloadSecureDossier } from "../../utils/downloader";
-import { ExportMenu } from "../reports";
 interface FIRAttachmentsProps {
   fir: FIRDetailRecord;
-  onAttachmentAdded: (updatedAttachments: any[]) => void;
+  onAttachmentAdded: (updatedAttachments: FIRAttachmentRecord[]) => void;
 }
 
 export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
@@ -16,14 +20,16 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
 }) => {
   const { user } = useAuthStore();
   const { addLog } = useAuditStore();
-  const [attachments, setAttachments] = useState<any[]>(fir.attachments || []);
+  const [attachments, setAttachments] = useState<FIRAttachmentRecord[]>(
+    (fir.attachments as FIRAttachmentRecord[]) || [],
+  );
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (!bytes) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -32,40 +38,15 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      void simulateUpload(e.target.files[0]);
+      void handleUpload(e.target.files[0]);
     }
   };
 
-  const simulateUpload = async (file: File) => {
+  const handleUpload = async (file: File) => {
+    setError(null);
     setUploadingFile(file.name);
-    setUploadProgress(0);
-
-    // Simulate progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 150);
-
-    // Wait for simulate progress to finish
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-
-    // Prepare updated attachments list
-    const newAttachment = {
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    const updated = [...attachments, newAttachment];
-
     try {
-      // Save to database
-      await updateFIR(fir.id, { attachments: updated });
+      const updated = await uploadFIRAttachment(fir.id, file);
       setAttachments(updated);
       onAttachmentAdded(updated);
 
@@ -74,32 +55,26 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
           user.name,
           user.badgeId,
           "UPLOAD",
-          `Attached investigative document [${file.name}] to FIR registry [${fir.fir_number}]`,
+          `Uploaded document [${file.name}] to FIR [${fir.fir_number}]`,
         );
       }
     } catch (err) {
-      alert("Failed to save attachment metadata to backend database.");
+      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
       setUploadingFile(null);
-      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   };
 
-  const handleDelete = async (indexToDelete: number) => {
-    const fileToDelete = attachments[indexToDelete];
-    const updated = attachments.filter((_, idx) => idx !== indexToDelete);
-
-    if (
-      !window.confirm(`Are you sure you want to remove ${fileToDelete.name}?`)
-    ) {
+  const handleDelete = async (attachment: FIRAttachmentRecord) => {
+    if (!window.confirm(`Are you sure you want to remove ${attachment.name}?`)) {
       return;
     }
-
+    setError(null);
     try {
-      await updateFIR(fir.id, { attachments: updated });
+      const updated = await deleteFIRAttachment(fir.id, attachment.id);
       setAttachments(updated);
       onAttachmentAdded(updated);
 
@@ -108,37 +83,32 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
           user.name,
           user.badgeId,
           "DELETE",
-          `Deleted document attachment [${fileToDelete.name}] from FIR registry [${fir.fir_number}]`,
+          `Removed document [${attachment.name}] from FIR [${fir.fir_number}]`,
         );
       }
     } catch (err) {
-      alert("Failed to remove attachment metadata from database.");
+      setError(err instanceof Error ? err.message : "Failed to remove attachment.");
     }
   };
 
-  const handleDownload = (
-    filename: string,
-    format: "pdf" | "docx" | "txt" | "csv" | "xlsx" = "pdf",
-  ) => {
-    downloadSecureDossier(
-      `ATTACHMENT_${filename.replace(/[^a-zA-Z0-9]/g, "_")}`,
-      {
-        "FIR ID": fir.fir_number,
-        "File Name": filename,
-        Classification: "SAKSHA CASE RECON DATA - CLASSIFIED SYSTEM",
-        Timestamp: new Date().toISOString(),
-      },
-      `CONFIDENTIAL - ${user?.badgeId || "SYSTEM"}`,
-      format,
-    );
-
-    if (user) {
-      addLog(
-        user.name,
-        user.badgeId,
-        "DOWNLOAD",
-        `Downloaded classified attachment [${filename}] for case [${fir.fir_number}]`,
-      );
+  const handleDownload = async (attachment: FIRAttachmentRecord) => {
+    if (!attachment.has_file) {
+      setError("This attachment record has no stored file.");
+      return;
+    }
+    setError(null);
+    try {
+      await downloadFIRAttachment(fir.id, attachment.id, attachment.name);
+      if (user) {
+        addLog(
+          user.name,
+          user.badgeId,
+          "DOWNLOAD",
+          `Downloaded document [${attachment.name}] from FIR [${fir.fir_number}]`,
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed.");
     }
   };
 
@@ -155,7 +125,7 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      void simulateUpload(e.dataTransfer.files[0]);
+      void handleUpload(e.dataTransfer.files[0]);
     }
   };
 
@@ -164,7 +134,7 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
       <div className="flex items-center gap-2 border-b border-[var(--border-primary)] pb-3 mb-4">
         <UploadCloud className="w-4 h-4 text-[var(--accent-teal)]" />
         <span className="text-[10px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
-          Classification & FIR Attachments
+          FIR Attachments
         </span>
       </div>
 
@@ -194,34 +164,38 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
                 Uploading: {uploadingFile}
               </p>
               <div className="w-full h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-150"
-                  style={{ width: `${uploadProgress}%` }}
-                />
+                <div className="h-full w-1/2 bg-emerald-500 rounded-full animate-pulse" />
               </div>
               <span className="text-[8px] text-[var(--text-muted)]">
-                {uploadProgress}% Telemetry Synced
+                Sending file to secure storage…
               </span>
             </div>
           ) : (
             <>
-              <UploadCloud className="w-8 h-8 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              <UploadCloud className="w-8 h-8 text-[var(--text-muted)]" />
               <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] text-center">
                 Drag investigative reports or click to browse
               </span>
               <span className="text-[7.5px] text-[var(--text-muted)] uppercase">
-                PDF, JPG, PNG â€¢ SECURE CHANNEL ONLY
+                PDF, JPG, PNG · max 50 MB
               </span>
             </>
           )}
         </div>
 
+        {error && (
+          <div className="flex items-start gap-2 p-2 rounded border border-red-500/30 bg-red-500/10 text-red-400 text-[9px]">
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Attachments List */}
         <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
-          {attachments.map((file, idx) => (
+          {attachments.map((file) => (
             <div
-              key={idx}
-              className="flex items-center justify-between p-2.5 bg-[var(--bg-secondary)]/60 border border-[var(--border-primary)] rounded-md hover:border-[var(--border-primary)] transition-colors"
+              key={file.id}
+              className="flex items-center justify-between p-2.5 bg-[var(--bg-secondary)]/60 border border-[var(--border-primary)] rounded-md transition-colors"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <FileText className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
@@ -230,17 +204,23 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
                     {file.name}
                   </p>
                   <p className="text-[8px] text-[var(--text-muted)] mt-0.5">
-                    {formatSize(file.size || 0)}
+                    {formatSize(file.size)}
+                    {file.uploaded_by ? ` · ${file.uploaded_by}` : ""}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                <ExportMenu
-                  onExport={(format) => handleDownload(file.name, format)}
-                />
                 <button
-                  onClick={() => handleDelete(idx)}
+                  onClick={() => handleDownload(file)}
+                  disabled={!file.has_file}
+                  title={file.has_file ? "Download file" : "No stored file for this record"}
+                  className="p-1 text-[var(--text-muted)] hover:text-[var(--accent-blue)] hover:bg-[var(--bg-tertiary)] rounded cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(file)}
                   className="p-1 text-[var(--text-muted)] hover:text-red-400 hover:bg-[var(--bg-tertiary)] rounded cursor-pointer transition-colors"
                   title="Remove Document"
                 >
@@ -254,7 +234,7 @@ export const FIRAttachments: React.FC<FIRAttachmentsProps> = ({
             <div className="flex flex-col items-center justify-center p-6 border border-dashed border-[var(--border-primary)] rounded-lg text-[var(--text-muted)] text-center gap-1">
               <ShieldAlert className="w-4 h-4 text-amber-500/60" />
               <span className="text-[9px] uppercase tracking-wide">
-                No dossiers attached
+                No documents attached
               </span>
             </div>
           )}
