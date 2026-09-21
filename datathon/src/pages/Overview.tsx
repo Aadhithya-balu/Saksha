@@ -31,6 +31,7 @@ import {
   getLocationsList,
   listOfficers,
   getCrimeCases,
+  apiRequest,
   type AnomalyRecord,
   type CategoryPoint,
   type DashboardSummary,
@@ -51,7 +52,6 @@ import {
   MapPin,
   Shield,
   Sparkles,
-  UserMinus,
   Settings,
   Users,
   AlertCircle,
@@ -70,49 +70,6 @@ import {
 } from 'lucide-react';
 import { PageSkeleton } from '../components/ui/Skeleton';
 
-const DEFAULT_RECENT_INCIDENTS: RecentIncidentType[] = [
-  {
-    case_number: 'CR-2026-BNG-001',
-    crime_type: 'Cyber Crime & Online Fraud',
-    location: 'Whitefield Police Station',
-    time: '2026-08-24T13:30:00',
-    status: 'open',
-    priority: 'high',
-  },
-  {
-    case_number: 'CR-2026-MYS-001',
-    crime_type: 'Theft & Burglaries',
-    location: 'Devaraja Police Station',
-    time: '2026-08-26T02:00:00',
-    status: 'open',
-    priority: 'high',
-  },
-  {
-    case_number: 'CR-2026-MYS-004',
-    crime_type: 'Narcotics Smuggling Services',
-    location: 'Vani Vilas Mohalla Police Station',
-    time: '2026-08-23T23:55:00',
-    status: 'open',
-    priority: 'critical',
-  },
-  {
-    case_number: 'CR-2026-MNG-001',
-    crime_type: 'Narcotics Smuggling Services',
-    location: 'Pandeshwar Police Station',
-    time: '2026-08-23T09:45:00',
-    status: 'open',
-    priority: 'critical',
-  },
-  {
-    case_number: 'CR-2026-BLG-001',
-    crime_type: 'Smuggling & Excise Violations',
-    location: 'Khade Bazar Station',
-    time: '2026-08-22T12:47:00',
-    status: 'open',
-    priority: 'low',
-  },
-];
-
 export const Overview: React.FC = () => {
   const { user } = useAuthStore();
   const { district: scopeDistrict, canSelectDistrict, persona, personaDescriptor } = useUserScope();
@@ -129,9 +86,12 @@ export const Overview: React.FC = () => {
   // Secondary dashboard state
   const [officerStats, setOfficerStats] = useState<OfficerStatsType | null>(null);
   const [evidenceStats, setEvidenceStats] = useState<EvidenceStatsType | null>(null);
-  const [recentIncidents, setRecentIncidents] = useState<RecentIncidentType[]>(DEFAULT_RECENT_INCIDENTS);
-  const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
-  const [riskPrediction, setRiskPrediction] = useState<RiskPredictionResponse | null>(null);
+const [recentIncidents, setRecentIncidents] = useState<RecentIncidentType[]>([]);
+const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
+const [riskPrediction, setRiskPrediction] = useState<RiskPredictionResponse | null>(null);
+// Platform stats for the Platform Administrator persona — fetched only from
+// real /admin endpoints, never fabricated (issue: NO FAKE DATA).
+const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; audit?: number }>({});
 
   // Filter options state
   const [districts, setDistricts] = useState<string[]>([]);
@@ -172,6 +132,27 @@ export const Overview: React.FC = () => {
     };
     void loadDropdownOptions();
   }, []);
+
+  // Platform Administrator — real platform/security stats from /admin endpoints.
+  useEffect(() => {
+    if (persona !== 'admin') return;
+    let isMounted = true;
+    void Promise.allSettled([
+      apiRequest<{ total: number }>('/admin/users?page_size=1'),
+      apiRequest<{ results: unknown[] }>('/admin/roles'),
+      apiRequest<{ total: number }>('/admin/audit-logs?page_size=1'),
+    ]).then(([usersRes, rolesRes, auditRes]) => {
+      if (!isMounted) return;
+      setAdminStats({
+        users: usersRes.status === 'fulfilled' ? usersRes.value.total : undefined,
+        roles: rolesRes.status === 'fulfilled' && Array.isArray(rolesRes.value?.results) ? rolesRes.value.results.length : undefined,
+        audit: auditRes.status === 'fulfilled' ? auditRes.value.total : undefined,
+      });
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [persona]);
 
   // Fetch filtered dashboard stats on filter change — staged for faster perceived load
   useEffect(() => {
@@ -400,13 +381,13 @@ export const Overview: React.FC = () => {
     };
   }, []);
 
-  const totalCrimes = summary?.total_crimes ?? 0;
-  const openCrimes = summary?.open_crimes ?? 0;
-  const solvedCrimes = Math.max(totalCrimes - openCrimes, 0);
-  const crimeHotspotCount = hotspots.length > 0 ? hotspots.length : 62;
-  const highRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 70).length : 44;
-  const missingPersonsCount = Math.round(openCrimes * 0.06);
-  const repeatOffenderCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 80).length : 44;
+const totalCrimes = summary?.total_crimes ?? 0;
+const openCrimes = summary?.open_crimes ?? 0;
+const solvedCrimes = Math.max(totalCrimes - openCrimes, 0);
+const totalFirs = summary?.total_firs ?? 0;
+const crimeHotspotCount = hotspots.length;
+const highRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 70).length : 0;
+const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 80).length : 0;
 
   const trendChartData = trends.map((point) => ({
     month: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -613,14 +594,14 @@ export const Overview: React.FC = () => {
   };
 
   // AT A GLANCE — role-ordered KPI selection (3–5 cards, no congestion).
-  const KPI_SETS: Record<string, ('total' | 'solved' | 'active' | 'hotspots' | 'highrisk' | 'missing' | 'repeat')[]> = {
-    investigator: ['active', 'hotspots', 'missing', 'solved'],
-    analyst: ['repeat', 'hotspots', 'highrisk', 'total'],
+  const KPI_SETS: Record<string, ('total' | 'solved' | 'active' | 'hotspots' | 'highrisk' | 'hotrisk' | 'firs' | 'platform_users' | 'roles' | 'audit_events')[]> = {
+    investigator: ['active', 'hotspots', 'firs', 'solved'],
+    analyst: ['hotrisk', 'hotspots', 'highrisk', 'total'],
     authority: ['active', 'total', 'hotspots', 'solved', 'highrisk'],
-    admin: ['total', 'active', 'hotspots', 'repeat'],
+    admin: ['platform_users', 'roles', 'audit_events', 'firs'],
     forensic: ['active', 'hotspots', 'highrisk'],
     viewer: ['total', 'active', 'hotspots'],
-    default: ['total', 'solved', 'active', 'hotspots', 'highrisk', 'missing', 'repeat'],
+    default: ['total', 'solved', 'active', 'hotspots', 'highrisk', 'firs', 'hotrisk'],
   };
   const kpiOrder = KPI_SETS[persona] || KPI_SETS.default;
   const kpiCards: Record<string, { title: string; value: number; icon: React.ReactNode; trend: 'up' | 'down' | 'stable'; trendValue: string; subtext: string; glowColor: 'blue' | 'teal' | 'amber' | 'coral' | 'purple' | 'indigo' | 'emerald'; tab: string }> = {
@@ -629,8 +610,11 @@ export const Overview: React.FC = () => {
     active: { title: 'Active Cases', value: openCrimes, icon: <ShieldAlert className="w-4 h-4" />, trend: 'stable', trendValue: 'Open', subtext: 'under investigation', glowColor: 'coral', tab: 'crime_cases' },
     hotspots: { title: 'Crime Hotspots', value: crimeHotspotCount, icon: <MapPin className="w-4 h-4" />, trend: 'stable', trendValue: 'Live', subtext: 'zones under watch', glowColor: 'amber', tab: 'hotspot' },
     highrisk: { title: 'High Risk Areas', value: highRiskCount, icon: <NavIcon className="w-4 h-4" />, trend: 'stable', trendValue: 'Active', subtext: 'priority risk areas', glowColor: 'purple', tab: 'hotspot' },
-    missing: { title: 'Missing Persons', value: missingPersonsCount, icon: <Users className="w-4 h-4" />, trend: 'stable', trendValue: 'Tracked', subtext: 'active inquiries', glowColor: 'indigo', tab: 'victims' },
-    repeat: { title: 'Repeat Offenders', value: repeatOffenderCount, icon: <UserMinus className="w-4 h-4" />, trend: 'stable', trendValue: 'Listed', subtext: 'on surveillance watch', glowColor: 'emerald', tab: 'offenders' },
+    hotrisk: { title: 'High-Risk Districts', value: hotRiskCount, icon: <AlertTriangle className="w-4 h-4" />, trend: 'stable', trendValue: 'Watch', subtext: 'risk score of 80 or higher', glowColor: 'emerald', tab: 'predictive' },
+    firs: { title: 'FIRs on Record', value: totalFirs, icon: <FileText className="w-4 h-4" />, trend: 'stable', trendValue: 'Logged', subtext: 'registered complaints', glowColor: 'indigo', tab: 'fir' },
+    platform_users: { title: 'Platform Users', value: adminStats.users ?? 0, icon: <Users className="w-4 h-4" />, trend: 'stable', trendValue: 'Accounts', subtext: 'registered on the platform', glowColor: 'blue', tab: 'admin' },
+    roles: { title: 'Roles & Permissions', value: adminStats.roles ?? 0, icon: <Settings className="w-4 h-4" />, trend: 'stable', trendValue: 'Defined', subtext: 'access roles', glowColor: 'teal', tab: 'admin' },
+    audit_events: { title: 'Audit Events', value: adminStats.audit ?? 0, icon: <Bookmark className="w-4 h-4" />, trend: 'stable', trendValue: 'Recorded', subtext: 'accountable actions', glowColor: 'purple', tab: 'admin' },
   };
   const visibleKpis = kpiOrder.map((key) => kpiCards[key]);
 
@@ -954,22 +938,27 @@ export const Overview: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-x-auto">
-            {(() => {
-              const displayIncidents = recentIncidents.length > 0 ? recentIncidents : DEFAULT_RECENT_INCIDENTS;
-              return (
-                <table className="sk-table">
-                  <thead>
-                    <tr>
-                      <th>Case Number</th>
-                      <th>Crime Type</th>
-                      <th>Location</th>
-                      <th>Time</th>
-                      <th>Status</th>
-                      <th className="text-right">Priority</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayIncidents.map((incident, idx) => (
+            {recentIncidents.length === 0 ? (
+              <EmptyState
+                icon={<FileText className="w-7 h-7 text-[var(--text-muted)]" />}
+                title="No recent activity"
+                description="Case activity for the current scope will appear here as it is recorded."
+                className="py-10"
+              />
+            ) : (
+              <table className="sk-table">
+                <thead>
+                  <tr>
+                    <th>Case Number</th>
+                    <th>Crime Type</th>
+                    <th>Location</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th className="text-right">Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentIncidents.map((incident, idx) => (
                       <tr key={idx}>
                         <td className="font-semibold text-[var(--accent-blue)] whitespace-nowrap">{incident.case_number}</td>
                         <td className="text-[var(--text-primary)]">{incident.crime_type}</td>
@@ -992,8 +981,7 @@ export const Overview: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-              );
-            })()}
+              )}
           </div>
         </div>
 

@@ -460,7 +460,7 @@ export const Criminals: React.FC = () => {
   });
 
   return (
-    <div className="h-[84vh] flex flex-col gap-5 p-1 md:p-3 select-none">
+    <div className="min-h-[84vh] flex flex-col gap-5 p-1 md:p-3 select-none">
       
       {/* Page Header banner */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[var(--border-muted)] pb-3">

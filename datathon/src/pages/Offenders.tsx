@@ -76,7 +76,7 @@ export const Offenders: React.FC = () => {
   };
 
   return (
-    <div className="h-[84vh] flex flex-col gap-5 p-1 md:p-3 select-none">
+    <div className="min-h-[84vh] flex flex-col gap-5 p-1 md:p-3 select-none">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-muted)] pb-3">
         <div>
           <h2 className="text-md font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">

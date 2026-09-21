@@ -332,7 +332,7 @@ export const Hotspots: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+      <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
         <PageHeader title={t.page_hotspot_title} subtitle={t.page_hotspot_subtitle} icon={<Compass className="w-5 h-5" />} />
         <PageSkeleton />
       </div>
@@ -341,7 +341,7 @@ export const Hotspots: React.FC = () => {
 
   if (error && hotspots.length === 0) {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+      <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
         <PageHeader title={t.page_hotspot_title} icon={<Compass className="w-5 h-5" />} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
@@ -359,7 +359,7 @@ export const Hotspots: React.FC = () => {
   }
 
   return (
-    <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+    <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
 
       {/* Page header */}
       <PageHeader

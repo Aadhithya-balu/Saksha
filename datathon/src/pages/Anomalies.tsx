@@ -110,7 +110,7 @@ export const Anomalies: React.FC = () => {
   const activeAlert = alerts.find(a => a.id === selectedAlertId) || filteredAlerts[0] || null;
 
   return (
-    <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
+    <div className="min-h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
       
       {/* Search Filter Top HUD */}
       {loadError && <div className="text-[9px] font-mono text-amber-400 uppercase">{loadError}</div>}

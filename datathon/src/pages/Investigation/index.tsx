@@ -254,7 +254,7 @@ const InvestigationPage: React.FC = () => {
   // ── List View ──
   if (viewState === 'list') {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
+      <div className="min-h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
         {/* Header */}
         <div className="pb-3 shrink-0 flex flex-col gap-2">
           <PageHeader
