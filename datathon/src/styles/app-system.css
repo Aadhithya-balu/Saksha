@@ -1225,6 +1225,15 @@
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* Laptop/desktop: the bottom bar is a mobile-only affordance.
+   This rule lives here (specificity 0,2,0) because Tailwind's
+   `md:hidden` (0,1,0) is out-specified by the display:flex above. */
+@media (min-width: 768px) {
+  .sk-app .sk-mobile-bar {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------
    19. COMMAND PALETTE
    ------------------------------------------------------------ */

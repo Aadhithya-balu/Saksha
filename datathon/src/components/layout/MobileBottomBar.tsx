@@ -2,12 +2,14 @@ import React from 'react';
 import { useRBAC } from '../../hooks/useRBAC';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard,
   Map,
   FileText,
   MessageSquare,
   Menu,
+  LogOut,
 } from 'lucide-react';
 
 interface MobileBottomBarProps {
@@ -43,6 +45,10 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({
     setActiveTab(id);
   };
 
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+  };
+
   const items = primaryTabs.filter((t) => checkPermission(t.path));
 
   const tabBtn = (active: boolean) =>
@@ -51,6 +57,17 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({
 
   return (
     <nav aria-label="Mobile navigation" className="sk-mobile-bar md:hidden select-none">
+      <button
+        onClick={handleLogout}
+        className={`${tabBtn(false)} hover:text-[var(--accent-coral)]`}
+        title="Sign Out"
+      >
+        <span className="relative">
+          <LogOut className="w-5 h-5" />
+        </span>
+        <span className="text-[10px] font-medium uppercase tracking-wide">Sign Out</span>
+      </button>
+
       {items.map((item) => {
         const isActive = activeTab === item.id;
         return (
