@@ -209,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div className="sk-clearance-row">
               <span className="sk-clear-id truncate">{user.badgeId}</span>
-              <span className="sk-clear-id">{user.name.split(' ')[0]}</span>
+              <span className="sk-clear-id truncate">{user.district || user.station || user.name.split(' ')[0]}</span>
             </div>
           </div>
         )}

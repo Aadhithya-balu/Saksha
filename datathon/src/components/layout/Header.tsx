@@ -14,6 +14,7 @@ import {
   ChevronDown,
   KeyRound,
   LogOut,
+  MapPin,
 } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 import DataModeBadge from '../ui/DataModeBadge';
@@ -135,6 +136,17 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
           <ChevronRight className="sk-crumb-sep hidden sm:block w-3.5 h-3.5" />
           <span className="sk-crumb-current">{currentPage}</span>
         </div>
+
+        {user?.district && (
+          <span
+            className="sk-header-chip hidden sm:inline-flex !max-w-[220px] overflow-hidden"
+            data-accent="cyan"
+            title={`Operating area: ${user.district}`}
+          >
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate">{user.district}</span>
+          </span>
+        )}
       </div>
 
       {/* Center: Quick find (opens Command Palette) */}

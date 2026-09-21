@@ -9,6 +9,7 @@ import ForecastChart from '../components/charts/ForecastChart';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
+import { useUserScope } from '../hooks/useUserScope';
 import { useAuditStore } from '../store/auditStore';
 import { useRealtimeStore } from '../store/realtimeStore';
 import { usePolling } from '../hooks/usePolling';
@@ -113,6 +114,7 @@ const DEFAULT_RECENT_INCIDENTS: RecentIncidentType[] = [
 
 export const Overview: React.FC = () => {
   const { user } = useAuthStore();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const { addLog } = useAuditStore();
 
   // Base dashboard state
@@ -135,8 +137,9 @@ export const Overview: React.FC = () => {
   const [categoriesList, setCategoriesList] = useState<CrimeCategoryRecord[]>([]);
   const [officers, setOfficers] = useState<OfficerRecord[]>([]);
 
-  // Filter selection state
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  // Filter selection state — district defaults to the operator's own district
+  // (from /auth/me) so district-scoped users always work inside their area.
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => scopeDistrict || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOfficer, setSelectedOfficer] = useState<string>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');
@@ -440,7 +443,7 @@ export const Overview: React.FC = () => {
   }, [hotspots]);
 
   const resetFilters = () => {
-    setSelectedDistrict('');
+    setSelectedDistrict(canSelectDistrict ? '' : scopeDistrict || '');
     setSelectedCategory('');
     setSelectedOfficer('');
     setSelectedPriority('');
@@ -593,6 +596,16 @@ export const Overview: React.FC = () => {
         icon={<LayoutDashboard className="w-5 h-5" />}
         actions={
           <>
+            {scopeDistrict && (
+              <span
+                className="sk-header-chip hidden sm:inline-flex"
+                data-accent="cyan"
+                title={canSelectDistrict ? `Default filter · ${scopeDistrict}` : `Your operating area: ${scopeDistrict}`}
+              >
+                <MapPin className="w-3 h-3" />
+                {scopeDistrict}
+              </span>
+            )}
             <button className="sk-btn sk-btn-secondary sk-btn-icon" onClick={resetFilters} title="Reset filters">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -611,15 +624,34 @@ export const Overview: React.FC = () => {
 
       {/* Filter console */}
       <div className="sk-panel sk-panel-pad !p-4 flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="sk-field min-w-[140px]">
-          <label className="sk-label">District</label>
-          <select className="sk-select" value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
-            <option value="">All Districts</option>
-            {districts.map((dist) => (
-              <option key={dist} value={dist}>{dist}</option>
-            ))}
-          </select>
-        </div>
+        {canSelectDistrict ? (
+          <div className="sk-field min-w-[140px]">
+            <label className="sk-label">District</label>
+            <select className="sk-select" value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
+              <option value="">All Districts</option>
+              {districts.map((dist) => (
+                <option key={dist} value={dist}>{dist}</option>
+              ))}
+            </select>
+          </div>
+        ) : scopeDistrict ? (
+          <div className="sk-field min-w-[140px]">
+            <label className="sk-label">District</label>
+            <div className="sk-select !cursor-not-allowed opacity-90 select-none" title="Your data scope is fixed to your operating area">
+              {scopeDistrict}
+            </div>
+          </div>
+        ) : (
+          <div className="sk-field min-w-[140px]">
+            <label className="sk-label">District</label>
+            <select className="sk-select" value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
+              <option value="">All Districts</option>
+              {districts.map((dist) => (
+                <option key={dist} value={dist}>{dist}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="sk-field min-w-[150px]">
           <label className="sk-label">Category</label>
