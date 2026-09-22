@@ -4072,3 +4072,211 @@ export async function verifyAIMatch(matchId: string, decision: 'CONFIRM' | 'REJE
     body: JSON.stringify({ decision }),
   });
 }
+
+// --- Phase 1/3/5 (issue #269): ingestion, knowledge graph, alert findings ---
+
+export interface DataSourceRecord {
+  id: string;
+  name: string;
+  source_type: string;
+  description: string | null;
+  config: Record<string, unknown> | null;
+  jurisdiction: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IngestionKind {
+  value: string;
+  label: string;
+  ai_eligible: boolean;
+}
+
+export interface IngestionJobRecord {
+  id: string;
+  source_id: string | null;
+  status: string;
+  artifact_kind: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  size_bytes: number;
+  content_hash: string | null;
+  record_count: number;
+  ai_job_spawned: boolean;
+  error_details: string | null;
+  received_at: string;
+  status_counts?: Record<string, number>;
+  by_kind?: Record<string, number>;
+}
+
+export interface IngestionStatus {
+  total: number;
+  received: number;
+  validating: number;
+  normalizing: number;
+  stored: number;
+  ready_for_ai: number;
+  completed: number;
+  requires_review: number;
+  failed: number;
+  by_kind: Record<string, number>;
+}
+
+export async function getIngestionKinds(): Promise<IngestionKind[]> {
+  return apiRequest<IngestionKind[]>('/ingestion/kinds');
+}
+
+export async function listDataSources(activeOnly = false): Promise<DataSourceRecord[]> {
+  return apiRequest<DataSourceRecord[]>(`/ingestion/sources${buildQueryString({ active_only: activeOnly || undefined })}`);
+}
+
+export async function createDataSource(payload: {
+  name: string;
+  source_type?: string;
+  description?: string | null;
+  config?: Record<string, unknown> | null;
+  jurisdiction?: Record<string, unknown> | null;
+  is_active?: boolean;
+}): Promise<DataSourceRecord> {
+  return apiRequest<DataSourceRecord>('/ingestion/sources', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadArtifact(
+  file: File,
+  opts?: { sourceId?: string; jurisdiction?: string; origin?: string },
+): Promise<IngestionJobRecord> {
+  const form = new FormData();
+  form.append('file', file);
+  if (opts?.sourceId) form.append('source_id', opts.sourceId);
+  if (opts?.jurisdiction) form.append('jurisdiction', opts.jurisdiction);
+  if (opts?.origin) form.append('origin', opts.origin);
+  return apiRequest<IngestionJobRecord>('/ingestion/upload', { method: 'POST', body: form });
+}
+
+export async function listIngestionJobs(): Promise<IngestionJobRecord[]> {
+  return apiRequest<IngestionJobRecord[]>('/ingestion/jobs');
+}
+
+export async function getIngestionStatus(): Promise<IngestionStatus> {
+  return apiRequest<IngestionStatus>('/ingestion/jobs/status');
+}
+
+export interface KGNodeRecord {
+  id: string;
+  node_type: string;
+  ref_type: string;
+  ref_id: string;
+  label: string;
+  attributes: Record<string, unknown>;
+  districts: string[];
+  status: string;
+}
+
+export interface KGRelationshipRecord {
+  id: string;
+  source_node_id: string;
+  target_node_id: string;
+  relationship_type: string;
+  direction: string;
+  strength: number;
+  basis: string | null;
+  status: string;
+}
+
+export interface KGFragment {
+  nodes: KGNodeRecord[];
+  edges: KGRelationshipRecord[];
+  depth: number;
+}
+
+export interface KGStats {
+  node_total: number;
+  edge_total: number;
+  nodes_by_type: Record<string, number>;
+  edges_by_direction: Record<string, number>;
+}
+
+export async function getKGStats(): Promise<KGStats> {
+  return apiRequest<KGStats>('/knowledge-graph/stats');
+}
+
+export async function searchKGNodes(q?: string, limit = 50): Promise<{ items: KGNodeRecord[]; total: number }> {
+  return apiRequest<{ items: KGNodeRecord[]; total: number }>(
+    `/knowledge-graph/nodes${buildQueryString({ q, limit })}`,
+  );
+}
+
+export async function getKGFragment(nodeId: string, depth = 2): Promise<KGFragment> {
+  return apiRequest<KGFragment>(`/knowledge-graph/fragment/${nodeId}${buildQueryString({ depth })}`);
+}
+
+export async function getKGFragmentByRef(refType: string, refId: string, depth = 2): Promise<KGFragment> {
+  return apiRequest<KGFragment>(
+    `/knowledge-graph/fragment/by-ref/${encodeURIComponent(refType)}/${encodeURIComponent(refId)}${buildQueryString({ depth })}`,
+  );
+}
+
+export async function rebuildKG(): Promise<{ status: string; nodes: number; edges: number }> {
+  return apiRequest<{ status: string; nodes: number; edges: number }>('/knowledge-graph/rebuild', {
+    method: 'POST',
+  });
+}
+
+export interface AlertFindingRecord {
+  id: string;
+  finding_type: 'CRIME_SPIKE' | 'REPEAT_OFFENDER' | string;
+  district: string;
+  category: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  severity: string;
+  confidence: string;
+  provenance: string;
+  current_count: number;
+  baseline_count: number;
+  spike_ratio: number;
+  evidence: Array<Record<string, unknown>>;
+  time_window: Record<string, unknown> | null;
+  explanation: string;
+  status: string;
+  observation_count: number;
+  review_decision: string | null;
+  review_note: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export async function getAlertFindings(params?: {
+  status?: string;
+  finding_type?: string;
+  limit?: number;
+}): Promise<{ total: number; results: AlertFindingRecord[] }> {
+  return apiRequest<{ total: number; results: AlertFindingRecord[] }>(
+    `/alerts/findings${buildQueryString({ status: params?.status, finding_type: params?.finding_type, limit: params?.limit })}`,
+  );
+}
+
+export async function reviewAlertFinding(
+  findingId: string,
+  decision: 'confirm' | 'investigate' | 'dismiss',
+  note?: string,
+): Promise<AlertFindingRecord> {
+  return apiRequest<AlertFindingRecord>(
+    `/alerts/findings/${findingId}/review${buildQueryString({ decision, note })}`,
+    { method: 'POST' },
+  );
+}
+
+export async function regenerateAlertFindings(): Promise<{
+  generated: number;
+  empty: boolean;
+  total_open: number;
+}> {
+  return apiRequest<{ generated: number; empty: boolean; total_open: number }>('/alerts/findings/generate', {
+    method: 'POST',
+  });
+}

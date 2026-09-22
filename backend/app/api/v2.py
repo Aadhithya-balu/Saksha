@@ -75,6 +75,14 @@ from app.routes import model_management
 # AI Processing (Phase 2)
 from app.routes import ai_processing
 
+# Phase 1 (issue #269): universal data ingestion
+from app.routes import ingestion
+from app.routes import ai_candidates
+from app.routes import knowledge_graph
+
+# Phase 5 (issue #269): analytics alert-finding review workflow
+from app.routes import alert_findings
+
 
 api_router = APIRouter()
 
@@ -141,3 +149,13 @@ api_router.include_router(model_management.router)
 
 # AI Processing (Phase 2)
 api_router.include_router(ai_processing.router)
+
+# Phase 1 (issue #269): universal data ingestion
+api_router.include_router(ingestion.router)
+# Phase 2 (issue #269): human-review-gated knowledge candidates
+api_router.include_router(ai_candidates.router)
+# Phase 3 (issue #269): knowledge graph
+api_router.include_router(knowledge_graph.router)
+
+# Phase 5 (issue #269): analytics alert-finding review workflow
+api_router.include_router(alert_findings.router)

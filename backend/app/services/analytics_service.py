@@ -26,6 +26,22 @@ from app.models.victim import Victim
 SEVERITY_WEIGHT = {"low": 0.8, "medium": 1.0, "high": 1.25, None: 1.0}
 
 
+def _district_fir_ids(db: Session, district: str):
+    """FIR ids whose case location is in ``district`` (chat/analytics scope)."""
+    return db.query(FIR.id).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).filter(Location.district == district)
+
+
+def _district_criminal_ids(db: Session, district: str):
+    """Criminal ids linked to at least one FIR in ``district``."""
+    return db.query(FIRCriminalLink.criminal_id).join(
+        FIR, FIR.id == FIRCriminalLink.fir_id
+    ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).filter(Location.district == district)
+
+
 def derive_data_provenance(records: list) -> str:
     """Derive data provenance from actual source records.
 
@@ -56,10 +72,11 @@ def derive_data_provenance(records: list) -> str:
     return 'MIXED'
 
 
-def recent_activity(db: Session, days: int = 0) -> dict[str, Any]:
+def recent_activity(db: Session, days: int = 0, district: str | None = None) -> dict[str, Any]:
     """Time-aware activity summary so the chat can answer 'any records today?'.
 
     days=0 means since local midnight (i.e. today); otherwise a rolling window.
+    ``district`` narrows every figure to one district for scoped callers.
     """
     from app.models.evidence import Evidence
 
@@ -71,13 +88,35 @@ def recent_activity(db: Session, days: int = 0) -> dict[str, Any]:
         start = now - timedelta(days=days)
         period_label = f"{start.strftime('%Y-%m-%d %H:%M')} to {now.strftime('%Y-%m-%d %H:%M')}"
 
-    new_cases = db.query(CrimeCase).filter(CrimeCase.created_at >= start).count()
-    new_firs = db.query(FIR).filter(FIR.created_at >= start).count()
-    new_evidence = db.query(Evidence).filter(Evidence.created_at >= start).count()
-    new_criminals = db.query(Criminal).filter(Criminal.created_at >= start).count()
+    new_cases = (
+        db.query(CrimeCase).join(Location, Location.id == CrimeCase.location_id).filter(
+            CrimeCase.created_at >= start
+        ).filter(Location.district == district if district else True).count()
+    )
+    new_firs = (
+        db.query(FIR).filter(FIR.created_at >= start)
+        .filter(FIR.id.in_(list(r[0] for r in _district_fir_ids(db, district).all())) if district else True).count()
+    )
+    new_evidence = (
+        db.query(Evidence).join(CrimeCase, CrimeCase.id == Evidence.case_id)
+        .join(Location, Location.id == CrimeCase.location_id).filter(
+            Evidence.created_at >= start
+        ).filter(Location.district == district if district else True).count()
+    )
+    new_criminals = (
+        db.query(Criminal).filter(Criminal.created_at >= start)
+        .filter(Criminal.id.in_(list(r[0] for r in _district_criminal_ids(db, district).all())) if district else True).count()
+    )
 
-    latest_case = db.query(CrimeCase).order_by(CrimeCase.created_at.desc()).first()
-    latest_fir = db.query(FIR).order_by(FIR.created_at.desc()).first()
+    case_q = db.query(CrimeCase).join(Location, Location.id == CrimeCase.location_id)
+    if district:
+        case_q = case_q.filter(Location.district == district)
+    latest_case = case_q.order_by(CrimeCase.created_at.desc()).first()
+
+    fir_q = db.query(FIR)
+    if district:
+        fir_q = fir_q.filter(FIR.id.in_(list(r[0] for r in _district_fir_ids(db, district).all())))
+    latest_fir = fir_q.order_by(FIR.created_at.desc()).first()
 
     return {
         "period_label": period_label,
@@ -122,8 +161,15 @@ class DistrictAggregate:
     lng: float
 
 
-def dashboard_summary(db: Session, date_from: datetime | None = None, date_to: datetime | None = None) -> dict[str, Any]:
+def dashboard_summary(
+    db: Session,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    district: str | None = None,
+) -> dict[str, Any]:
     query = db.query(CrimeCase)
+    if district:
+        query = query.join(Location, Location.id == CrimeCase.location_id).filter(Location.district == district)
     if date_from:
         query = query.filter(CrimeCase.occurred_at >= date_from)
     if date_to:
@@ -133,11 +179,18 @@ def dashboard_summary(db: Session, date_from: datetime | None = None, date_to: d
     open_crimes = query.filter(CrimeCase.status == "open").count()
     resolved = query.filter(CrimeCase.status == "closed").count()
 
+    fir_q = db.query(FIR)
+    criminal_q = db.query(Criminal)
+    if district:
+        fir_ids = [r[0] for r in _district_fir_ids(db, district).all()]
+        fir_q = fir_q.filter(FIR.id.in_(fir_ids))
+        criminal_q = criminal_q.filter(Criminal.id.in_([r[0] for r in _district_criminal_ids(db, district).all()]))
+
     return {
         "total_crimes": total_crimes,
         "open_crimes": open_crimes,
-        "total_firs": db.query(FIR).count(),
-        "total_criminals": db.query(Criminal).count(),
+        "total_firs": fir_q.count(),
+        "total_criminals": criminal_q.count(),
         "resolution_rate_percent": round((resolved / total_crimes) * 100, 2) if total_crimes else 0.0,
     }
 
@@ -151,25 +204,25 @@ def crime_trends(db: Session) -> list[dict[str, Any]]:
     return [{"date": date, "count": count} for date, count in sorted(buckets.items())]
 
 
-def category_breakdown(db: Session) -> list[dict[str, Any]]:
-    rows = (
+def category_breakdown(db: Session, district: str | None = None) -> list[dict[str, Any]]:
+    query = (
         db.query(CrimeCategory.name, func.count(CrimeCase.id))
         .join(CrimeCase, CrimeCase.category_id == CrimeCategory.id)
-        .group_by(CrimeCategory.name)
-        .order_by(func.count(CrimeCase.id).desc())
-        .all()
     )
+    if district:
+        query = query.join(Location, Location.id == CrimeCase.location_id).filter(Location.district == district)
+    rows = query.group_by(CrimeCategory.name).order_by(func.count(CrimeCase.id).desc()).all()
     return [{"category": name, "count": count} for name, count in rows]
 
 
-def district_comparison(db: Session) -> list[dict[str, Any]]:
-    rows = (
+def district_comparison(db: Session, district: str | None = None) -> list[dict[str, Any]]:
+    query = (
         db.query(Location.district, func.count(CrimeCase.id))
         .join(CrimeCase, CrimeCase.location_id == Location.id)
-        .group_by(Location.district)
-        .order_by(func.count(CrimeCase.id).desc())
-        .all()
     )
+    if district:
+        query = query.filter(Location.district == district)
+    rows = query.group_by(Location.district).order_by(func.count(CrimeCase.id).desc()).all()
     return [{"district": district, "count": count} for district, count in rows]
 
 
@@ -525,7 +578,7 @@ def _build_hotspots(db: Session, district_id: str | None = None, hour: int | Non
     }
 
 
-def anomalies(db: Session) -> dict[str, Any]:
+def anomalies(db: Session, district: str | None = None) -> dict[str, Any]:
     firs = (
         db.query(FIR)
         .options(
@@ -541,6 +594,8 @@ def anomalies(db: Session) -> dict[str, Any]:
     for fir in firs:
         case = fir.crime_case
         if not case:
+            continue
+        if district and (not case.location or case.location.district != district):
             continue
         severity = case.category.severity if case.category else "medium"
         score = 0.45
@@ -577,7 +632,7 @@ def anomalies(db: Session) -> dict[str, Any]:
     return {"anomalies": sorted(rows, key=lambda row: row["score"], reverse=True)}
 
 
-def offender_dossiers(db: Session) -> list[dict[str, Any]]:
+def offender_dossiers(db: Session, district: str | None = None) -> list[dict[str, Any]]:
     # Eager-load the full FIR -> CrimeCase -> Location/Category chain in one
     # query. Without it each dossier row lazy-loads every linked FIR's case,
     # location and category over one round trip apiece — tens of seconds
@@ -600,6 +655,8 @@ def offender_dossiers(db: Session) -> list[dict[str, Any]]:
     for criminal in criminals:
         firs = [link.fir for link in criminal.fir_links if link.fir]
         districts = sorted({fir.crime_case.location.district for fir in firs if fir.crime_case and fir.crime_case.location})
+        if district and district not in districts:
+            continue
         categories = [fir.crime_case.category.name for fir in firs if fir.crime_case and fir.crime_case.category]
         linked_count = len(firs)
         risk = min(100, 35 + linked_count * 12 + (10 if criminal.status == "at_large" else 0))

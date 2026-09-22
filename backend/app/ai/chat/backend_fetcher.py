@@ -25,6 +25,38 @@ PII_PRIVILEGED_ROLES = {"admin", "crime_analyst", "investigator", "inspector"}
 _PII_REDACTED = "[REDACTED - insufficient role clearance]"
 
 
+# ----- district scoping subqueries (chat honors the caller's district) -----
+def _fir_in_district(db: Session, district: str):
+    from app.models.crime import CrimeCase
+    from app.models.fir import FIR
+    from app.models.location import Location
+    return db.query(FIR.id).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).filter(Location.district == district)
+
+
+def _criminal_in_district(db: Session, district: str):
+    from app.models.crime import CrimeCase
+    from app.models.fir import FIR, FIRCriminalLink
+    from app.models.location import Location
+    return db.query(FIRCriminalLink.criminal_id).join(
+        FIR, FIR.id == FIRCriminalLink.fir_id
+    ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).filter(Location.district == district)
+
+
+def _victim_in_district(db: Session, district: str):
+    from app.models.crime import CrimeCase
+    from app.models.fir import FIR, FIRVictimLink
+    from app.models.location import Location
+    return db.query(FIRVictimLink.victim_id).join(
+        FIR, FIR.id == FIRVictimLink.fir_id
+    ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).filter(Location.district == district)
+
+
 def user_may_view_pii(user: Any) -> bool:
     """True when the authenticated user's role permits unredacted PII.
 
@@ -54,9 +86,20 @@ class BackendResult:
 class BackendFetcher:
     """Executes query plans by calling existing backend services directly."""
 
-    def execute(self, plan: QueryPlan, db: Session, redact_pii: bool = False) -> list[BackendResult]:
+    def execute(self, plan: QueryPlan, db: Session, redact_pii: bool = False,
+                district: str | None = None) -> list[BackendResult]:
         self._redact_pii = redact_pii
-        if plan.parallel and len(plan.backend_calls) > 1:
+        # District scope for the *caller*. Bound users see only their district's
+        # records; multi-district callers pass None (all). A non-matching
+        # sentinel yields zero records so district-less bound accounts fail
+        # closed (no cross-district leakage) and chat answers honestly refuse.
+        self._district = (district or "").strip() or None
+        # Analytics is fast read-only SQL: keep it off the AI-worker pool.
+        # Analytics-only plans run sequentially on the request DB (via a
+        # dedicated short session inside ``_exec_analytics``); worker sessions
+        # are reserved for slow/parallel AI jobs.
+        analytics_only = all(c.service == "analytics" for c in plan.backend_calls)
+        if plan.parallel and len(plan.backend_calls) > 1 and not analytics_only:
             return self._execute_parallel(plan, db)
         return self._execute_sequential(plan, db)
 
@@ -104,6 +147,8 @@ class BackendFetcher:
                 return self._exec_ml(call, db)
             if call.service == "analytics":
                 return self._exec_analytics(call, db)
+            if call.service == "kg":
+                return self._exec_kg(call, db)
             return BackendResult(
                 source=call.service, data_type=call.method,
                 content="Unknown service", success=False,
@@ -147,22 +192,30 @@ class BackendFetcher:
 
     def _pg_get_fir(self, db: Session, params: dict) -> BackendResult:
         from app.models.fir import FIR
+
+        def _scoped(q):
+            d = getattr(self, "_district", None)
+            if d:
+                ids = [r[0] for r in _fir_in_district(db, d).all()]
+                q = q.filter(FIR.id.in_(ids))
+            return q
+
         fir_num = (params.get("fir_number", "") or "").strip()
         if fir_num.startswith("ordinal:"):
             idx = int(fir_num.split(":", 1)[1]) - 1
             if idx < 0:
                 idx = 0
-            fir = db.query(FIR).order_by(FIR.filed_at.desc()).offset(idx).first()
+            fir = _scoped(db.query(FIR)).order_by(FIR.filed_at.desc()).offset(idx).first()
         else:
             # Exact (case-insensitive) match first, then prefix, then a
             # prefix-agnostic contains match so "FIR-045/BNG/2026" / "045/BNG/2026"
             # both resolve to the same record.
             normalized = re.sub(r"^FIR[\s-]*:?", "", fir_num, flags=re.I).strip()
-            fir = db.query(FIR).filter(func.lower(FIR.fir_number) == fir_num.lower()).first()
+            fir = _scoped(db.query(FIR)).filter(func.lower(FIR.fir_number) == fir_num.lower()).first()
             if not fir:
-                fir = db.query(FIR).filter(FIR.fir_number.ilike(f"{fir_num}%")).first()
+                fir = _scoped(db.query(FIR)).filter(FIR.fir_number.ilike(f"{fir_num}%")).first()
             if not fir and normalized != fir_num:
-                fir = db.query(FIR).filter(FIR.fir_number.ilike(f"%{normalized}%")).first()
+                fir = _scoped(db.query(FIR)).filter(FIR.fir_number.ilike(f"%{normalized}%")).first()
         if not fir:
             return BackendResult(source="postgres", data_type="fir", content="No FIR found.", raw_data=None)
         content = self._format_fir(fir)
@@ -171,7 +224,12 @@ class BackendFetcher:
     def _pg_search_firs(self, db: Session, params: dict) -> BackendResult:
         from app.models.fir import FIR
         query = params.get("query", "")
-        firs = db.query(FIR).filter(
+        q = db.query(FIR)
+        d = getattr(self, "_district", None)
+        if d:
+            ids = [r[0] for r in _fir_in_district(db, d).all()]
+            q = q.filter(FIR.id.in_(ids))
+        firs = q.filter(
             FIR.fir_number.ilike(f"%{query}%")
             | FIR.complainant_name.ilike(f"%{query}%")
             | FIR.narrative.ilike(f"%{query}%")
@@ -189,7 +247,12 @@ class BackendFetcher:
     def _pg_list_firs(self, db: Session, params: dict) -> BackendResult:
         from app.models.fir import FIR
         limit = params.get("limit", 10)
-        firs = db.query(FIR).order_by(FIR.filed_at.desc()).limit(limit).all()
+        q = db.query(FIR)
+        d = getattr(self, "_district", None)
+        if d:
+            ids = [r[0] for r in _fir_in_district(db, d).all()]
+            q = q.filter(FIR.id.in_(ids))
+        firs = q.order_by(FIR.filed_at.desc()).limit(limit).all()
         if not firs:
             return BackendResult(source="postgres", data_type="firs", content="No FIRs in the database.")
         parts = [self._format_fir(f) for f in firs]
@@ -202,16 +265,24 @@ class BackendFetcher:
 
     def _pg_get_case(self, db: Session, params: dict) -> BackendResult:
         from app.models.crime import CrimeCase
+        from app.models.location import Location
+
+        def _scoped(q):
+            d = getattr(self, "_district", None)
+            if d:
+                q = q.join(Location, Location.id == CrimeCase.location_id).filter(Location.district == d)
+            return q
+
         case_num = (params.get("case_number", "") or "").strip().rstrip(".,;:!?")
         if not case_num:
             return BackendResult(source="postgres", data_type="case", content="No case number provided.")
         # Exact match first so a precise identifier never falls back to noisier
         # partial/contains matching (which can pull in unrelated records).
-        case = db.query(CrimeCase).filter(func.lower(CrimeCase.case_number) == case_num.lower()).first()
+        case = _scoped(db.query(CrimeCase)).filter(func.lower(CrimeCase.case_number) == case_num.lower()).first()
         if not case:
-            case = db.query(CrimeCase).filter(CrimeCase.case_number.ilike(f"{case_num}%")).first()
+            case = _scoped(db.query(CrimeCase)).filter(CrimeCase.case_number.ilike(f"{case_num}%")).first()
         if not case:
-            case = db.query(CrimeCase).filter(CrimeCase.case_number.ilike(f"%{case_num}%")).first()
+            case = _scoped(db.query(CrimeCase)).filter(CrimeCase.case_number.ilike(f"%{case_num}%")).first()
         if not case:
             return BackendResult(source="postgres", data_type="case", content="No case found.")
         content = self._format_case(case)
@@ -219,9 +290,13 @@ class BackendFetcher:
 
     def _pg_search_cases(self, db: Session, params: dict) -> BackendResult:
         from app.models.crime import CrimeCase
+        from app.models.location import Location
         query_text = params.get("query", "")
         category = params.get("category", "")
         q = db.query(CrimeCase)
+        d = getattr(self, "_district", None)
+        if d:
+            q = q.join(Location, Location.id == CrimeCase.location_id).filter(Location.district == d)
         if query_text:
             q = q.filter(
                 CrimeCase.case_number.ilike(f"%{query_text}%")
@@ -246,8 +321,13 @@ class BackendFetcher:
 
     def _pg_list_cases(self, db: Session, params: dict) -> BackendResult:
         from app.models.crime import CrimeCase
+        from app.models.location import Location
         limit = params.get("limit", 20)
-        cases = db.query(CrimeCase).order_by(CrimeCase.reported_at.desc()).limit(limit).all()
+        q = db.query(CrimeCase)
+        d = getattr(self, "_district", None)
+        if d:
+            q = q.join(Location, Location.id == CrimeCase.location_id).filter(Location.district == d)
+        cases = q.order_by(CrimeCase.reported_at.desc()).limit(limit).all()
         if not cases:
             return BackendResult(source="postgres", data_type="cases", content="No cases in database.")
         parts = [self._format_case(c) for c in cases]
@@ -264,21 +344,31 @@ class BackendFetcher:
         if not name:
             return BackendResult(source="postgres", data_type="criminal", content="No criminal name provided.")
 
+        d = getattr(self, "_district", None)
         criminals: list = []
         # 1) Exact full-name match (case-insensitive) — the only acceptable
         #    result for a precise personal identifier.
         exact = db.query(Criminal).filter(func.lower(Criminal.full_name) == name.lower()).limit(2).all()
+        if d:
+            allowed = {row[0] for row in _criminal_in_district(db, d).all()}
+            exact = [c for c in exact if c.id in allowed]
         if exact:
             criminals = exact
         else:
             # 2) Name present as an exact comma-separated alias token.
-            for c in db.query(Criminal).filter(Criminal.aliases.ilike(f"%{name}%")).limit(10).all():
+            alias_rows = db.query(Criminal).filter(Criminal.aliases.ilike(f"%{name}%")).limit(12).all()
+            if d:
+                alias_rows = [c for c in alias_rows if c.id in allowed]
+            for c in alias_rows:
                 tokens = [t.strip() for t in (c.aliases or "").split(",")]
                 if any(t.lower() == name.lower() for t in tokens):
                     criminals.append(c)
             if not criminals:
                 # 3) Strongly selective prefix match (unique leading fragment).
-                partials = db.query(Criminal).filter(Criminal.full_name.ilike(f"{name}%")).limit(4).all()
+                partial_rows = db.query(Criminal).filter(Criminal.full_name.ilike(f"{name}%")).limit(6).all()
+                if d:
+                    partial_rows = [c for c in partial_rows if c.id in allowed]
+                partials = partial_rows
                 if len(partials) == 1:
                     criminals = partials
                 elif len(partials) > 1:
@@ -286,13 +376,17 @@ class BackendFetcher:
                 else:
                     # 4) Contained name, then alias/partial — always kept tiny so
                     #    fuzzy text never floods the answer with unrelated records.
-                    contains = db.query(Criminal).filter(Criminal.full_name.ilike(f"%{name}%")).limit(4).all()
+                    contains = db.query(Criminal).filter(Criminal.full_name.ilike(f"%{name}%")).limit(6).all()
+                    if d:
+                        contains = [c for c in contains if c.id in allowed]
                     if len(contains) == 1:
                         criminals = contains
                     else:
                         criminals = contains[:2]
                 if not criminals:
-                    alias_partial = db.query(Criminal).filter(Criminal.aliases.ilike(f"%{name}%")).limit(4).all()
+                    alias_partial = db.query(Criminal).filter(Criminal.aliases.ilike(f"%{name}%")).limit(6).all()
+                    if d:
+                        alias_partial = [c for c in alias_partial if c.id in allowed]
                     criminals = alias_partial[:2]
 
         if not criminals:
@@ -314,6 +408,8 @@ class BackendFetcher:
                 content="No criminal search query provided.",
             )
         pattern = f"%{query}%"
+        d = getattr(self, "_district", None)
+        allowed = {row[0] for row in _criminal_in_district(db, d).all()} if d else None
         looks_like_name = (
             bool(re.match(r"^[A-Za-z][A-Za-z .'\u2019-]{1,50}$", query))
             and query.count(" ") <= 3
@@ -325,6 +421,8 @@ class BackendFetcher:
             rows = db.query(Criminal).filter(
                 Criminal.full_name.ilike(pattern) | Criminal.aliases.ilike(pattern)
             ).limit(10).all()
+            if allowed is not None:
+                rows = [c for c in rows if c.id in allowed]
 
             def _rank(c):
                 lower = c.full_name.lower()
@@ -345,6 +443,8 @@ class BackendFetcher:
                 | Criminal.mo_summary.ilike(pattern)
                 | Criminal.identifying_marks.ilike(pattern)
             ).limit(15).all()
+            if allowed is not None:
+                rows = [c for c in rows if c.id in allowed]
 
             def _rank(c):
                 lower = c.full_name.lower()
@@ -406,7 +506,12 @@ class BackendFetcher:
     def _pg_get_victims(self, db: Session, params: dict) -> BackendResult:
         from app.models.victim import Victim
         name = params.get("name", "")
-        victims = db.query(Victim).filter(Victim.full_name.ilike(f"%{name}%")).all()
+        q = db.query(Victim)
+        d = getattr(self, "_district", None)
+        if d:
+            ids = [r[0] for r in _victim_in_district(db, d).all()]
+            q = q.filter(Victim.id.in_(ids))
+        victims = q.filter(Victim.full_name.ilike(f"%{name}%")).all()
         if not victims:
             return BackendResult(source="postgres", data_type="victims", content="No victims found.")
         parts = [f"Victim: {v.full_name}, Age: {v.age or 'N/A'}, Gender: {v.gender or 'N/A'}" for v in victims]
@@ -513,9 +618,143 @@ class BackendFetcher:
             return self._neo4j_gangs(db)
         return BackendResult(source="neo4j", data_type=method, content="Neo4j unavailable, no SQL fallback.")
 
+    def _exec_kg(self, call: BackendCall, db: Session) -> BackendResult:
+        method = call.method
+        if method == "fragment_by_person":
+            return self._kg_fragment_by_person(db, call.params)
+        if method == "fragment_by_case":
+            return self._kg_fragment_by_case(db, call.params)
+        return BackendResult(source="kg", data_type=method, content="KG method not implemented", success=False)
+
+    def _kg_fragment_by_person(self, db: Session, params: dict) -> BackendResult:
+        """Cross-case knowledge-graph retrieval for a named person.
+
+        Uses the Phase 3 knowledge graph (backend/app/services
+        /knowledge_graph_service.py). Honest no-graph / no-node answers —
+        never fabricated connections.
+        """
+        import traceback
+        import uuid as uuid_mod
+        from app.core.exceptions import NotFoundException
+        from app.services.knowledge_graph_service import build_fragment, get_node_by_ref
+
+        name = (params.get("name", "") or "").strip()
+        if not name:
+            return BackendResult(source="kg", data_type="kg_fragment", content="No person name provided.", success=False)
+
+        criminal_res = self._pg_get_criminal(db, {"name": name}, redact_pii=False)
+        candidates = criminal_res.records or []
+        if not candidates:
+            return BackendResult(
+                source="kg", data_type="kg_fragment",
+                content=f"No criminal record matches '{name}' — cannot look up cross-case connections.",
+                success=False,
+            )
+
+        d = getattr(self, "_district", None)
+        try:
+            for cand in candidates:
+                raw_id = cand.get("id") or ""
+                try:
+                    node = get_node_by_ref(db, "criminal", uuid_mod.UUID(str(raw_id)))
+                except (NotFoundException, ValueError, TypeError):
+                    continue
+                depth = min(int(params.get("depth", 2)), 3)
+                fragment = build_fragment(db, node, depth=depth)
+                if fragment.get("nodes"):
+                    return self._kg_render_fragment(fragment, d)
+            return BackendResult(
+                source="kg", data_type="kg_fragment",
+                content=f"Knowledge graph has no cross-case connections for '{name}' yet.",
+                success=False,
+            )
+        except Exception as exc:
+            return BackendResult(
+                source="kg", data_type="kg_fragment",
+                content="Knowledge graph service is unavailable right now.",
+                success=False, error=traceback.format_exc(limit=2) or str(exc),
+            )
+
+    def _kg_fragment_by_case(self, db: Session, params: dict) -> BackendResult:
+        import traceback
+        from app.core.exceptions import NotFoundException
+        from app.services.knowledge_graph_service import build_fragment, get_node_by_ref
+
+        case_id = (params.get("case_number", "") or "").strip()
+        if not case_id:
+            return BackendResult(source="kg", data_type="kg_fragment", content="No case number provided.", success=False)
+        try:
+            from app.models.crime import CrimeCase
+            case = db.query(CrimeCase).filter(CrimeCase.case_number == case_id).first()
+            if not case:
+                return BackendResult(
+                    source="kg", data_type="kg_fragment",
+                    content=f"No case '{case_id}' found — cannot look up cross-case connections.", success=False,
+                )
+            try:
+                node = get_node_by_ref(db, "case", case.id)
+            except NotFoundException:
+                return BackendResult(
+                    source="kg", data_type="kg_fragment",
+                    content="Knowledge graph has no node for that case (rebuild the graph first).",
+                    success=False,
+                )
+            d = getattr(self, "_district", None)
+            fragment = build_fragment(db, node, depth=min(int(params.get("depth", 2)), 3))
+            return self._kg_render_fragment(fragment, d)
+        except Exception as exc:
+            return BackendResult(
+                source="kg", data_type="kg_fragment",
+                content="Knowledge graph service is unavailable right now.",
+                success=False, error=traceback.format_exc(limit=2) or str(exc),
+            )
+
+    def _kg_render_fragment(self, fragment: dict, district: str | None) -> BackendResult:
+        district = (district or "").strip() or None
+        nodes = fragment.get("nodes") or []
+        edges = fragment.get("edges") or []
+        if district:
+            nodes = [n for n in nodes if district in (n.districts or [])]
+            keep = {n.id for n in nodes}
+            edges = [
+                e for e in edges
+                if e.source_node_id in keep and e.target_node_id in keep
+            ]
+        if not nodes or not edges:
+            return BackendResult(
+                source="kg", data_type="kg_fragment",
+                content="Knowledge graph has no cross-case connections for that entity yet.",
+                success=False,
+            )
+        by_id = {n.id: n.label for n in nodes}
+        node_lines = [
+            f"Node: {n.label} (type: {n.node_type}, districts: {', '.join(n.districts or []) or 'n/a'})"
+            for n in nodes[:25]
+        ]
+        edge_lines = [
+            f"Link: {by_id.get(e.source_node_id, e.source_node_id)} --[{e.relationship_type}"
+            f"{' (DERIVED: ' + (e.basis or 'inferred') + ')' if e.direction == 'DERIVED' else ''}]--> "
+            f"{by_id.get(e.target_node_id, e.target_node_id)}"
+            for e in edges[:25]
+        ]
+        content = "### Saksha Knowledge Graph - Cross-Case Fragment\n" + "\n".join(node_lines + edge_lines)
+        return BackendResult(
+            source="kg", data_type="kg_fragment",
+            content=content,
+            records=[
+                {"type": "kg_node", "label": n.label, "node_type": n.node_type, "id": str(n.id)}
+                for n in nodes[:25]
+            ],
+        )
+
     def _exec_ml(self, call: BackendCall, db: Session) -> BackendResult:
         method = call.method
         params = call.params
+        # District-bound callers always get their own district's ML numbers,
+        # never a fabricated/global default.
+        d = getattr(self, "_district", None)
+        if d and not params.get("district"):
+            params = {**params, "district": d}
 
         if method == "risk_predict":
             return self._ml_risk_predict(params, db)
@@ -674,14 +913,22 @@ class BackendFetcher:
 
     def _exec_analytics(self, call: BackendCall, db: Session) -> BackendResult:
         method = call.method
+        district = getattr(self, "_district", None)
+        # Analytics is fast, read-only SQL. It must NOT run on the AI-worker
+        # session pool (fresh in-memory test engines have no tables, and long
+        # jobs shouldn't share the request session): open a dedicated short
+        # session from the request DB bind.
+        from sqlalchemy.orm import sessionmaker as _analytics_sessionmaker
+        analytics_db = _analytics_sessionmaker(bind=db.get_bind())()
         try:
+            db = analytics_db
             from app.services.analytics_service import (
                 dashboard_summary, category_breakdown, district_comparison,
                 hotspots, anomalies, offender_dossiers,
                 recent_activity,
             )
             if method == "dashboard_summary":
-                s = dashboard_summary(db)
+                s = dashboard_summary(db, district=district)
                 content = (
                     f"Total crimes: {s.get('total_crimes', 0)}. "
                     f"Open cases: {s.get('open_crimes', 0)}. "
@@ -691,17 +938,17 @@ class BackendFetcher:
                 return BackendResult(source="analytics", data_type="summary", content=content, raw_data=s)
 
             if method == "category_breakdown":
-                cats = category_breakdown(db)
+                cats = category_breakdown(db, district=district)
                 parts = [f"{c['category']}: {c['count']} cases" for c in cats[:10]]
                 return BackendResult(source="analytics", data_type="categories", content=". ".join(parts) or "No data.", raw_data=cats)
 
             if method == "district_comparison":
-                districts = district_comparison(db)
+                districts = district_comparison(db, district=district)
                 parts = [f"{d['district']}: {d['count']} cases" for d in districts[:10]]
                 return BackendResult(source="analytics", data_type="districts", content=". ".join(parts) or "No data.", raw_data=districts)
 
             if method == "hotspots":
-                h = hotspots(db)
+                h = hotspots(db, district_id=district)
                 hotspot_list = h.get("hotspots", []) if isinstance(h, dict) else (h if isinstance(h, list) else [])
                 if not hotspot_list:
                     return BackendResult(source="analytics", data_type="hotspots", content="No hotspot data.")
@@ -709,7 +956,7 @@ class BackendFetcher:
                 return BackendResult(source="analytics", data_type="hotspots", content="\n".join(parts), raw_data=hotspot_list)
 
             if method == "anomalies":
-                a = anomalies(db)
+                a = anomalies(db, district=district)
                 if not a:
                     return BackendResult(source="analytics", data_type="anomalies", content="No anomalies detected.")
                 parts = [f"Anomaly: {an.get('title', 'Unknown')} (severity: {an.get('severity', 'N/A')})" for an in a[:10]]
@@ -717,7 +964,7 @@ class BackendFetcher:
 
             if method == "recent_activity":
                 days = int(call.params.get("days", 0) or 0)
-                ra = recent_activity(db, days=days)
+                ra = recent_activity(db, days=days, district=district)
                 parts = [
                     f"System date/time now: {ra['now']}",
                     f"Period analyzed: {ra['period_label']}",
@@ -734,7 +981,7 @@ class BackendFetcher:
                 )
 
             if method == "offender_dossiers":
-                d = offender_dossiers(db)
+                d = offender_dossiers(db, district=district)
                 if not d:
                     return BackendResult(source="analytics", data_type="dossiers", content="No offender data.")
                 parts = [
@@ -749,6 +996,8 @@ class BackendFetcher:
             return BackendResult(source="analytics", data_type=method, content="Analytics method not found.")
         except Exception as exc:
             return BackendResult(source="analytics", data_type=method, content="", success=False, error=str(exc))
+        finally:
+            analytics_db.close()
 
     @staticmethod
     def _format_fir(fir: Any) -> str:

@@ -39,6 +39,9 @@ import FaceRecognition from './pages/FaceRecognition';
 import NotFound from './pages/NotFound';
 import ProcessingCenter from './pages/AIProcessing/ProcessingCenter';
 import AIReview from './pages/AIProcessing/AIReview';
+import DataIngestion from './pages/DataIngestion';
+import KnowledgeGraph from './pages/KnowledgeGraph';
+import AlertReview from './pages/AlertReview';
 
 const routeEntries = [
   ['dashboard', '/dashboard'],
@@ -69,6 +72,9 @@ const routeEntries = [
   ['docs', '/docs'],
   ['ai_jobs', '/ai/jobs'],
   ['ai_review', '/ai/review'],
+  ['data_ingestion', '/ingestion'],
+  ['knowledge_graph', '/intelligence-graph'],
+  ['alerts_review', '/alerts-review'],
 ] as const;
 
 const tabForPath = (pathname: string): string | null => {
@@ -294,6 +300,9 @@ function App() {
       case 'docs': return <DocsPage />;
       case 'ai_jobs': return <RoleGuard path="/ai/jobs"><ProcessingCenter /></RoleGuard>;
       case 'ai_review': return <RoleGuard path="/ai/review"><AIReview /></RoleGuard>;
+      case 'data_ingestion': return <RoleGuard path="/ingestion"><DataIngestion /></RoleGuard>;
+      case 'knowledge_graph': return <RoleGuard path="/intelligence-graph"><KnowledgeGraph /></RoleGuard>;
+      case 'alerts_review': return <RoleGuard path="/alerts-review"><AlertReview /></RoleGuard>;
       default: return <Overview />;
     }
   };
