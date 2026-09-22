@@ -396,6 +396,8 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                 <tr className="border-b border-border-color bg-[var(--bg-secondary)]/40 text-[var(--text-muted)] uppercase select-none">
                   <th className="p-4">{t.cc_case_details}</th>
                   <th className="p-4">{t.cc_occurred_at}</th>
+                  <th className="p-4">{t.cc_district}</th>
+                  <th className="p-4">{t.cc_category}</th>
                   <th className="p-4 text-center">{t.cc_status}</th>
                   <th className="p-4 text-center">{t.cc_priority}</th>
                   <th className="p-4">{t.cc_progress}</th>
@@ -404,7 +406,18 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
               </thead>
               <tbody className="divide-y divide-border-color/65">
                 {cases.map((c) => (
-                   <tr key={c.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors group">
+                   <tr
+                    key={c.id}
+                    onClick={() => onSelectCase(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectCase(c.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    className="hover:bg-[var(--bg-surface-hover)] transition-colors group cursor-pointer"
+                  >
                     <td className="p-4">
                       <div className="font-bold text-[var(--text-primary)] group-hover:text-[var(--text-primary)] uppercase">
                         {c.case_number}
@@ -415,6 +428,12 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                     </td>
                     <td className="p-4 text-[var(--text-secondary)]">
                       {formatCaseDate(c.occurred_at)}
+                    </td>
+                    <td className="p-4 text-[var(--text-secondary)]">
+                      {c.location?.district || '—'}
+                    </td>
+                    <td className="p-4 text-[var(--text-secondary)]">
+                      {c.category?.name || '—'}
                     </td>
                     <td className="p-4 text-center">
                       <span className="sk-chip px-2 py-0.5" style={getStatusStyle(c.status)}>
@@ -456,7 +475,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                         </button>
                         {canWrite && (
                         <button
-                          onClick={() => onEditCase(c.id)}
+                          onClick={(e) => { e.stopPropagation(); onEditCase(c.id); }}
                           title={t.cc_edit}
                           className="p-1.5 hover:bg-[#0E9E78]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#0E9E78] transition-colors cursor-pointer"
                         >
@@ -464,8 +483,8 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                         </button>
                         )}
                         {canDelete && (
-                          <button
-                            onClick={() => handleDeleteClick(c)}
+<button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(c); }}
                             title={t.cc_purge}
                             className="p-1.5 hover:bg-[#C94A2A]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-colors cursor-pointer"
                           >

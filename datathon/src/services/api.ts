@@ -1366,6 +1366,18 @@ export interface CrimeCaseDetailRecord extends CrimeCaseRecord {
     filed_at: string;
   }>;
   ai_recommendations: AIRecommendation[];
+  location?: {
+    id: string;
+    district: string;
+    station: string;
+    pincode?: string | null;
+  } | null;
+  category?: {
+    id: string;
+    name: string;
+    section_code?: string | null;
+    severity?: string | null;
+  } | null;
 }
 
 export interface OfficerWithUserRecord {
