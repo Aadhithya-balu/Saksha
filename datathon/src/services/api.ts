@@ -4008,3 +4008,67 @@ export async function getFaceRecognitionStatus(): Promise<{ enabled: boolean; pr
   return apiRequest('/face-recognition/status');
 }
 
+// --- AI Processing (Phase 2) ---
+
+export interface AIProcessingJob {
+  id: string;
+  target_entity_type: string;
+  target_entity_id: string;
+  job_type: string;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REQUIRES_REVIEW';
+  error_details: string | null;
+  retry_count: number;
+  processing_started_at: string | null;
+  processing_completed_at: string | null;
+  created_at: string;
+}
+
+export interface AIEntity {
+  id: string;
+  entity_type: string;
+  attributes: Record<string, any>;
+  source_entity_type: string;
+  source_entity_id: string;
+  confidence: number;
+  verification_status: string;
+  provider: string;
+  created_at: string;
+}
+
+export interface AIMatchRecord {
+  id: string;
+  candidate_ai_entity_id: string;
+  candidate_ai_entity?: AIEntity | null;
+  source_entity_type: string;
+  source_entity_id: string;
+  match_score: number;
+  matching_attributes: Record<string, any>;
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED';
+  created_at: string;
+}
+
+export async function getAIJobs(): Promise<AIProcessingJob[]> {
+  return apiRequest<AIProcessingJob[]>('/ai/jobs');
+}
+
+export async function spawnAIJob(targetType: string, targetId: string, jobType: string): Promise<AIProcessingJob> {
+  return apiRequest<AIProcessingJob>('/ai/jobs', {
+    method: 'POST',
+    body: JSON.stringify({ target_type: targetType, target_id: targetId, job_type: jobType }),
+  });
+}
+
+export async function retryAIJob(jobId: string): Promise<AIProcessingJob> {
+  return apiRequest<AIProcessingJob>(`/ai/jobs/${jobId}/retry`, { method: 'POST' });
+}
+
+export async function getPendingAIMatches(): Promise<AIMatchRecord[]> {
+  return apiRequest<AIMatchRecord[]>('/ai/matches');
+}
+
+export async function verifyAIMatch(matchId: string, decision: 'CONFIRM' | 'REJECT'): Promise<AIMatchRecord> {
+  return apiRequest<AIMatchRecord>(`/ai/matches/${matchId}/verify`, {
+    method: 'POST',
+    body: JSON.stringify({ decision }),
+  });
+}

@@ -37,6 +37,8 @@ import Admin from './pages/Admin';
 import IdentityResolution from './pages/IdentityResolution';
 import FaceRecognition from './pages/FaceRecognition';
 import NotFound from './pages/NotFound';
+import ProcessingCenter from './pages/AIProcessing/ProcessingCenter';
+import AIReview from './pages/AIProcessing/AIReview';
 
 const routeEntries = [
   ['dashboard', '/dashboard'],
@@ -65,6 +67,8 @@ const routeEntries = [
   ['officers', '/officers'],
   ['evidence', '/evidence'],
   ['docs', '/docs'],
+  ['ai_jobs', '/ai/jobs'],
+  ['ai_review', '/ai/review'],
 ] as const;
 
 const tabForPath = (pathname: string): string | null => {
@@ -189,6 +193,8 @@ function App() {
       officers: 'Officers',
       evidence: 'Evidence',
       docs: 'Documentation',
+      ai_jobs: 'AI Processing Center',
+      ai_review: 'Entity Resolution Review',
     };
     addLog(user.name, user.badgeId, 'PAGE_VIEW', `Accessed ${tabLabels[activeTab] || activeTab}`);
   }, [activeTab, isAuthenticated, user, addLog]);
@@ -286,6 +292,8 @@ function App() {
       case 'sociological': return <RoleGuard path="/sociological"><SociologicalPage /></RoleGuard>;
       case 'strategic': return <RoleGuard path="/strategic"><StrategicPage /></RoleGuard>;
       case 'docs': return <DocsPage />;
+      case 'ai_jobs': return <RoleGuard path="/ai/jobs"><ProcessingCenter /></RoleGuard>;
+      case 'ai_review': return <RoleGuard path="/ai/review"><AIReview /></RoleGuard>;
       default: return <Overview />;
     }
   };

@@ -141,6 +141,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
+      label: 'AI PROCESSING',
+      items: [
+        { id: 'ai_jobs', label: 'Processing Center', path: '/ai/jobs', icon: <Brain /> },
+        { id: 'ai_review', label: 'Entity Review', path: '/ai/review', icon: <ShieldCheck /> },
+      ],
+    },
+    {
       label: 'REPORTS',
       items: [
         { id: 'reports', label: t.nav_reports, path: '/reports', icon: <BarChart3 /> },

@@ -501,13 +501,13 @@ class LLMGenerator:
         #    database context and should never be mangled into a record list.
         conversation = self._conversation_reply(message)
         if conversation:
-            for chunk in self._stream_text(conversation):
+            async for chunk in self._stream_text(conversation):
                 yield chunk
             return
 
         tokens = self._query_tokens(message)
         if not tokens:
-            for chunk in self._stream_text(_GREETING_MESSAGE):
+            async for chunk in self._stream_text(_GREETING_MESSAGE):
                 yield chunk
             return
 
@@ -522,7 +522,7 @@ class LLMGenerator:
                 f"I could not find any records for **{missing_person}** in the Saksha database.",
                 f"Double-check the spelling, or share a case/FIR number and I'll look again.\n\n{_FOOTER_MESSAGE}",
             ]).strip()
-            for chunk in self._stream_text(full_response):
+            async for chunk in self._stream_text(full_response):
                 yield chunk
             return
 
@@ -537,10 +537,10 @@ class LLMGenerator:
                         f"{platform_knowledge}\n\n"
                         f"{_FOOTER_MESSAGE}"
                     )
-                    for chunk in self._stream_text(answer):
+                    async for chunk in self._stream_text(answer):
                         yield chunk
                     return
-            for chunk in self._stream_text(_REFUSAL_MESSAGE):
+            async for chunk in self._stream_text(_REFUSAL_MESSAGE):
                 yield chunk
             return
 
@@ -556,7 +556,7 @@ class LLMGenerator:
         temporal = any(token in _TEMPORAL_WORDS for token in tokens)
         scored = [item for item in scored if item[2] != _SYSTEM_CLOCK_HEADER or temporal]
         if not scored:
-            for chunk in self._stream_text(_REFUSAL_MESSAGE):
+            async for chunk in self._stream_text(_REFUSAL_MESSAGE):
                 yield chunk
             return
 
@@ -588,7 +588,7 @@ class LLMGenerator:
                 f"I could not find {article} {noun} record matching **{explicit_id}** in the Saksha database.",
                 f"Double-check the number and I'll take another look.\n\n{_FOOTER_MESSAGE}",
             ]).strip()
-            for chunk in self._stream_text(full_response):
+            async for chunk in self._stream_text(full_response):
                 yield chunk
             return
 
@@ -617,7 +617,7 @@ class LLMGenerator:
             else:
                 response_parts = [lead, "", _REFUSAL_MESSAGE]
             full_response = "\n".join(response_parts).strip()
-            for chunk in self._stream_text(full_response):
+            async for chunk in self._stream_text(full_response):
                 yield chunk
             return
 
@@ -638,13 +638,13 @@ class LLMGenerator:
         #    entity profiles are much more useful than a raw list.
         distribution_answer = self._distribution_count_answer(message, kept)
         if distribution_answer:
-            for chunk in self._stream_text(distribution_answer):
+            async for chunk in self._stream_text(distribution_answer):
                 yield chunk
             return
 
         count_answer = self._count_answer(message, kept, temporal, focus_kind)
         if count_answer:
-            for chunk in self._stream_text(count_answer):
+            async for chunk in self._stream_text(count_answer):
                 yield chunk
             return
 
@@ -655,25 +655,25 @@ class LLMGenerator:
         if self._wants_full_profile(message):
             full_answer = self._entity_profile_answer(message, kept, temporal, focus_kind)
             if full_answer:
-                for chunk in self._stream_text(full_answer):
+                async for chunk in self._stream_text(full_answer):
                     yield chunk
                 return
 
         field_answer = self._field_answer(message, kept, temporal, focus_kind)
         if field_answer:
-            for chunk in self._stream_text(field_answer):
+            async for chunk in self._stream_text(field_answer):
                 yield chunk
             return
 
         entity_answer = self._entity_profile_answer(message, kept, temporal, focus_kind)
         if entity_answer:
-            for chunk in self._stream_text(entity_answer):
+            async for chunk in self._stream_text(entity_answer):
                 yield chunk
             return
 
         ranked_answer = self._build_ranked_answer(message, kept, temporal)
         if ranked_answer:
-            for chunk in self._stream_text(ranked_answer):
+            async for chunk in self._stream_text(ranked_answer):
                 yield chunk
             return
 
@@ -698,7 +698,7 @@ class LLMGenerator:
                     f"I could not find {article} {noun} record matching that in the Saksha database.",
                     f"Double-check the name or number and I'll take another look.\n\n{_FOOTER_MESSAGE}",
                 ]).strip()
-                for chunk in self._stream_text(full_response):
+                async for chunk in self._stream_text(full_response):
                     yield chunk
                 return
             response_parts: list[str] = self._list_intro(message, len(records)) + [""]
@@ -707,11 +707,11 @@ class LLMGenerator:
             response_parts.append("")
             response_parts.append(_FOOTER_MESSAGE)
             full_response = "\n".join(response_parts).strip()
-            for chunk in self._stream_text(full_response):
+            async for chunk in self._stream_text(full_response):
                 yield chunk
             return
 
-        for chunk in self._stream_text(_REFUSAL_MESSAGE):
+        async for chunk in self._stream_text(_REFUSAL_MESSAGE):
             yield chunk
 
     # -- Conversational helpers -------------------------------------------------
@@ -1455,16 +1455,18 @@ class LLMGenerator:
         return [f"Here's what I found in the Saksha database ({count} records):", ""]
 
     @staticmethod
-    def _stream_text(text: str) -> AsyncIterator[str]:
+    async def _stream_text(text: str) -> AsyncIterator[str]:
         """Yields typing-effect chunks while preserving EVERY newline and blank
         line — the chat UI's markdown renderer needs intact line breaks to lay
         out headings, lists and record rows (issue #124)."""
+        import asyncio
         segments = re.findall(r"\S+\s*|\s+", text)
         if not segments:
             return
         chunk_size = max(5, len(segments) // 30)
         for i in range(0, len(segments), chunk_size):
             yield "".join(segments[i:i + chunk_size])
+            await asyncio.sleep(0.01)
 
     @staticmethod
     def _is_smalltalk(message: str) -> bool:

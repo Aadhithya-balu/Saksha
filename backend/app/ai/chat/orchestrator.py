@@ -97,7 +97,9 @@ class ChatOrchestrator:
         external_history = history is not None
         hist = history if external_history else memory.get_history(sid)
 
+        import asyncio
         yield self._ndjson({"type": "status", "content": "Analyzing query intent..."})
+        await asyncio.sleep(0.01)
 
         intent_result = self.intent_router.detect(message)
         entities = self.entity_extractor.extract(message)
@@ -106,6 +108,7 @@ class ChatOrchestrator:
             "type": "status",
             "content": f"Intent: {', '.join(i.value for i in intent_result.intents)}",
         })
+        await asyncio.sleep(0.01)
 
         is_platform_q = any(
             i.value == "platform_general" for i in intent_result.intents
@@ -122,6 +125,7 @@ class ChatOrchestrator:
             "content": f"Retrieved data from {len(successful)} source(s)."
             + (f" {len(failed)} source(s) unavailable." if failed else ""),
         })
+        await asyncio.sleep(0.01)
 
         # Issue #189: When zero usable sources exist (and not a platform
         # question), emit a refusal notice immediately so the client knows
@@ -135,6 +139,7 @@ class ChatOrchestrator:
         built_context = self.context_builder.build(results, entities, message, current_user=current_user)
 
         yield self._ndjson({"type": "status", "content": "Generating response..."})
+        await asyncio.sleep(0.01)
 
         full_response = ""
         try:
