@@ -220,13 +220,14 @@ export interface AnomaliesResponse {
   anomalies: AnomalyRecord[];
 }
 
-export type NetworkNodeCategory = 'suspect' | 'offender' | 'case' | 'location' | 'victim' | 'gang' | 'vehicle' | 'weapon' | 'officer';
+export type NetworkNodeCategory = 'suspect' | 'offender' | 'case' | 'location' | 'victim' | 'gang' | 'vehicle' | 'weapon' | 'officer' | 'evidence';
 
 export interface NetworkNode {
   id: string;
   name: string;
   category: NetworkNodeCategory;
-  riskScore: number;
+  /** Risk score 0-100. Optional: not every node has a computed risk score. */
+  riskScore?: number;
   details: string;
   casesCount: number;
   phone?: string | null;
@@ -1757,6 +1758,46 @@ export interface InvestigationOfficer {
   station: string;
 }
 
+export interface InvestigationVehicle {
+  id: string;
+  registration: string;
+  make_model?: string | null;
+  color?: string | null;
+  status: string;
+  source_type: string;
+  source_reference?: string | null;
+  verification_status: string;
+  confidence: number;
+}
+
+export interface InvestigationLocation {
+  id: string;
+  name: string;
+  type: string;
+  station?: string | null;
+  district?: string | null;
+  address?: string | null;
+}
+
+export interface InvestigationOrganization {
+  id: string;
+  name: string;
+  type: string;
+  leader_name?: string | null;
+  active_members: number;
+  risk_level: string;
+  territory?: string | null;
+}
+
+export interface InvestigationDigitalAccount {
+  id: string;
+  account_type: string;
+  identifier: string;
+  associated_person?: string | null;
+  source: string;
+  verification_status: string;
+}
+
 export interface InvestigationCase {
   id: string;
   case_number: string;
@@ -1769,6 +1810,11 @@ export interface InvestigationCase {
   reported_at: string;
   created_at: string;
   assigned_officer: InvestigationOfficer | null;
+  crime_type?: string | null;
+  location?: string | null;
+  station?: string | null;
+  district?: string | null;
+  updated_at?: string | null;
 }
 
 export interface InvestigationFIR {
@@ -1782,6 +1828,7 @@ export interface InvestigationFIR {
   narrative: string | null;
   criminals: Array<{ id: string; full_name: string; aliases: string | null; status: string }>;
   victims: Array<{ id: string; full_name: string; contact_number: string | null; gender: string | null; age: number | null; statement: string | null }>;
+  police_station?: string | null;
 }
 
 export interface InvestigationCriminal {
@@ -1795,6 +1842,9 @@ export interface InvestigationCriminal {
   status: string;
   risk_score: number;
   linked_fir_count: number;
+  gang_affiliation?: string | null;
+  phone_number?: string | null;
+  total_cases_count?: number;
 }
 
 export interface InvestigationEvidence {
@@ -1805,13 +1855,21 @@ export interface InvestigationEvidence {
   collected_by: string | null;
   chain_of_custody: string | null;
   created_at: string;
+  title?: string | null;
+  status?: string | null;
+  current_custody?: string | null;
 }
 
 export interface InvestigationTimelineEvent {
+  id?: string | null;
   timestamp: string;
   event: string;
   actor: string | null;
   category: string;
+  source?: string | null;
+  source_id?: string | null;
+  evidence_id?: string | null;
+  details?: string | null;
 }
 
 export interface InvestigationAIRecommendation {
@@ -1830,6 +1888,62 @@ export interface InvestigationHistoryEntry {
   officer_badge: string | null;
 }
 
+export interface ForensicReportRecord {
+  id: string;
+  case_id: string;
+  evidence_id?: string | null;
+  title: string;
+  forensic_type: string;
+  examiner_name: string;
+  lab_name: string;
+  status: string;
+  findings?: string | null;
+  methodology?: string | null;
+  ai_assisted: boolean;
+  ai_notes?: string | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface ForensicReportCreatePayload {
+  case_id: string;
+  evidence_id?: string | null;
+  title: string;
+  forensic_type: string;
+  examiner_name?: string | null;
+  lab_name?: string | null;
+  status?: string;
+  findings?: string | null;
+  methodology?: string | null;
+  ai_assisted?: boolean;
+  ai_notes?: string | null;
+}
+
+export interface ForensicReportVerifyPayload {
+  status?: string;
+  verification_notes?: string | null;
+}
+
+export interface EvidenceHashVerification {
+  evidence_id: string;
+  filename: string;
+  recorded_hash: string;
+  current_hash: string;
+  verified: boolean;
+  message: string;
+  checked_at: string;
+}
+
+export interface CustodyTransferPayload {
+  to_user: string;
+  action?: string;
+  to_state?: string;
+  location?: string | null;
+  reason?: string | null;
+}
+
 export interface InvestigationData {
   case: InvestigationCase;
   firs: InvestigationFIR[];
@@ -1838,6 +1952,11 @@ export interface InvestigationData {
   timeline: InvestigationTimelineEvent[];
   ai_recommendations: InvestigationAIRecommendation[];
   history: InvestigationHistoryEntry[];
+  vehicles?: InvestigationVehicle[];
+  locations?: InvestigationLocation[];
+  organizations?: InvestigationOrganization[];
+  digital_accounts?: InvestigationDigitalAccount[];
+  forensic_reports_count?: number;
 }
 
 export async function getInvestigation(caseId: string) {
@@ -1856,6 +1975,66 @@ export async function investigationChat(caseId: string, message: string, session
   return apiRequest<{ answer: string; sources: string[]; citations?: ChatCitation[] }>(`/investigation/chat`, {
     method: 'POST',
     body: JSON.stringify({ case_id: caseId, message, session_id: sessionId ?? null }),
+  });
+}
+
+export async function getCaseNetworkGraph(caseId: string) {
+  return apiRequest<NetworkGraphResponse>(`/network/case/${caseId}`);
+}
+
+export async function getCaseForensics(caseId: string) {
+  return apiRequest<ForensicReportRecord[]>(`/forensics/case/${caseId}`);
+}
+
+export async function createForensicReport(payload: ForensicReportCreatePayload) {
+  return apiRequest<ForensicReportRecord>('/forensics', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function verifyForensicReport(reportId: string, payload: ForensicReportVerifyPayload) {
+  return apiRequest<ForensicReportRecord>(`/forensics/${reportId}/verify`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function downloadForensicReportPDF(reportId: string, filename?: string): Promise<void> {
+  const tokens = getStoredTokens();
+  const response = await fetch(`${API_BASE_URL}/forensics/${reportId}/export`, {
+    headers: {
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download forensic report PDF (${response.statusText})`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `KSP_Forensic_Report_${reportId.slice(0, 8)}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 500);
+}
+
+export async function verifyEvidenceHash(evidenceId: string) {
+  return apiRequest<EvidenceHashVerification>(`/evidence/${evidenceId}/verify-hash`, {
+    method: 'POST',
+  });
+}
+
+export async function transferEvidenceCustody(evidenceId: string, payload: CustodyTransferPayload) {
+  return apiRequest<any>(`/evidence/${evidenceId}/custody/transfer`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 

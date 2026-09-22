@@ -40,6 +40,7 @@ from app.models.identity import (
 from app.models.model_update import ModelUpdateJob
 from app.models.face_identity import FaceIdentity
 from app.models.ai_processing import AIProcessingJob, AIOcrResult, AIEntity, AIEvent, AIMatchRecord
+from app.models.forensic_report import ForensicReport
 from app.models.ai_candidates import AICandidateRecord
 from app.models.knowledge_graph import KGNode, KGRelationship
 from app.models.ingestion import DataSource, IngestionJob
@@ -60,6 +61,7 @@ __all__ = [
     "ModelUpdateJob",
     "FaceIdentity",
     "AIProcessingJob", "AIOcrResult", "AIEntity", "AIEvent", "AIMatchRecord",
+    "ForensicReport",
     "AICandidateRecord",
     "KGNode", "KGRelationship",
     "DataSource", "IngestionJob",

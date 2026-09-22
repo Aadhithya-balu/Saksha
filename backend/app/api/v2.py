@@ -75,6 +75,9 @@ from app.routes import model_management
 # AI Processing (Phase 2)
 from app.routes import ai_processing
 
+# Forensics Workflow (Phase 4)
+from app.routes import forensics
+
 # Phase 1 (issue #269): universal data ingestion
 from app.routes import ingestion
 from app.routes import ai_candidates
@@ -149,6 +152,9 @@ api_router.include_router(model_management.router)
 
 # AI Processing (Phase 2)
 api_router.include_router(ai_processing.router)
+
+# Forensics Workflow (Phase 4)
+api_router.include_router(forensics.router)
 
 # Phase 1 (issue #269): universal data ingestion
 api_router.include_router(ingestion.router)

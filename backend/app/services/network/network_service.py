@@ -13,6 +13,7 @@ are flagged (``isSeed`` / ``is_demo_derived`` / ``dataset_scope``) so UIs can
 visually separate seeded demo content from live intelligence.
 """
 
+import uuid
 from collections import Counter, defaultdict, deque
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -795,9 +796,14 @@ def get_person_network_graph(
     depth: int = 1,
     provenance_filter: str | None = None,
     exclude_demo: bool = False,
+    district: str | None = None,
 ) -> NetworkGraphResponse:
-    """Fetch relationship graph centered on a specific person or node."""
-    nodes, edges = _build_sql_graph(db)
+    """Fetch relationship graph centered on a specific person or node.
+
+    ``district`` restricts the underlying source graph to incidents in one
+    jurisdiction so district-bound users never see cross-district links.
+    """
+    nodes, edges = _build_sql_graph(db, district=district)
 
     target_ids = set()
     pid_clean = person_id.strip()
@@ -907,15 +913,35 @@ def get_case_network_graph(
     case_id: str,
     provenance_filter: str | None = None,
     exclude_demo: bool = False,
+    district: str | None = None,
 ) -> NetworkGraphResponse:
     """Fetch case relationship graph."""
-    normalized = case_id if case_id.startswith(("case-", "fir-")) else f"case-{case_id}"
+    clean_id = str(case_id).strip()
+    if clean_id.startswith("case-"):
+        clean_id = clean_id[5:]
+    elif clean_id.startswith("fir-"):
+        clean_id = clean_id[4:]
+
+    target_id = f"case-{clean_id}"
+    try:
+        case_uuid = uuid.UUID(clean_id)
+        linked_fir = db.query(FIR).filter(FIR.crime_case_id == case_uuid).first()
+        if linked_fir:
+            target_id = f"case-{linked_fir.id}"
+    except (ValueError, AttributeError):
+        case_obj = db.query(CrimeCase).filter(CrimeCase.case_number.ilike(f"%{clean_id}%")).first()
+        if case_obj:
+            linked_fir = db.query(FIR).filter(FIR.crime_case_id == case_obj.id).first()
+            if linked_fir:
+                target_id = f"case-{linked_fir.id}"
+
     return get_person_network_graph(
         db,
-        normalized,
+        target_id,
         depth=2,
         provenance_filter=provenance_filter,
         exclude_demo=exclude_demo,
+        district=district,
     )
 
 

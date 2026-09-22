@@ -15,6 +15,7 @@ from app.auth.rbac import ALL_ROLES, require_roles
 from app.auth.scope import enforce_record_district
 from app.database.postgres import get_db
 from app.models.user import User
+from app.services import audit_service
 from app.services.investigation_service import get_investigation
 
 router = APIRouter(prefix="/investigation", tags=["Investigation"], dependencies=[Depends(require_roles(*ALL_ROLES))])
@@ -27,8 +28,8 @@ class OfficerOut(BaseModel):
     badge_number: str
     rank: str | None
     full_name: str
-    district: str
-    station: str
+    district: str | None = None
+    station: str | None = None
 
 
 class CaseOut(BaseModel):
@@ -43,6 +44,51 @@ class CaseOut(BaseModel):
     reported_at: str
     created_at: str
     assigned_officer: OfficerOut | None
+    crime_type: str | None = None
+    location: str | None = None
+    station: str | None = None
+    district: str | None = None
+    updated_at: str | None = None
+
+
+class VehicleOut(BaseModel):
+    id: str
+    registration: str
+    make_model: str | None = None
+    color: str | None = None
+    status: str = "Recorded"
+    source_type: str = "FIR/Narrative"
+    source_reference: str | None = None
+    verification_status: str = "LINKED"
+    confidence: float = 1.0
+
+
+class LocationOut(BaseModel):
+    id: str
+    name: str
+    type: str
+    station: str | None = None
+    district: str | None = None
+    address: str | None = None
+
+
+class OrganizationOut(BaseModel):
+    id: str
+    name: str
+    type: str
+    leader_name: str | None = None
+    active_members: int = 1
+    risk_level: str = "MODERATE"
+    territory: str | None = None
+
+
+class DigitalAccountOut(BaseModel):
+    id: str
+    account_type: str
+    identifier: str
+    associated_person: str | None = None
+    source: str = "Case Record"
+    verification_status: str = "VERIFIED"
 
 
 class FIRCriminalOut(BaseModel):
@@ -98,10 +144,15 @@ class EvidenceOut(BaseModel):
 
 
 class TimelineEventOut(BaseModel):
+    id: str | None = None
     timestamp: str
     event: str
     actor: str | None
     category: str
+    source: str | None = "Case Record"
+    source_id: str | None = None
+    evidence_id: str | None = None
+    details: str | None = None
 
 
 class AIRecommendationOut(BaseModel):
@@ -128,6 +179,11 @@ class InvestigationResponse(BaseModel):
     timeline: list[TimelineEventOut]
     ai_recommendations: list[AIRecommendationOut]
     history: list[HistoryEntryOut]
+    vehicles: list[VehicleOut] = []
+    locations: list[LocationOut] = []
+    organizations: list[OrganizationOut] = []
+    digital_accounts: list[DigitalAccountOut] = []
+    forensic_reports_count: int = 0
 
 
 class InvestigationChatRequest(BaseModel):
@@ -151,9 +207,11 @@ def get_investigation_dashboard(
         raise HTTPException(status_code=404, detail="Crime case not found.")
     enforce_record_district(
         current_user,
-        data.case.location.district if data.case.location else None,
+        data.case.district,
         db,
     )
+
+    audit_service.log_action(db, current_user, "CASE_VIEW", "CrimeCase", str(case_id))
 
     case_dict = data.case.__dict__.copy()
     if case_dict.get("assigned_officer"):
@@ -167,6 +225,11 @@ def get_investigation_dashboard(
         timeline=[TimelineEventOut(**t.__dict__) for t in data.timeline],
         ai_recommendations=[AIRecommendationOut(**r.__dict__) for r in data.ai_recommendations],
         history=[HistoryEntryOut(**h.__dict__) for h in data.history],
+        vehicles=[VehicleOut(**v.__dict__) for v in data.vehicles],
+        locations=[LocationOut(**l.__dict__) for l in data.locations],
+        organizations=[OrganizationOut(**o.__dict__) for o in data.organizations],
+        digital_accounts=[DigitalAccountOut(**d.__dict__) for d in data.digital_accounts],
+        forensic_reports_count=data.forensic_reports_count,
     )
 
 
@@ -183,7 +246,7 @@ def get_investigation_timeline(
         raise HTTPException(status_code=404, detail="Crime case not found.")
     enforce_record_district(
         current_user,
-        data.case.location.district if data.case.location else None,
+        data.case.district,
         db,
     )
 
@@ -203,7 +266,7 @@ def get_investigation_history(
         raise HTTPException(status_code=404, detail="Crime case not found.")
     enforce_record_district(
         current_user,
-        data.case.location.district if data.case.location else None,
+        data.case.district,
         db,
     )
 
@@ -226,7 +289,7 @@ async def investigation_chat(
         raise HTTPException(status_code=404, detail="Crime case not found.")
     enforce_record_district(
         current_user,
-        data.case.location.district if data.case.location else None,
+        data.case.district,
         db,
     )
 

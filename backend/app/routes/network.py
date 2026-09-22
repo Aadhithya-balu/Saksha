@@ -108,13 +108,41 @@ def get_person_network(
     current_user: Any = Depends(get_current_user),
 ):
     """Retrieve relationship graph centered around a specific criminal, suspect, officer, or victim."""
+    if not is_multi_district(current_user):
+        district = enforce_district_scope(current_user, None, db)
+    else:
+        district = None
     return network_service.get_person_network_graph(
         db,
         person_id=person_id,
         depth=depth,
         provenance_filter=provenance_filter,
         exclude_demo=exclude_demo,
+        district=district,
     )
+
+
+@router.get("/case/{case_id}", response_model=NetworkGraphResponse)
+def get_case_network(
+    case_id: str,
+    provenance_filter: str | None = Query(None, description="Filter edges by provenance or verification status"),
+    exclude_demo: bool = Query(False, description="Exclude demo/seed records"),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+):
+    """Retrieve relationship network graph centered around a specific crime case."""
+    if not is_multi_district(current_user):
+        district = enforce_district_scope(current_user, None, db)
+    else:
+        district = None
+    return network_service.get_case_network_graph(
+        db,
+        case_id=case_id,
+        provenance_filter=provenance_filter,
+        exclude_demo=exclude_demo,
+        district=district,
+    )
+
 
 
 @router.get("/search")
@@ -251,23 +279,6 @@ def search_network_entities(
 
     results.sort(key=lambda x: 0 if q.lower() in x["name"].lower() else 1)
     return {"results": results[:limit], "query": q, "total": len(results[:limit])}
-
-
-@router.get("/case/{case_id}", response_model=NetworkGraphResponse)
-def get_case_network(
-    case_id: str,
-    provenance_filter: str | None = Query(None, description="Filter edges by provenance or verification status"),
-    exclude_demo: bool = Query(False, description="Exclude demo/seed records"),
-    db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
-):
-    """Retrieve relationship network associated with a specific crime case or FIR."""
-    return network_service.get_case_network_graph(
-        db,
-        case_id=case_id,
-        provenance_filter=provenance_filter,
-        exclude_demo=exclude_demo,
-    )
 
 
 @router.get("/gangs", response_model=list[GangNetworkSummary])

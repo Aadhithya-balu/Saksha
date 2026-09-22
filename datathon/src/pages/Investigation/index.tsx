@@ -9,12 +9,13 @@ import type {
 } from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import { useUserScope } from '../../hooks/useUserScope';
-import InvestigationDashboard from '../../components/investigation/InvestigationDashboard';
-import CaseProgress from '../../components/investigation/CaseProgress';
-import InvestigationTimeline from '../../components/investigation/InvestigationTimeline';
-import LinkedFIRs from '../../components/investigation/LinkedFIRs';
-import LinkedCriminals from '../../components/investigation/LinkedCriminals';
-import LinkedEvidence from '../../components/investigation/LinkedEvidence';
+import { CaseHeader } from '../../components/investigation/workspace/CaseHeader';
+import { CaseOverviewTab } from '../../components/investigation/workspace/CaseOverviewTab';
+import { CaseTimelineTab } from '../../components/investigation/workspace/CaseTimelineTab';
+import { CaseEntitiesTab } from '../../components/investigation/workspace/CaseEntitiesTab';
+import { CaseEvidenceTab } from '../../components/investigation/workspace/CaseEvidenceTab';
+import { CaseForensicsTab } from '../../components/investigation/workspace/CaseForensicsTab';
+import { CaseGraphTab } from '../../components/investigation/workspace/CaseGraphTab';
 import AIRecommendations from '../../components/investigation/AIRecommendations';
 import AIChatPanel from '../../components/investigation/AIChatPanel';
 import { MOPatternExplorer } from '../../components/investigation/MOPatternExplorer';
@@ -74,6 +75,7 @@ const InvestigationPage: React.FC = () => {
   const [cases, setCases] = useState<CrimeCaseDetailRecord[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [investigationData, setInvestigationData] = useState<InvestigationData | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -433,83 +435,125 @@ const InvestigationPage: React.FC = () => {
     );
   }
 
-  const { case: caseInfo, firs, criminals, evidence, timeline, ai_recommendations } = investigationData;
+  const { case: caseInfo } = investigationData;
+
+  const tabCounts = {
+    timeline: investigationData.timeline?.length || 0,
+    entities:
+      (investigationData.criminals?.length || 0) +
+      (investigationData.vehicles?.length || 0) +
+      (investigationData.locations?.length || 0) +
+      (investigationData.organizations?.length || 0) +
+      (investigationData.digital_accounts?.length || 0),
+    evidence: investigationData.evidence?.length || 0,
+    forensics: investigationData.forensic_reports_count || 0,
+  };
+
+  const handleSelectCriminal = (criminalId: string) => {
+    if (selectedCaseId) {
+      sessionStorage.setItem('return_to_case_id', selectedCaseId);
+      sessionStorage.setItem('return_to_case_number', caseInfo.case_number);
+    }
+    window.dispatchEvent(
+      new CustomEvent('navigate-tab', {
+        detail: { tab: 'criminals', targetId: criminalId },
+      })
+    );
+  };
 
   return (
-    <div className="min-h-[84vh] space-y-6 p-1 md:p-3">
+    <div className="min-h-[84vh] space-y-5 p-1 md:p-3 text-left">
       {/* Back button */}
       <button
         onClick={handleBack}
-        className="sk-btn sk-btn-ghost shrink-0 uppercase"
+        className="sk-btn sk-btn-ghost shrink-0 uppercase cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" /> All cases
       </button>
 
-      {/* Dossier orientation — plain-language summary line */}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-        <span className="font-semibold text-[var(--text-primary)]">Dossier</span>
-        <span className="text-[var(--border-strong)]">/</span>
-        <span className="text-[var(--accent-blue-light)] font-medium">{caseInfo.case_number}</span>
-        <span
-          className="sk-chip px-2 py-0.5"
-          style={{
-            color: (PRIORITY_TONE[caseInfo.priority] || PRIORITY_TONE.medium).color,
-            background: (PRIORITY_TONE[caseInfo.priority] || PRIORITY_TONE.medium).background,
-          }}
-        >
-          {PRIORITY_LABEL[caseInfo.priority] || caseInfo.priority} priority
-        </span>
-        <span
-          className="sk-chip px-2 py-0.5"
-          style={{ color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' }}
-        >
-          {STATUS_LABEL[caseInfo.status] || caseInfo.status.replace(/_/g, ' ')}
-        </span>
-        <span className="sk-chip px-2 py-0.5" style={{ color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}>
-          {caseInfo.progress}% documented
-        </span>
-      </div>
-
-      {/* Dashboard Header */}
-      <InvestigationDashboard data={caseInfo} />
-
-      {/* Progress */}
-      <CaseProgress progress={caseInfo.progress} status={caseInfo.status} />
-
-      {/* MO Pattern Intelligence & Explainable Matching Section */}
-      <MOPatternExplorer
-        currentCaseId={selectedCaseId!}
-        currentCaseNumber={caseInfo.case_number}
-        onSelectCase={(caseId) => loadInvestigation(caseId)}
-        onSelectCriminal={(criminalId) => {
-          if (selectedCaseId) {
-            sessionStorage.setItem('return_to_case_id', selectedCaseId);
-            sessionStorage.setItem('return_to_case_number', caseInfo.case_number);
-          }
-          window.dispatchEvent(
-            new CustomEvent('navigate-tab', {
-              detail: { tab: 'criminals', targetId: criminalId },
-            })
-          );
-        }}
+      {/* Primary Case Cockpit Header */}
+      <CaseHeader
+        caseData={caseInfo}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        tabCounts={tabCounts}
       />
 
-      {/* Main Grid: 3 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: FIRs + Criminals */}
-        <div className="lg:col-span-2 space-y-6">
-          <LinkedFIRs firs={firs} />
-          <LinkedCriminals criminals={criminals} />
-          <LinkedEvidence evidence={evidence} />
-        </div>
+      {/* Tab Panels */}
+      {activeTab === 'overview' && (
+        <CaseOverviewTab
+          data={investigationData}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
+      )}
 
-        {/* Right Column: Timeline + AI + Chat */}
+      {activeTab === 'timeline' && (
+        <CaseTimelineTab events={investigationData.timeline || []} />
+      )}
+
+      {activeTab === 'entities' && (
+        <CaseEntitiesTab
+          data={investigationData}
+          onSelectCriminal={handleSelectCriminal}
+        />
+      )}
+
+      {activeTab === 'graph' && (
+        <CaseGraphTab
+          caseId={selectedCaseId!}
+          data={investigationData}
+          onNavigateTab={(tab, targetId) => {
+            if (tab === 'criminals' && targetId) {
+              handleSelectCriminal(targetId);
+            } else {
+              setActiveTab(tab);
+            }
+          }}
+        />
+      )}
+
+      {activeTab === 'evidence' && (
+        <CaseEvidenceTab
+          evidenceList={investigationData.evidence || []}
+          caseNumber={caseInfo.case_number}
+        />
+      )}
+
+      {activeTab === 'forensics' && (
+        <CaseForensicsTab
+          caseId={selectedCaseId!}
+          caseNumber={caseInfo.case_number}
+          evidenceList={investigationData.evidence || []}
+        />
+      )}
+
+      {activeTab === 'alerts' && (
         <div className="space-y-6">
-          <InvestigationTimeline events={timeline} />
-          <AIRecommendations recommendations={ai_recommendations} />
-          <AIChatPanel caseId={selectedCaseId!} />
+          <MOPatternExplorer
+            currentCaseId={selectedCaseId!}
+            currentCaseNumber={caseInfo.case_number}
+            onSelectCase={(caseId) => loadInvestigation(caseId)}
+            onSelectCriminal={handleSelectCriminal}
+          />
         </div>
-      </div>
+      )}
+
+      {activeTab === 'assistant' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              Automated Analytical Recommendations
+            </h3>
+            <AIRecommendations recommendations={investigationData.ai_recommendations || []} />
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              Investigation Copilot Chat
+            </h3>
+            <AIChatPanel caseId={selectedCaseId!} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

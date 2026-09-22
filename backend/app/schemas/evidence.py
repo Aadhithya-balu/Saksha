@@ -102,3 +102,22 @@ class EvidenceDetailOut(EvidenceOut):
     chain_of_custody: list[ChainOfCustodyOut] = Field(default_factory=list)
     ai_summaries: list[EvidenceAISummaryOut] = Field(default_factory=list)
 
+
+class CustodyTransferRequest(BaseModel):
+    to_user: str = Field(..., description="Badge number, full name, or user UUID")
+    action: str = Field(default="Custody Transfer", max_length=100)
+    to_state: str = Field(default="Transferred", max_length=50)
+    location: str | None = Field(default="Evidence Locker / Forensic Lab", max_length=255)
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+class EvidenceHashVerificationOut(BaseModel):
+    evidence_id: uuid.UUID
+    filename: str
+    recorded_hash: str
+    current_hash: str
+    verified: bool
+    message: str
+    checked_at: datetime
+
+
