@@ -431,6 +431,7 @@ def rank_categories(
     db: Session,
     *,
     window_days: int | None = None,
+    district: str | None = None,
 ) -> list[dict[str, Any]]:
     """Rank crime categories by total incidents in the current window.
 
@@ -443,6 +444,7 @@ def rank_categories(
 
     from app.core.alert_policy import CategoryRanking
     from app.models.crime_category import CrimeCategory
+    from app.models.location import Location
 
     _window = window_days or CategoryRanking.WINDOW_DAYS
     now = datetime.now(timezone.utc)
@@ -452,6 +454,11 @@ def rank_categories(
     current_rows = (
         db.query(CrimeCategory.name, func.count(CrimeCase.id))
         .join(CrimeCase, CrimeCase.category_id == CrimeCategory.id)
+    )
+    if district:
+        current_rows = current_rows.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == district)
+    current_rows = (
+        current_rows
         .filter(CrimeCase.occurred_at >= cutoff_current)
         .group_by(CrimeCategory.name)
         .all()
@@ -459,6 +466,11 @@ def rank_categories(
     prior_rows = (
         db.query(CrimeCategory.name, func.count(CrimeCase.id))
         .join(CrimeCase, CrimeCase.category_id == CrimeCategory.id)
+    )
+    if district:
+        prior_rows = prior_rows.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == district)
+    prior_rows = (
+        prior_rows
         .filter(CrimeCase.occurred_at >= cutoff_prior, CrimeCase.occurred_at < cutoff_current)
         .group_by(CrimeCategory.name)
         .all()

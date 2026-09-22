@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_CRIME_ANALYST, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_district_scope, enforce_record_district, is_multi_district
 from app.database.postgres import get_db
 from app.models.crime import CrimeCase
 from app.models.fir import FIR
@@ -56,6 +57,22 @@ class TimelineEventOut(BaseModel):
     actor: str | None = None
 
 
+class CrimeCategoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    name: str
+    section_code: str | None = None
+    severity: str | None = None
+
+
+class LocationSimpleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    district: str
+    station: str
+    pincode: str | None = None
+
+
 class AIRecommendationOut(BaseModel):
     type: str
     title: str
@@ -71,6 +88,8 @@ class CrimeCaseDetailOut(CrimeCaseOut):
     timeline: list[TimelineEventOut]
     firs: list[FIROut]
     ai_recommendations: list[AIRecommendationOut]
+    location: LocationSimpleOut | None = None
+    category: CrimeCategoryOut | None = None
 
 
 class LinkFIRsPayload(BaseModel):
@@ -79,22 +98,6 @@ class LinkFIRsPayload(BaseModel):
 
 class OfficerWithUserOut(OfficerOut):
     full_name: str
-
-
-class CrimeCategoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    name: str
-    section_code: str | None = None
-    severity: str | None = None
-
-
-class LocationSimpleOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    district: str
-    station: str
-    pincode: str | None = None
 
 
 class CrimeCaseInsightsOut(BaseModel):
@@ -135,6 +138,8 @@ def list_cases(
         .options(
             joinedload(CrimeCase.assigned_officer)
             .joinedload(Officer.user),
+            joinedload(CrimeCase.location),
+            joinedload(CrimeCase.category),
         )
         .order_by(CrimeCase.reported_at.desc())
     )
@@ -144,10 +149,15 @@ def list_cases(
         query = query.filter(CrimeCase.category_id == category_id)
     if priority:
         query = query.filter(CrimeCase.priority == priority)
-    if district:
-        query = query.join(Location, CrimeCase.location_id == Location.id).filter(
-            (Location.district == district) | (Location.station == district)
-        )
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        query = query.join(Location, CrimeCase.location_id == Location.id)
+        if is_multi_district(current_user):
+            query = query.filter(
+                (Location.district == effective_district) | (Location.station == effective_district)
+            )
+        else:
+            query = query.filter(Location.district == effective_district)
     if q:
         query = query.filter(
             (CrimeCase.case_number.ilike(f"%{q}%")) | (CrimeCase.description.ilike(f"%{q}%"))
@@ -204,7 +214,9 @@ def list_cases(
                 notes=notes_out,
                 timeline=[],
                 firs=[],
-                ai_recommendations=[]
+                ai_recommendations=[],
+                location=case.location,
+                category=case.category,
             )
         )
 
@@ -299,10 +311,15 @@ def crime_case_insights(
         base = base.filter(CrimeCase.category_id == category_id)
     if priority:
         base = base.filter(CrimeCase.priority == priority)
-    if district:
-        base = base.join(Location, CrimeCase.location_id == Location.id).filter(
-            (Location.district == district) | (Location.station == district)
-        )
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        base = base.join(Location, CrimeCase.location_id == Location.id)
+        if is_multi_district(current_user):
+            base = base.filter(
+                (Location.district == effective_district) | (Location.station == effective_district)
+            )
+        else:
+            base = base.filter(Location.district == effective_district)
 
     rows = base.all()
 
@@ -349,12 +366,16 @@ def get_case(
         .options(
             joinedload(CrimeCase.assigned_officer)
             .joinedload(Officer.user),
+            joinedload(CrimeCase.location),
+            joinedload(CrimeCase.category),
         )
         .filter(CrimeCase.id == case_id)
         .first()
     )
     if not case:
         raise HTTPException(status_code=404, detail="Crime case not found")
+
+    enforce_record_district(current_user, case.location.district if case.location else None, db)
 
     # 1. Fetch linked FIRs from existing table
     firs_list = db.query(FIR).filter(FIR.crime_case_id == case.id).all()
@@ -397,29 +418,8 @@ def get_case(
         for n in notes_db
     ]
 
-    # 3. AI Recommendations
-    ai_recommendations = [
-        AIRecommendationOut(
-            type="crime_pattern",
-            title="Similar Nearby Incident",
-            description="A house break-in was reported 1.2km away with similar MO (lock-break during early hours)."
-        ),
-        AIRecommendationOut(
-            type="suspect",
-            title="Possible Repeat Offender",
-            description="Prior offender Ramu 'Kodaikanal' Swamy has active modus operandi pattern match in this sector."
-        ),
-        AIRecommendationOut(
-            type="evidence",
-            title="Suggested Evidence Checklist",
-            description="Establish custody of CCTV footage from entry corridors and run fingerprint matching."
-        ),
-        AIRecommendationOut(
-            type="legal",
-            title="Recommended Sections",
-            description="Review applicability of BNS Section 305 (Theft) and BNS Section 331 (House-trespass)."
-        )
-    ]
+    # 3. AI Recommendations — only real, DB-derived directives are returned (empty otherwise)
+    ai_recommendations = []
 
     priority = case.priority or "medium"
     progress = case.progress if case.progress is not None else 10
@@ -453,7 +453,9 @@ def get_case(
         notes=notes_out,
         timeline=timeline,
         firs=firs_out,
-        ai_recommendations=ai_recommendations
+        ai_recommendations=ai_recommendations,
+        location=case.location,
+        category=case.category,
     )
 
 

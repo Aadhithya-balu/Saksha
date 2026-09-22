@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, ArrowLeft, Layers, Activity, Users, Shield, Briefcase, FileText, Brain } from 'lucide-react';
+import { Search, ArrowLeft, Layers, Activity, Users, Shield, Briefcase, FileText, Brain, MapPin } from 'lucide-react';
 import { getInvestigation, getCrimeCases, searchInvestigation } from '../../services/api';
 import type {
   InvestigationData,
@@ -7,6 +7,8 @@ import type {
   InvestigationGroupedSearchResponse,
   InvestigationSearchItem,
 } from '../../services/api';
+import PageHeader from '../../components/ui/PageHeader';
+import { useUserScope } from '../../hooks/useUserScope';
 import InvestigationDashboard from '../../components/investigation/InvestigationDashboard';
 import CaseProgress from '../../components/investigation/CaseProgress';
 import InvestigationTimeline from '../../components/investigation/InvestigationTimeline';
@@ -35,7 +37,39 @@ const navigateTo = (tab: string, targetId?: string) => {
 const isUuidish = (v?: string | null): v is string =>
   !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  assigned: 'Assigned',
+  investigating: 'Under investigation',
+  'evidence collected': 'Evidence collected',
+  'charge sheet filed': 'Charge sheet filed',
+  closed: 'Closed',
+};
+
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+const PRIORITY_TONE: Record<string, { color: string; background: string }> = {
+  critical: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  high: { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  medium: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  low: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+};
+
+const NEEDS_ATTENTION_STATUSES = new Set(['open', 'assigned', 'investigating']);
+
+const daysSince = (iso?: string) =>
+  iso ? Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 86400000)) : 0;
+
+const needsAttention = (item: CrimeCaseDetailRecord) =>
+  NEEDS_ATTENTION_STATUSES.has(item.status) && (item.progress ?? 0) < 40;
+
 const InvestigationPage: React.FC = () => {
+  const { district: scopeDistrict, canSelectDistrict, personaDescriptor } = useUserScope();
   const [viewState, setViewState] = useState<ViewState>('list');
   const [cases, setCases] = useState<CrimeCaseDetailRecord[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -58,13 +92,27 @@ const InvestigationPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch case list on mount
+  // Fetch case list on mount — district-scoped operators always see their own
+  // district (backend is the source of truth for the filter).
   const loadCases = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getCrimeCases(searchQuery || undefined, statusFilter || undefined, 1, 50);
-      setCases(response.results || []);
+      const response = await getCrimeCases(
+        searchQuery || undefined,
+        statusFilter || undefined,
+        1,
+        50,
+        canSelectDistrict ? undefined : { district: scopeDistrict },
+      );
+      // Attention-first ordering: critical/high first, then case number.
+      const sorted = [...(response.results || [])].sort(
+        (a, b) =>
+          (a.priority === 'critical' ? 0 : a.priority === 'high' ? 1 : a.priority === 'medium' ? 2 : 3) -
+            (b.priority === 'critical' ? 0 : b.priority === 'high' ? 1 : b.priority === 'medium' ? 2 : 3) ||
+          String(a.case_number).localeCompare(String(b.case_number)),
+      );
+      setCases(sorted);
     } catch (err: any) {
       setError(err?.message || 'Failed to load cases');
     } finally {
@@ -90,7 +138,7 @@ const InvestigationPage: React.FC = () => {
       }
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, scopeDistrict, canSelectDistrict]);
 
   // Fetch investigation detail
   const loadInvestigation = async (caseId: string) => {
@@ -206,46 +254,58 @@ const InvestigationPage: React.FC = () => {
   // ── List View ──
   if (viewState === 'list') {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
+      <div className="min-h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-muted)] pb-3 shrink-0">
-          <div>
-            <h2 className="text-md font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-5 h-5 text-[#1E6FD9]" />
-              Unified Investigation Interface
-            </h2>
-            <p className="text-[9.5px] font-mono text-[var(--text-muted)] mt-0.5">
-              KARNATAKA POLICE — INVESTIGATION DASHBOARD, TIMELINE, FIRs, CRIMINALS, EVIDENCE & AI ANALYSIS
-            </p>
-            {error && <p className="text-[9px] font-mono text-amber-400 uppercase mt-1">{error}</p>}
-          </div>
+        <div className="pb-3 shrink-0 flex flex-col gap-2">
+          <PageHeader
+            title="Investigation Cases"
+            subtitle={
+              canSelectDistrict || !personaDescriptor
+                ? 'Open a case to see the full dossier — FIRs, people, evidence, timeline and analysis.'
+                : `${personaDescriptor} workspace. Open a case to see the full dossier — FIRs, people, evidence, timeline and analysis${scopeDistrict ? ` in ${scopeDistrict}` : ''}.`
+            }
+            icon={<Layers className="w-5 h-5" />}
+            actions={
+              scopeDistrict ? (
+                <span
+                  className="sk-header-chip hidden sm:inline-flex"
+                  data-accent="cyan"
+                  title="Your operating area — set from your profile"
+                >
+                  <MapPin className="w-3 h-3" />
+                  {scopeDistrict}
+                </span>
+              ) : undefined
+            }
+          />
+          {error && <p className="text-xs font-medium text-[var(--accent-coral-light)]">{error}</p>}
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3 shrink-0 text-[10px] font-mono">
+        <div className="flex gap-3 shrink-0">
           <div className="flex items-center relative flex-1 max-w-md">
             <input
               type="text"
               placeholder="Search by person, victim, FIR, case number, MO keywords…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-secondary)]/70 border border-[var(--border-primary)] rounded text-[var(--text-primary)] outline-none focus:border-[#1E6FD9] text-[10.5px]"
+              className="sk-input w-full pl-8 pr-3 py-1.5"
             />
-            <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)] pointer-events-none" />
           </div>
           {!searchQuery.trim() && (
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+              className="sk-select px-3 py-1.5 cursor-pointer"
             >
-              <option value="">All Statuses</option>
-              <option value="open">OPEN</option>
-              <option value="assigned">ASSIGNED</option>
-              <option value="investigating">INVESTIGATING</option>
-              <option value="evidence collected">EVIDENCE COLLECTED</option>
-              <option value="charge sheet filed">CHARGE SHEET FILED</option>
-              <option value="closed">CLOSED</option>
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="assigned">Assigned</option>
+              <option value="investigating">Under investigation</option>
+              <option value="evidence collected">Evidence collected</option>
+              <option value="charge sheet filed">Charge sheet filed</option>
+              <option value="closed">Closed</option>
             </select>
           )}
         </div>
@@ -268,46 +328,55 @@ const InvestigationPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {cases.map((caseItem) => {
                 const isOpening = loadingDetail && selectedCaseId === caseItem.id;
+                const attention = needsAttention(caseItem);
+                const tone = PRIORITY_TONE[caseItem.priority] || PRIORITY_TONE.medium;
                 return (
                   <button
                     key={caseItem.id}
                     onClick={() => loadInvestigation(caseItem.id)}
                     disabled={loadingDetail}
-                    className={`p-4 bg-secondary-bg border border-border-color rounded-card text-left transition-all cursor-pointer group ${
-                      isOpening
-                        ? 'border-[#1E6FD9]/60 shadow-glow-blue/10'
-                        : 'hover:border-[#1E6FD9]/30 hover:bg-[#1E6FD9]/5'
+                    className={`sk-card text-left transition-colors cursor-pointer group ${
+                      isOpening ? 'ring-2 ring-[var(--accent-blue-subtle)]' : ''
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[11px] font-bold text-[var(--text-primary)] uppercase group-hover:text-[#1E6FD9] transition-colors">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <span className="text-[13px] font-semibold text-[var(--text-primary)] uppercase group-hover:text-[var(--accent-blue)] transition-colors break-all">
                         {caseItem.case_number}
                       </span>
-                      <span className={`px-1.5 py-0.5 text-[7.5px] rounded font-bold uppercase ${
-                        caseItem.priority === 'critical' ? 'bg-red-950/40 text-red-400 border border-red-900/40' :
-                        caseItem.priority === 'high' ? 'bg-orange-950/40 text-orange-400 border border-orange-900/40' :
-                        caseItem.priority === 'medium' ? 'bg-yellow-950/40 text-yellow-400 border border-yellow-900/40' :
-                        'bg-green-950/40 text-green-400 border border-green-900/40'
-                      }`}>
-                        {caseItem.priority}
+                      <span
+                        className="sk-chip px-2 py-0.5 shrink-0"
+                        style={{ color: tone.color, background: tone.background }}
+                      >
+                        {PRIORITY_LABEL[caseItem.priority] || caseItem.priority} priority
                       </span>
                     </div>
-                    <p className="text-[9px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed mb-2">
-                      {caseItem.description || 'No description'}
+                    <p className="text-[12.5px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed mb-3">
+                      {caseItem.description || 'No description recorded.'}
                     </p>
-                    <div className="flex items-center justify-between text-[8px] text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1">
-                        <Activity className="w-3 h-3" />
+                    <div className="flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <Activity className="w-3 h-3 shrink-0" />
                         {isOpening ? (
-                          <span className="flex items-center gap-1.5 text-[#1E6FD9]">
-                            <span className="w-2.5 h-2.5 rounded-full border border-[#1E6FD9] border-t-transparent animate-spin inline-block" />
-                            Loading dossier...
+                          <span className="flex items-center gap-1.5 text-[var(--accent-blue-light)]">
+                            <span className="w-2.5 h-2.5 rounded-full border border-[var(--accent-blue)] border-t-transparent animate-spin inline-block" />
+                            Loading dossier…
                           </span>
                         ) : (
-                          caseItem.status.replace(/_/g, ' ')
+                          <span className="truncate">{STATUS_LABEL[caseItem.status] || caseItem.status.replace(/_/g, ' ')}</span>
                         )}
                       </span>
-                      <span>{caseItem.progress}% complete</span>
+                      <span className="shrink-0">{caseItem.progress}% documented</span>
+                    </div>
+                    <div className="mt-2.5 pt-2.5 border-t border-[var(--border-muted)] flex items-center justify-between gap-2 text-[10.5px] text-[var(--text-muted)]">
+                      <span className="truncate">
+                        {caseItem.assigned_officer?.full_name ? caseItem.assigned_officer.full_name : 'Not yet assigned'}
+                      </span>
+                      {attention && (
+                        <span className="flex items-center gap-1.5 shrink-0 text-[var(--accent-coral-light)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+                          {daysSince(caseItem.reported_at)} day{daysSince(caseItem.reported_at) === 1 ? '' : 's'} open
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -325,25 +394,25 @@ const InvestigationPage: React.FC = () => {
       <div className="min-h-[84vh] space-y-6 p-1 md:p-3">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xs uppercase font-bold cursor-pointer"
+          className="sk-btn sk-btn-ghost shrink-0 uppercase"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Case List
+          <ArrowLeft className="w-4 h-4" /> All cases
         </button>
 
         {/* Clear, labeled loading state */}
-        <div className="p-6 bg-secondary-bg border border-border-color rounded-card flex flex-col items-center justify-center gap-4 text-center">
-          <div className="w-10 h-10 rounded-full border-2 border-[#1E6FD9] border-t-transparent animate-spin" />
+        <div className="p-6 sk-card flex flex-col items-center justify-center gap-4 text-center">
+          <div className="w-10 h-10 rounded-full border-2 border-[var(--accent-blue)] border-t-transparent animate-spin" />
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-primary)]">
-              Loading Investigation Dossier
+            <p className="text-sm uppercase tracking-[0.18em] font-bold text-[var(--text-primary)]">
+              Opening investigation dossier
             </p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1 uppercase">
-              Aggregating case, FIRs, criminals, evidence, timelime & AI intelligence...
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              Pulling together the FIR, people, evidence, timeline and analysis for this case…
             </p>
           </div>
-          <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)] uppercase">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#1E6FD9] animate-pulse" />
-            Securing unified investigation context
+          <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-blue)] animate-pulse" />
+            Building your working view
           </div>
         </div>
 
@@ -371,10 +440,35 @@ const InvestigationPage: React.FC = () => {
       {/* Back button */}
       <button
         onClick={handleBack}
-        className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-xs uppercase font-bold"
+        className="sk-btn sk-btn-ghost shrink-0 uppercase"
       >
-        <ArrowLeft className="w-4 h-4" /> Back to Case List
+        <ArrowLeft className="w-4 h-4" /> All cases
       </button>
+
+      {/* Dossier orientation — plain-language summary line */}
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+        <span className="font-semibold text-[var(--text-primary)]">Dossier</span>
+        <span className="text-[var(--border-strong)]">/</span>
+        <span className="text-[var(--accent-blue-light)] font-medium">{caseInfo.case_number}</span>
+        <span
+          className="sk-chip px-2 py-0.5"
+          style={{
+            color: (PRIORITY_TONE[caseInfo.priority] || PRIORITY_TONE.medium).color,
+            background: (PRIORITY_TONE[caseInfo.priority] || PRIORITY_TONE.medium).background,
+          }}
+        >
+          {PRIORITY_LABEL[caseInfo.priority] || caseInfo.priority} priority
+        </span>
+        <span
+          className="sk-chip px-2 py-0.5"
+          style={{ color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' }}
+        >
+          {STATUS_LABEL[caseInfo.status] || caseInfo.status.replace(/_/g, ' ')}
+        </span>
+        <span className="sk-chip px-2 py-0.5" style={{ color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}>
+          {caseInfo.progress}% documented
+        </span>
+      </div>
 
       {/* Dashboard Header */}
       <InvestigationDashboard data={caseInfo} />

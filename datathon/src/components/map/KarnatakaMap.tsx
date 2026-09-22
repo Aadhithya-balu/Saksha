@@ -15,78 +15,87 @@ import { useAuthStore } from '../../store/authStore';
 import { useThemePalettes } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 
-// Real Karnataka District Police Station database mapping
-const DISTRICT_POLICE_STATIONS: Record<string, HotspotPoint[]> = {
+// Reference geography for Karnataka district police stations (real station
+// names and coordinates). No threat score, crime category or trend is stored
+// here ? live intelligence for a station is only shown when the backend
+// hotspot API actually returns it.
+export interface StationRef {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+const DISTRICT_POLICE_STATIONS: Record<string, StationRef[]> = {
   'Bengaluru Urban': [
-    { district_id: 'Bengaluru Urban', name: 'Whitefield Police Station', lat: 12.9698, lng: 77.7500, score: 78, category: 'Cyber Crime & Online Fraud', trend: 'up' },
-    { district_id: 'Bengaluru Urban', name: 'Jayanagar Police Station', lat: 12.9260, lng: 77.5830, score: 65, category: 'Narcotics Smuggling Services', trend: 'down' },
-    { district_id: 'Bengaluru Urban', name: 'Indiranagar Police Station', lat: 12.9784, lng: 77.6408, score: 52, category: 'Theft & Burglaries', trend: 'stable' },
-    { district_id: 'Bengaluru Urban', name: 'Koramangala Police Station', lat: 12.9352, lng: 77.6245, score: 58, category: 'Commercial Frauds & Cheating', trend: 'up' },
-    { district_id: 'Bengaluru Urban', name: 'Electronic City Police Station', lat: 12.8452, lng: 77.6602, score: 42, category: 'Cyber Extortion & Phishing', trend: 'stable' },
-    { district_id: 'Bengaluru Urban', name: 'Cubbon Park Police Station', lat: 12.9767, lng: 77.5928, score: 30, category: 'VVIP & Public Security', trend: 'down' },
+    { name: 'Whitefield Police Station', lat: 12.9698, lng: 77.7500 },
+    { name: 'Jayanagar Police Station', lat: 12.9260, lng: 77.5830 },
+    { name: 'Indiranagar Police Station', lat: 12.9784, lng: 77.6408 },
+    { name: 'Koramangala Police Station', lat: 12.9352, lng: 77.6245 },
+    { name: 'Electronic City Police Station', lat: 12.8452, lng: 77.6602 },
+    { name: 'Cubbon Park Police Station', lat: 12.9767, lng: 77.5928 },
   ],
   'Mysuru': [
-    { district_id: 'Mysuru', name: 'Devaraja Police Station', lat: 12.3050, lng: 76.6480, score: 58, category: 'Theft & Burglaries', trend: 'up' },
-    { district_id: 'Mysuru', name: 'Lashkar Police Station', lat: 12.3160, lng: 76.6550, score: 50, category: 'Commercial Fraud & Cheating', trend: 'stable' },
-    { district_id: 'Mysuru', name: 'Nazarbad Police Station', lat: 12.3100, lng: 76.6680, score: 44, category: 'Violent Assaults & Riots', trend: 'down' },
-    { district_id: 'Mysuru', name: 'V.V. Puram Police Station', lat: 12.3320, lng: 76.6340, score: 36, category: 'Vehicle Theft', trend: 'stable' },
-    { district_id: 'Mysuru', name: 'Saraswathipuram Police Station', lat: 12.3010, lng: 76.6310, score: 28, category: 'Domestic Violence', trend: 'down' },
+    { name: 'Devaraja Police Station', lat: 12.3050, lng: 76.6480 },
+    { name: 'Lashkar Police Station', lat: 12.3160, lng: 76.6550 },
+    { name: 'Nazarbad Police Station', lat: 12.3100, lng: 76.6680 },
+    { name: 'V.V. Puram Police Station', lat: 12.3320, lng: 76.6340 },
+    { name: 'Saraswathipuram Police Station', lat: 12.3010, lng: 76.6310 },
   ],
   'Ballari': [
-    { district_id: 'Ballari', name: 'City Police Station', lat: 15.1400, lng: 76.9100, score: 82, category: 'Domestic Violence', trend: 'up' },
-    { district_id: 'Ballari', name: 'Cowl Bazaar Police Station', lat: 15.1290, lng: 76.9230, score: 62, category: 'Smuggling & Illegal Mining', trend: 'up' },
-    { district_id: 'Ballari', name: 'Brucepet Police Station', lat: 15.1480, lng: 76.9200, score: 48, category: 'Theft & Property Crimes', trend: 'stable' },
-    { district_id: 'Ballari', name: 'APMC Yard Police Station', lat: 15.1620, lng: 76.8980, score: 32, category: 'Excise & Transport Violations', trend: 'down' },
+    { name: 'City Police Station', lat: 15.1400, lng: 76.9100 },
+    { name: 'Cowl Bazaar Police Station', lat: 15.1290, lng: 76.9230 },
+    { name: 'Brucepet Police Station', lat: 15.1480, lng: 76.9200 },
+    { name: 'APMC Yard Police Station', lat: 15.1620, lng: 76.8980 },
   ],
   'Belagavi': [
-    { district_id: 'Belagavi', name: 'Khade Bazar Police Station', lat: 15.8500, lng: 74.5100, score: 45, category: 'Smuggling & Excise Violations', trend: 'down' },
-    { district_id: 'Belagavi', name: 'Market Police Station', lat: 15.8620, lng: 74.5220, score: 55, category: 'Counterfeit & Smuggling', trend: 'up' },
-    { district_id: 'Belagavi', name: 'Camp Police Station', lat: 15.8420, lng: 74.5050, score: 38, category: 'Property Disputes', trend: 'stable' },
-    { district_id: 'Belagavi', name: 'Tilakwadi Police Station', lat: 15.8350, lng: 74.5020, score: 30, category: 'Cyber Fraud & Phishing', trend: 'down' },
+    { name: 'Khade Bazar Police Station', lat: 15.8500, lng: 74.5100 },
+    { name: 'Market Police Station', lat: 15.8620, lng: 74.5220 },
+    { name: 'Camp Police Station', lat: 15.8420, lng: 74.5050 },
+    { name: 'Tilakwadi Police Station', lat: 15.8350, lng: 74.5020 },
   ],
   'Kalaburagi': [
-    { district_id: 'Kalaburagi', name: 'Brahmapur Police Station', lat: 17.3300, lng: 76.8400, score: 38, category: 'Property Disputes', trend: 'up' },
-    { district_id: 'Kalaburagi', name: 'Chowk Police Station', lat: 17.3410, lng: 76.8320, score: 48, category: 'Violent Assaults & Clashes', trend: 'up' },
-    { district_id: 'Kalaburagi', name: 'Station Bazaar Police Station', lat: 17.3240, lng: 76.8480, score: 34, category: 'Theft & Pickpocketing', trend: 'stable' },
-    { district_id: 'Kalaburagi', name: 'University Police Station', lat: 17.2980, lng: 76.8150, score: 22, category: 'Public Disturbance', trend: 'down' },
+    { name: 'Brahmapur Police Station', lat: 17.3300, lng: 76.8400 },
+    { name: 'Chowk Police Station', lat: 17.3410, lng: 76.8320 },
+    { name: 'Station Bazaar Police Station', lat: 17.3240, lng: 76.8480 },
+    { name: 'University Police Station', lat: 17.2980, lng: 76.8150 },
   ],
   'Dakshina Kannada': [
-    { district_id: 'Dakshina Kannada', name: 'Surathkal Police Station', lat: 12.9800, lng: 74.8600, score: 52, category: 'Cyber Crime & Online Fraud', trend: 'stable' },
-    { district_id: 'Dakshina Kannada', name: 'Mangaluru North (Bunder) Police Station', lat: 12.8710, lng: 74.8380, score: 62, category: 'Maritime & Port Smuggling', trend: 'up' },
-    { district_id: 'Dakshina Kannada', name: 'Mangaluru South (Pandeshwar) Police Station', lat: 12.8590, lng: 74.8420, score: 46, category: 'Commercial Fraud & Extortion', trend: 'stable' },
-    { district_id: 'Dakshina Kannada', name: 'Kadri Police Station', lat: 12.8850, lng: 74.8610, score: 34, category: 'Narcotics & Substance Abuse', trend: 'down' },
+    { name: 'Surathkal Police Station', lat: 12.9800, lng: 74.8600 },
+    { name: 'Mangaluru North (Bunder) Police Station', lat: 12.8710, lng: 74.8380 },
+    { name: 'Mangaluru South (Pandeshwar) Police Station', lat: 12.8590, lng: 74.8420 },
+    { name: 'Kadri Police Station', lat: 12.8850, lng: 74.8610 },
   ],
   'Dharwad': [
-    { district_id: 'Dharwad', name: 'Dharwad Town Police Station', lat: 15.4590, lng: 75.0080, score: 44, category: 'Theft & Burglaries', trend: 'up' },
-    { district_id: 'Dharwad', name: 'Suburban Police Station', lat: 15.4480, lng: 75.0190, score: 36, category: 'Property Disputes', trend: 'stable' },
-    { district_id: 'Dharwad', name: 'Hubballi Town Police Station', lat: 15.3647, lng: 75.1240, score: 55, category: 'Commercial Extortion & Frauds', trend: 'up' },
-    { district_id: 'Dharwad', name: 'Gokul Road Police Station', lat: 15.3520, lng: 75.0980, score: 30, category: 'Vehicle Thefts & Traffic', trend: 'down' },
+    { name: 'Dharwad Town Police Station', lat: 15.4590, lng: 75.0080 },
+    { name: 'Suburban Police Station', lat: 15.4480, lng: 75.0190 },
+    { name: 'Hubballi Town Police Station', lat: 15.3647, lng: 75.1240 },
+    { name: 'Gokul Road Police Station', lat: 15.3520, lng: 75.0980 },
   ],
   'Tumkuru': [
-    { district_id: 'Tumkuru', name: 'Tumkuru Town Police Station', lat: 13.3400, lng: 77.1000, score: 40, category: 'Theft & Highway Robberies', trend: 'up' },
-    { district_id: 'Tumkuru', name: 'New Extension Police Station', lat: 13.3510, lng: 77.1120, score: 32, category: 'Domestic Violence', trend: 'stable' },
-    { district_id: 'Tumkuru', name: 'Tilak Park Police Station', lat: 13.3340, lng: 77.0950, score: 25, category: 'Commercial Disputes', trend: 'down' },
+    { name: 'Tumkuru Town Police Station', lat: 13.3400, lng: 77.1000 },
+    { name: 'New Extension Police Station', lat: 13.3510, lng: 77.1120 },
+    { name: 'Tilak Park Police Station', lat: 13.3340, lng: 77.0950 },
   ],
   'Hassan': [
-    { district_id: 'Hassan', name: 'Hassan City Police Station', lat: 13.0100, lng: 76.1000, score: 28, category: 'Domestic Violence', trend: 'down' },
-    { district_id: 'Hassan', name: 'Hassan Extension Police Station', lat: 13.0220, lng: 76.1150, score: 24, category: 'Property Disputes', trend: 'stable' },
-    { district_id: 'Hassan', name: 'Penta Police Station', lat: 12.9980, lng: 76.0880, score: 18, category: 'Vehicle Theft', trend: 'down' },
+    { name: 'Hassan City Police Station', lat: 13.0100, lng: 76.1000 },
+    { name: 'Hassan Extension Police Station', lat: 13.0220, lng: 76.1150 },
+    { name: 'Penta Police Station', lat: 12.9980, lng: 76.0880 },
   ],
   'Mandya': [
-    { district_id: 'Mandya', name: 'Mandya Town Police Station', lat: 12.5200, lng: 76.9000, score: 48, category: 'Domestic Violence & Assault', trend: 'up' },
-    { district_id: 'Mandya', name: 'Mandya Central Police Station', lat: 12.5280, lng: 76.8920, score: 40, category: 'Agricultural & Land Disputes', trend: 'stable' },
-    { district_id: 'Mandya', name: 'Maddur Police Station', lat: 12.5840, lng: 77.0450, score: 36, category: 'Highway Robberies & Thefts', trend: 'up' },
-    { district_id: 'Mandya', name: 'Srirangapatna Police Station', lat: 12.4210, lng: 76.6950, score: 26, category: 'Heritage & Tourist Security', trend: 'down' },
+    { name: 'Mandya Town Police Station', lat: 12.5200, lng: 76.9000 },
+    { name: 'Mandya Central Police Station', lat: 12.5280, lng: 76.8920 },
+    { name: 'Maddur Police Station', lat: 12.5840, lng: 77.0450 },
+    { name: 'Srirangapatna Police Station', lat: 12.4210, lng: 76.6950 },
   ],
   'Chitradurga': [
-    { district_id: 'Chitradurga', name: 'Chitradurga Town Police Station', lat: 14.2250, lng: 76.4000, score: 38, category: 'Property Disputes & Thefts', trend: 'up' },
-    { district_id: 'Chitradurga', name: 'Fort Police Station', lat: 14.2180, lng: 76.3950, score: 30, category: 'Highway Violations & Smuggling', trend: 'stable' },
-    { district_id: 'Chitradurga', name: 'Holalkere Police Station', lat: 14.0410, lng: 76.1820, score: 22, category: 'Domestic Violence', trend: 'down' },
+    { name: 'Chitradurga Town Police Station', lat: 14.2250, lng: 76.4000 },
+    { name: 'Fort Police Station', lat: 14.2180, lng: 76.3950 },
+    { name: 'Holalkere Police Station', lat: 14.0410, lng: 76.1820 },
   ],
   'Shivamogga': [
-    { district_id: 'Shivamogga', name: 'Shivamogga Town Police Station', lat: 13.9300, lng: 75.5700, score: 42, category: 'Violent Assaults & Riots', trend: 'up' },
-    { district_id: 'Shivamogga', name: 'Kote Police Station', lat: 13.9380, lng: 75.5820, score: 34, category: 'Timber & Forest Smuggling', trend: 'stable' },
-    { district_id: 'Shivamogga', name: 'Doddapete Police Station', lat: 13.9240, lng: 75.5610, score: 26, category: 'Commercial Fraud & Thefts', trend: 'down' },
+    { name: 'Shivamogga Town Police Station', lat: 13.9300, lng: 75.5700 },
+    { name: 'Kote Police Station', lat: 13.9380, lng: 75.5820 },
+    { name: 'Doddapete Police Station', lat: 13.9240, lng: 75.5610 },
   ]
 };
 
@@ -312,75 +321,68 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
     return null;
   }, [selectedDistrict, resolvedDistrictData]);
 
-  // Get active district's complete police station registry
+  // Reference geography + live intelligence for the selected district.
+  // Station names/coordinates come from the reference table; threat score,
+  // category and trend are only ever populated from backend hotspots.
   const districtStations = useMemo(() => {
     if (!selectedDistrict) return [];
     const targetDist = selectedDistrict.toLowerCase();
-    
-    // Find district key in dictionary (case-insensitive)
+
     const dictKey = Object.keys(DISTRICT_POLICE_STATIONS).find(k => k.toLowerCase() === targetDist);
-    const dictStations = dictKey ? DISTRICT_POLICE_STATIONS[dictKey] : [];
-    
-    // Also include any dynamically passed hotspots for this district
+    const refStations = dictKey ? DISTRICT_POLICE_STATIONS[dictKey] : [];
+
     const liveStations = activeHotspots.filter(h => (h.district_id || '').toLowerCase() === targetDist);
-    
-    // Combine unique stations
+
     const map = new Map<string, any>();
-    [...dictStations, ...liveStations].forEach((s: any) => {
-      if (s.name && !map.has(s.name)) {
-        map.set(s.name, {
-          ...s,
-          district_id: selectedDistrict,
-          weight: Math.min(100, Math.max(10, Math.round((s.score || s.weight || 75) * temporalShiftInfo.multiplier))),
-          baseScore: s.score || s.weight || 75,
-          type: s.category || s.type || 'Patrol Beat Station',
-          trend: s.trend || 'stable'
-        });
-      }
+    // Backend intelligence takes precedence and is the only source of threat data.
+    liveStations.forEach((s: any) => {
+      if (!s.name) return;
+      const score = Number(s.score ?? s.weight ?? 0);
+      map.set(s.name, {
+        ...s,
+        district_id: selectedDistrict,
+        weight: Math.min(100, Math.max(0, Math.round(score * temporalShiftInfo.multiplier))),
+        baseScore: score,
+        type: s.category || s.type || 'Unclassified',
+        trend: s.trend || 'stable',
+        hasLiveIntelligence: true,
+      });
+    });
+    // Reference stations without backend intelligence render as geography only.
+    refStations.forEach((s) => {
+      if (!s.name || map.has(s.name)) return;
+      map.set(s.name, {
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+        district_id: selectedDistrict,
+        hasLiveIntelligence: false,
+      });
     });
 
-    if (map.size > 0) {
-      return Array.from(map.values());
-    }
-
-    const center = DISTRICT_COORDS[selectedDistrict] || { lat: 14.5, lng: 75.8 };
-    return [
-      { district_id: selectedDistrict, name: `${selectedDistrict} Town Police Station`, lat: center.lat + 0.03, lng: center.lng + 0.02, weight: 82, baseScore: 82, type: 'Patrol Beat Station', score: 82, trend: 'up' as const },
-      { district_id: selectedDistrict, name: `${selectedDistrict} Central Police Station`, lat: center.lat - 0.02, lng: center.lng - 0.03, weight: 75, baseScore: 75, type: 'Jurisdiction Station', score: 75, trend: 'stable' as const },
-      { district_id: selectedDistrict, name: `${selectedDistrict} Rural Police Station`, lat: center.lat - 0.05, lng: center.lng + 0.04, weight: 68, baseScore: 68, type: 'Highway Security', score: 68, trend: 'down' as const }
-    ];
+    return Array.from(map.values());
   }, [selectedDistrict, activeHotspots, temporalShiftInfo]);
 
-  // Rendered hotspots on map (combining active hotspots + selected district stations)
+  // Rendered hotspots on map — real backend hotspots only. Reference stations
+  // are never drawn as threat nodes.
   const renderedHotspots = useMemo(() => {
     if (!layers.hotspot) return [];
-    if (selectedDistrict && districtStations.length > 0) {
-      const map = new Map<string, any>();
-      activeHotspots.forEach(h => map.set(h.name, h));
-      districtStations.forEach(s => map.set(s.name, s));
-      return Array.from(map.values());
-    }
     return activeHotspots;
-  }, [layers.hotspot, selectedDistrict, districtStations, activeHotspots]);
+  }, [layers.hotspot, activeHotspots]);
 
-  // Selected station object
+  // Selected station object — live intelligence when available, otherwise an
+  // honest geography-only reference (no invented risk score).
   const activeStationInfo = useMemo(() => {
     if (!selectedStation) return null;
     const targetStation = selectedStation.toLowerCase();
     const found = renderedHotspots.find(h => (h.name || '').toLowerCase() === targetStation)
       || activeHotspots.find(h => (h.name || '').toLowerCase() === targetStation);
     if (found) return found;
-    return {
-      name: selectedStation,
-      lat: 12.97,
-      lng: 77.59,
-      weight: 75,
-      baseScore: 75,
-      type: 'General Offense Patrol',
-      district_id: selectedDistrict || 'Karnataka',
-      trend: 'stable' as const,
-    };
-  }, [selectedStation, renderedHotspots, activeHotspots, selectedDistrict]);
+    const ref = districtStations.find((s: any) => (s.name || '').toLowerCase() === targetStation);
+    if (ref) return ref;
+    return null;
+  }, [selectedStation, renderedHotspots, activeHotspots, districtStations]);
+
 
   // Focus targeted hotspot for on-canvas tactical badge (strictly on click/selection only)
   const activeTargetHotspot = useMemo(() => {
@@ -1198,9 +1200,11 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
                       </h3>
                     </div>
                     <div className={`px-2.5 py-1 rounded font-bold text-[10px] ${
-                      activeStationInfo.weight >= 75 ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      !activeStationInfo.hasLiveIntelligence
+                        ? 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                        : activeStationInfo.weight >= 75 ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
                     }`}>
-                      {activeStationInfo.weight}% Risk
+                      {activeStationInfo.hasLiveIntelligence ? `${activeStationInfo.weight}% Risk` : 'No live data'}
                     </div>
                   </div>
 
@@ -1209,6 +1213,8 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
                       <span className="text-[var(--text-muted)]">District Sector:</span>
                       <span className="text-[var(--text-primary)] font-bold">{activeStationInfo.district_id}</span>
                     </div>
+                    {activeStationInfo.hasLiveIntelligence ? (
+                      <>
                     <div className="flex justify-between">
                       <span className="text-[var(--text-muted)]">Primary Crime:</span>
                       <span className="text-orange-400 font-semibold">{activeStationInfo.type}</span>
@@ -1224,6 +1230,19 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
                         {activeStationInfo.trend === 'up' ? 'SURGING' : 'STABILIZED'}
                       </span>
                     </div>
+                      </>
+                    ) : (
+                      <>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--text-muted)]">Station Coordinates:</span>
+                      <span className="text-[var(--text-secondary)]">{activeStationInfo.lat.toFixed(3)}°N, {activeStationInfo.lng.toFixed(3)}°E</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--text-muted)]">Intelligence:</span>
+                      <span className="text-[var(--text-muted)] font-semibold">No live hotspot data for this station</span>
+                    </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Crime Incidents under Station */}
@@ -1354,7 +1373,7 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
                         <option value="">-- Jump to Police Station --</option>
                         {districtStations.map((st: any) => (
                           <option key={st.name} value={st.name}>
-                            {st.name} ({st.weight}% Risk)
+                            {st.name}{st.hasLiveIntelligence ? ` (${st.weight}% Risk)` : ''}
                           </option>
                         ))}
                       </select>
@@ -1380,12 +1399,18 @@ export const KarnatakaMap: React.FC<KarnatakaMapProps> = ({
                             <p className="font-bold text-[9.5px] text-[var(--text-primary)] group-hover:text-[var(--accent-blue)] uppercase truncate">
                               {station.name}
                             </p>
-                            <p className="text-[8px] text-[var(--text-muted)] truncate">{station.type}</p>
+                            <p className="text-[8px] text-[var(--text-muted)] truncate">{station.hasLiveIntelligence ? station.type : 'Reference location'}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${station.weight >= 75 ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
-                              {station.weight}%
-                            </span>
+                            {station.hasLiveIntelligence ? (
+                              <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${station.weight >= 75 ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                                {station.weight}%
+                              </span>
+                            ) : (
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)]" title="No live hotspot intelligence returned for this station">
+                                No data
+                              </span>
+                            )}
                             <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent-blue)] group-hover:translate-x-0.5 transition-transform" />
                           </div>
                         </div>

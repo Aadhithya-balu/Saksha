@@ -45,33 +45,31 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({
 
   const items = primaryTabs.filter((t) => checkPermission(t.path));
 
+  const tabBtn = (active: boolean) =>
+    `md:hidden relative flex-1 flex flex-col items-center justify-center gap-1 px-1 pt-1 cursor-pointer
+     transition-colors duration-150 ${active ? 'text-[var(--accent-blue-light)]' : 'text-[var(--text-muted)]'}`;
+
   return (
-    <nav
-      aria-label="Mobile navigation"
-      className="md:hidden fixed bottom-0 inset-x-0 z-[210] flex items-stretch justify-around h-16
-        bg-[var(--bg-secondary)]/90 backdrop-blur-xl border-t border-[var(--border-primary)]
-        shadow-[0_-8px_24px_rgba(0,0,0,0.18)] select-none"
-    >
+    <nav aria-label="Mobile navigation" className="sk-mobile-bar md:hidden select-none">
       {items.map((item) => {
         const isActive = activeTab === item.id;
         return (
           <button
             key={item.id}
             onClick={() => handleTab(item.id)}
-            className={`relative flex-1 flex flex-col items-center justify-center gap-1 px-1
-              transition-colors duration-150 cursor-pointer ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-muted)]'}`}
+            className={tabBtn(isActive)}
             title={item.label}
           >
+            {isActive && (
+              <span className="absolute top-0 w-8 h-[2px] rounded-full bg-[var(--accent-blue)]" />
+            )}
             <span className="relative">
               {item.icon}
               {item.id === 'ai_chat' && unread > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-coral)] rounded-full" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-coral)] rounded-full ring-2 ring-[var(--bg-secondary)]" />
               )}
             </span>
             <span className="text-[10px] font-medium uppercase tracking-wide">{item.label}</span>
-            {isActive && (
-              <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[var(--accent-blue)]" />
-            )}
           </button>
         );
       })}
@@ -81,13 +79,13 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({
           setMobileMenuOpen(true);
           onOpenDrawer();
         }}
-        className="flex-1 flex flex-col items-center justify-center gap-1 px-1 text-[var(--text-muted)] cursor-pointer"
+        className={tabBtn(false)}
         title="More"
       >
         <span className="relative">
           <Menu className="w-5 h-5" />
           {unread > 0 && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-coral)] rounded-full" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[var(--accent-coral)] rounded-full ring-2 ring-[var(--bg-secondary)]" />
           )}
         </span>
         <span className="text-[10px] font-medium uppercase tracking-wide">More</span>

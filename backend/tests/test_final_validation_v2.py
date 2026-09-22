@@ -158,7 +158,9 @@ def analyst(client, db_session):
 
 @pytest.fixture
 def investigator(client, db_session):
-    create_user(db_session, "v2-investigator", "investigator")
+    user = create_user(db_session, "v2-investigator", "investigator")
+    user.district = "Bengaluru Urban"
+    db_session.commit()
     return login(client, "v2-investigator", "Acceptance#2026")["headers"]
 
 

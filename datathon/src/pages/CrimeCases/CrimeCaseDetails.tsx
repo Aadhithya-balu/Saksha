@@ -243,6 +243,11 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
           <div>
             <span className="text-[10px] text-[#0E9E78] font-bold tracking-[0.15em] uppercase">SAKSHA CRIME INCIDENT RECORDS</span>
             <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] uppercase tracking-wider mt-1">{caseData.case_number}</h1>
+            {caseData.category?.name && (
+              <span className="inline-block mt-2 px-2 py-0.5 rounded bg-[var(--bg-tertiary)] border border-border-color text-[9px] text-[var(--text-secondary)] uppercase">
+                CATEGORY: {caseData.category.name}{caseData.category.section_code ? ` (${caseData.category.section_code})` : ''}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             {/* Status Select */}
@@ -296,7 +301,7 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="w-3.5 h-3.5 text-[#C94A2A]" />
-            <span>INCIDENT COORDINATES (ID: {caseData.location_id.substring(0, 8)})</span>
+            <span>DISTRICT: {caseData.location?.district || '—'} | STATION: {caseData.location?.station || '—'}</span>
           </div>
         </div>
       </div>
@@ -431,7 +436,6 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
               <Sparkles className="w-4 h-4 text-[#1E6FD9] animate-pulse" /> SAKSHA AI Predictive Assistance
             </h3>
 
-            {/* Displaying mock AI details */}
             {caseData.ai_recommendations.length === 0 ? (
               <p className="text-[10px] text-[var(--text-muted)] uppercase text-center py-2">NO AI ASSISTANCE INSIGHTS GENERATED FOR THE CURRENT CLEARANCE STAGE.</p>
             ) : (

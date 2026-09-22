@@ -30,6 +30,7 @@ def _make_user(db_session, role_name: str) -> User:
         full_name="Hub User",
         hashed_password=hash_password("Password123!"),
         role_id=role.id,
+        district="Bengaluru Urban",
         is_active=True,
     )
     db_session.add(user)
@@ -70,6 +71,11 @@ def hub_data(db_session):
         narrative="Called about a murder with a neck injury.",
     )
     db_session.add(fir)
+    db_session.flush()
+
+    from app.models.fir import FIRCriminalLink
+
+    db_session.add(FIRCriminalLink(fir_id=fir.id, criminal_id=crook.id))
     db_session.flush()
     db_session.commit()
     return {"criminal": crook, "case": case}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRBAC } from '../../hooks/useRBAC';
-import { Lock, ShieldAlert, Key } from 'lucide-react';
+import { Lock, ShieldAlert } from 'lucide-react';
 
 interface RoleGuardProps {
   path: string;
@@ -17,7 +17,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ path, children }) => {
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
         <ShieldAlert className="w-12 h-12 text-[#C94A2A] mb-4 animate-bounce" />
         <h3 className="text-lg font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">Authentication Required</h3>
-        <p className="text-xs font-mono text-[var(--text-muted)] mt-2">Establish authorization links with police badge database to unlock telemetry.</p>
+        <p className="text-xs font-mono text-[var(--text-muted)] mt-2">Sign in to view this module.</p>
       </div>
     );
   }
@@ -58,9 +58,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ path, children }) => {
             <span>REQUIRED ENCR-CLEARANCE: <span className="text-[var(--text-primary)] font-semibold">{requiredRoles.join(' / ')}</span></span>
           </div>
 
-          <div className="text-[9.5px] text-[#C94A2A] font-semibold flex items-center justify-center gap-1.5 animate-pulse">
-            <Key className="w-3.5 h-3.5" />
-            <span>AUDIT TRAIL LOGGED: IP 10.144.x.x</span>
+          <div className="text-[9.5px] text-[var(--text-muted)] flex items-center justify-center gap-1.5">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Blocked by your role policy for this module</span>
           </div>
         </div>
       </div>

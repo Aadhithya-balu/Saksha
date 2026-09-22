@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_CRIME_ANALYST, ROLE_INVESTIGATOR, require_roles
+from app.auth.scope import enforce_district_scope, enforce_record_district, is_multi_district
 from app.database.postgres import get_db
 from app.models.crime import CrimeCase
+from app.models.location import Location
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.crime import CrimeCaseCreate, CrimeCaseOut, CrimeCaseUpdate, CrimeTimelineEvent
@@ -52,6 +54,9 @@ def list_crimes(
         query = query.filter(CrimeCase.occurred_at <= date_to)
     if q:
         query = query.filter(CrimeCase.description.ilike(f"%{q}%"))
+    effective_district = enforce_district_scope(current_user, None, db)
+    if effective_district and not is_multi_district(current_user):
+        query = query.join(Location, CrimeCase.location_id == Location.id).filter(Location.district == effective_district)
 
     total = query.count()
     from sqlalchemy import asc, desc as sa_desc
@@ -64,11 +69,21 @@ def list_crimes(
 
 @router.get("/{crime_id}", response_model=CrimeCaseOut)
 def get_crime(crime_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return crime_crud.get(db, crime_id)
+    crime = crime_crud.get(db, crime_id)
+    if crime is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Crime case not found")
+    enforce_record_district(current_user, crime.location.district if crime.location else None, db)
+    return crime
 
 
 @router.get("/{crime_id}/timeline", response_model=list[CrimeTimelineEvent])
 def crime_timeline(crime_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    crime = crime_crud.get(db, crime_id)
+    if crime is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Crime case not found")
+    enforce_record_district(current_user, crime.location.district if crime.location else None, db)
     return get_crime_timeline(db, crime_id)
 
 

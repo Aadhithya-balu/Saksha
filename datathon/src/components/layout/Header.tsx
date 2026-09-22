@@ -14,6 +14,7 @@ import {
   ChevronDown,
   KeyRound,
   LogOut,
+  MapPin,
 } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 import DataModeBadge from '../ui/DataModeBadge';
@@ -26,29 +27,43 @@ interface HeaderProps {
 }
 
 const pageLabels: Record<string, string> = {
-  dashboard: 'Analytics Dashboard',
-  command_center: 'Command Center',
-  intelligence: 'Investigation Hub',
-  identity: 'Identity Resolution & Data Integrity',
-  fir: 'FIR Registry',
-  hotspot: 'Hotspot Map',
-  network: 'Network Graph',
-  predictive: 'Predictive AI',
-  anomaly: 'Anomaly Feed',
+  dashboard: 'Home',
+  command_center: 'Search & Intelligence',
+  intelligence: 'Investigation',
+  identity: 'Identity Matches',
+  fir: 'FIRs',
+  hotspot: 'Hotspots',
+  network: 'Connections',
+  predictive: 'Risk Outlook',
+  anomaly: 'Unusual Activity',
   crime_cases: 'Crime Cases',
   investigation: 'Investigation',
-  notifications: 'Intelligence Center',
-  sociological: 'Sociological Intelligence',
+  notifications: 'Notifications',
+  investigation_intelligence: 'Case Intelligence',
+  intelligence_fusion: 'Combined Intelligence',
+  sociological: 'Community Patterns',
   strategic: 'Strategic Intelligence',
-  offenders: 'Offender Registry',
-  criminals: 'Criminal Dossiers',
-  victims: 'Victims Registry',
-  reports: 'Reports Center',
+  offenders: 'Offenders',
+  criminals: 'Criminals',
+  victims: 'Victims',
+  reports: 'Reports',
   settings_help: 'Settings',
   ai_chat: 'AI Assistant',
-  officers: 'Officer Management',
-  evidence: 'Evidence Handling',
+  officers: 'Officers',
+  evidence: 'Evidence',
   docs: 'Documentation',
+  admin: 'Administration',
+  face_recognition: 'Face Match',
+};
+
+const ROLE_ACCENT: Record<string, string> = {
+  ADMIN: 'coral',
+  SP: 'amber',
+  INSPECTOR: 'cyan',
+  SCRB: 'blue',
+  IO: 'teal',
+  FORENSIC: 'purple',
+  VIEWER: 'muted',
 };
 
 export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarCollapsed }) => {
@@ -105,49 +120,67 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
 
   return (
     <header
-      className="relative h-16 shrink-0 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]/70 backdrop-blur-md px-3 sm:px-4 md:px-6 flex items-center gap-3"
+      className="sk-header"
       style={{ zIndex: 100 }}
     >
-      {/* Left: Mobile menu + Breadcrumbs */}
+      {/* Left: Mobile menu + breadcrumb context */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
         {setSidebarCollapsed && (
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="md:hidden shrink-0 p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+            aria-label="Toggle navigation drawer"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
 
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-1.5 text-sm min-w-0">
-          <span className="text-[var(--text-muted)] hidden sm:inline shrink-0">Saksha</span>
-          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-disabled)] hidden sm:block shrink-0" />
-          <span className="text-[var(--text-primary)] font-medium truncate">{currentPage}</span>
+        <div className="sk-crumb">
+          <span className="sk-crumb-root hidden sm:inline">Saksha</span>
+          <ChevronRight className="sk-crumb-sep hidden sm:block w-3.5 h-3.5" />
+          <span className="sk-crumb-current">{currentPage}</span>
         </div>
+
+        {user?.district && (
+          <span
+            className="sk-header-chip hidden sm:inline-flex !max-w-[220px] overflow-hidden"
+            data-accent="cyan"
+            title={`Operating area: ${user.district}`}
+          >
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate">{user.district}</span>
+          </span>
+        )}
       </div>
 
-      {/* Center: Search trigger (flex sibling between two flex-1 sides, never overlaps) */}
+      {/* Center: Quick find (opens Command Palette) */}
       <button
         onClick={() => setCommandPaletteOpen(true)}
-        className="hidden md:flex items-center gap-2 w-[200px] lg:w-[260px] shrink-0 px-3.5 py-2 bg-[var(--bg-tertiary)]/70 border border-[var(--border-primary)] rounded-full text-[var(--text-muted)] transition-all duration-200 cursor-pointer hover:border-[var(--accent-blue)]/40 hover:bg-[var(--bg-tertiary)] focus:outline-none"
+        className="sk-header-search hidden md:flex shrink-0"
       >
-        <Search className="w-4 h-4 shrink-0 text-[var(--text-muted)]" />
-        <span className="text-[13px] flex-1 text-left truncate">Search anything...</span>
-        <kbd className="hidden xl:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded text-[var(--text-muted)]">
-          <Command className="w-2.5 h-2.5" />K
-        </kbd>
+        <Search className="w-3.5 h-3.5 shrink-0" />
+        <span className="flex-1 text-left truncate">Search cases, people, places…</span>
+        <kbd className="sk-cmd-kbd hidden xl:inline-flex shrink-0"><Command className="w-2.5 h-2.5" />K</kbd>
       </button>
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0 justify-end">
-        {/* Global data-mode indicator */}
+      {/* Right: Role chip + status + actions */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end">
         <div className="hidden 2xl:flex items-center">
           <DataModeBadge />
         </div>
 
-        {/* Connection Status */}
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono rounded-md border border-[var(--border-secondary)]">
+        {user && (
+          <span
+            className="sk-header-chip hidden xl:inline-flex"
+            data-accent={ROLE_ACCENT[user.role] || undefined}
+            title={`Clearance: ${user.role}`}
+          >
+            <span className="sk-chip-dot" />
+            {user.role}
+          </span>
+        )}
+
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-mono rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)]">
           {emulatorActive ? (
             <>
               <WifiOff className="w-3 h-3 text-[var(--accent-amber)]" />
@@ -164,14 +197,14 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="relative shrink-0 flex items-center justify-center h-9 w-9 rounded-full border border-[var(--border-primary)] bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--accent-blue)]/40 transition-all cursor-pointer"
+          className="relative shrink-0 flex items-center justify-center h-8 w-8 rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-blue)]/40 transition-all cursor-pointer"
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           aria-label="Toggle light/dark mode"
         >
           {theme === 'dark' ? (
-            <Sun className="w-[18px] h-[18px] text-[var(--accent-amber)]" />
+            <Sun className="w-[16px] h-[16px] text-[var(--accent-amber)]" />
           ) : (
-            <Moon className="w-[18px] h-[18px] text-[var(--accent-purple)]" />
+            <Moon className="w-[16px] h-[16px] text-[var(--accent-purple)]" />
           )}
         </button>
 
@@ -184,12 +217,10 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
             onClick={() => setProfileOpen((o) => !o)}
             aria-haspopup="true"
             aria-expanded={profileOpen}
-            className="flex items-center gap-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-tertiary)]/60 pl-1 pr-2 py-1 transition-all duration-150 hover:border-[var(--accent-blue)]/40 cursor-pointer"
+            className="flex items-center gap-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)] pl-1 pr-2 py-1 transition-all duration-150 hover:border-[var(--accent-blue)]/40 cursor-pointer"
             title="Account"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-blue-subtle)] border border-[var(--accent-blue)]/20 text-[11px] font-bold text-[var(--accent-blue)]">
-              {initials}
-            </span>
+            <span className="sk-avatar">{initials}</span>
             <span className="hidden lg:flex flex-col items-start leading-none">
               <span className="text-xs font-semibold text-[var(--text-primary)]">{user?.name?.split(' ')[0] || 'Officer'}</span>
               <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--text-muted)]">{user?.role || ''}</span>
@@ -199,13 +230,10 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
 
           {/* Profile dropdown */}
           {profileOpen && (
-            <div className="absolute right-0 top-[calc(100%+8px)] w-64 z-[220] overflow-hidden rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] shadow-[var(--shadow-xl)] sk-page-enter">
-              {/* Header panel */}
+            <div className="absolute right-0 top-[calc(100%+8px)] w-64 z-[220] overflow-hidden rounded-xl border border-[var(--border-primary)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] sk-page-enter">
               <div className="px-4 py-3 bg-[var(--bg-tertiary)]/60 border-b border-[var(--border-primary)]">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-blue-subtle)] border border-[var(--accent-blue)]/20 text-sm font-bold text-[var(--accent-blue)]">
-                    {initials}
-                  </span>
+                  <span className="sk-avatar">{initials}</span>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{user?.name || 'Officer'}</div>
                     <div className="text-[11px] font-mono text-[var(--text-muted)]">{user?.badgeId} · {user?.role}</div>
@@ -213,7 +241,6 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
                 </div>
               </div>
 
-              {/* Menu actions */}
               <div className="p-1.5">
                 <button
                   onClick={() => { setProfileOpen(false); setPwOpen(true); }}
@@ -238,8 +265,8 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
 
         {/* Clock */}
         <div className="hidden 2xl:flex flex-col items-end">
-          <span className="text-xs font-mono font-semibold text-[var(--text-primary)]">{systime}</span>
-          <span className="text-[9px] font-mono text-[var(--text-muted)]">IST</span>
+          <span className="text-[11px] font-mono font-semibold text-[var(--text-primary)]">{systime}</span>
+          <span className="text-[8px] font-mono text-[var(--text-muted)]">IST</span>
         </div>
 
         {/* Session Timer */}

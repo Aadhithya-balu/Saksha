@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, require_roles
+from app.auth.scope import enforce_record_district
 from app.database.postgres import get_db
 from app.models.user import User
 from app.services.investigation_service import get_investigation
@@ -148,6 +149,11 @@ def get_investigation_dashboard(
         data = get_investigation(db, case_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Crime case not found.")
+    enforce_record_district(
+        current_user,
+        data.case.location.district if data.case.location else None,
+        db,
+    )
 
     case_dict = data.case.__dict__.copy()
     if case_dict.get("assigned_officer"):
@@ -175,6 +181,11 @@ def get_investigation_timeline(
         data = get_investigation(db, case_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Crime case not found.")
+    enforce_record_district(
+        current_user,
+        data.case.location.district if data.case.location else None,
+        db,
+    )
 
     return [TimelineEventOut(**t.__dict__) for t in data.timeline]
 
@@ -190,6 +201,11 @@ def get_investigation_history(
         data = get_investigation(db, case_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Crime case not found.")
+    enforce_record_district(
+        current_user,
+        data.case.location.district if data.case.location else None,
+        db,
+    )
 
     return [HistoryEntryOut(**h.__dict__) for h in data.history]
 
@@ -208,6 +224,11 @@ async def investigation_chat(
         data = get_investigation(db, payload.case_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Crime case not found.")
+    enforce_record_district(
+        current_user,
+        data.case.location.district if data.case.location else None,
+        db,
+    )
 
     case = data.case
     context_message = (

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_CRIME_ANALYST, require_roles
+from app.auth.scope import enforce_district_scope, is_multi_district
 from app.core.alert_policy import get_current_policy
 from app.database.postgres import get_db
 from app.models.user import User
@@ -59,11 +60,14 @@ def district_ranking(
     Methodology: incident_count, no population normalisation,
     no severity weighting.  Documented in alert policy.
     """
-    del current_user
+    effective_district = enforce_district_scope(current_user, None, db)
+    districts = rank_districts(db, window_days=window_days)
+    if effective_district and not is_multi_district(current_user):
+        districts = [d for d in districts if d["district"].lower() == effective_district.lower()]
     return {
         "metric": "incident_count",
         "window_days": window_days,
-        "districts": rank_districts(db, window_days=window_days),
+        "districts": districts,
     }
 
 
@@ -81,11 +85,15 @@ def category_ranking(
 
     Includes change_percentage vs prior window as secondary metric.
     """
-    del current_user
+    effective_district = enforce_district_scope(current_user, None, db)
     return {
         "metric": "incident_count",
         "window_days": window_days,
-        "categories": rank_categories(db, window_days=window_days),
+        "categories": rank_categories(
+            db,
+            window_days=window_days,
+            district=None if is_multi_district(current_user) else effective_district,
+        ),
     }
 
 
@@ -106,7 +114,7 @@ def red_zones(
     Returns structured alerts with evidence, provenance, confidence,
     policy version, and human-readable explanation.
     """
-    del current_user
+    effective_district = enforce_district_scope(current_user, None, db)
     result = detect_red_zones(db, min_current=min_current, ratio_threshold=ratio_threshold)
     if include_intelligence:
         try:
@@ -121,6 +129,14 @@ def red_zones(
                     z["fused_pattern_type"] = matching["pattern_type"]
         except Exception:
             pass
+    if effective_district and not is_multi_district(current_user):
+        result["red_zones"] = [
+            z for z in result.get("red_zones", []) if z.get("district", "").lower() == effective_district.lower()
+        ]
+        if "districts" in result and isinstance(result["districts"], list):
+            result["districts"] = [
+                d for d in result["districts"] if d.get("district", "").lower() == effective_district.lower()
+            ]
     return result
 
 
@@ -165,9 +181,9 @@ def red_zones_for_district(
     current_user: User = Depends(get_current_user),
 ):
     """Structured red-zone alerts for a specific district."""
-    del current_user
+    effective_district = enforce_district_scope(current_user, district, db)
     result = detect_red_zones(db)
-    zones = [z for z in result["red_zones"] if z["district"].lower() == district.lower()]
+    zones = [z for z in result["red_zones"] if z["district"].lower() == effective_district.lower()]
     if not zones:
-        raise HTTPException(status_code=404, detail=f"No active red zones in {district}")
-    return {"district": district, "policy_version": result["policy_version"], "red_zones": zones}
+        raise HTTPException(status_code=404, detail=f"No active red zones in {effective_district}")
+    return {"district": effective_district, "policy_version": result["policy_version"], "red_zones": zones}

@@ -270,7 +270,7 @@ export const CorrelationChart: React.FC = () => {
 
       {/* Legend & Dataset Lineage */}
       <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] pt-2 border-t border-[var(--border-muted)] mt-1">
-        <span>Trend: {regression ? 'Inverse Correlation (r=-0.29)' : 'Standard Distribution'}</span>
+        <span>Trend: {regression && analysis?.correlations.unemployment_vs_crime != null ? `${analysis.correlations.unemployment_vs_crime < 0 ? 'Inverse' : 'Positive'} Correlation (r=${analysis.correlations.unemployment_vs_crime.toFixed(2)})` : regression ? 'Regression fit (r unavailable)' : 'Standard Distribution'}</span>
         {analysis?.dataset && (
           <span className="text-[9px] uppercase opacity-70">
             Dataset v{analysis.dataset.version}

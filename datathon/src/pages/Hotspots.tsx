@@ -24,12 +24,14 @@ import type { DistrictInfo } from '../store/mapStore';
 import { PageHeader } from '../components/ui/PageHeader';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useTranslation } from '../i18n';
+import { useUserScope } from '../hooks/useUserScope';
 
 type HotspotSource = 'backend' | 'stations' | 'demo';
 
 export const Hotspots: React.FC = () => {
   const { user } = useAuthStore();
   const { addLog } = useAuditStore();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const { selectedDistrict, selectedStation, setSelectedDistrict, setSelectedStation, setTimeOfDay, timeOfDay } = useMapStore();
   const { isProduction } = useDataMode();
   const t = useTranslation();
@@ -52,6 +54,16 @@ export const Hotspots: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // District-scoped officers always begin on their own district. Multi-district
+    // operators (admin/SP/analyst) start on the statewide view — their home
+    // district is often a HQ placeholder ("State HQ") that has no stations.
+    if (!canSelectDistrict && scopeDistrict && !useMapStore.getState().selectedDistrict) {
+      setSelectedDistrict(scopeDistrict);
+      setSelectedStation(null);
+    }
+  }, [scopeDistrict, canSelectDistrict, setSelectedDistrict, setSelectedStation]);
+
+  useEffect(() => {
     let isMounted = true;
     setLoading(true);
     setError(null);
@@ -60,9 +72,10 @@ export const Hotspots: React.FC = () => {
     setHotspotAnalysisMode(null);
     setHotspotDataProvenance(null);
 
-    // Check if navigating from Anomaly "Locate on Map"
+    // Check if navigating from Anomaly "Locate on Map" — command roles may
+    // jump to any district; district-scoped officers skip the override.
     const override = sessionStorage.getItem('selected_district_override');
-    if (override) {
+    if (override && canSelectDistrict) {
       sessionStorage.removeItem('selected_district_override');
       setSelectedDistrict(override);
       setSelectedStation(null);
@@ -173,7 +186,7 @@ export const Hotspots: React.FC = () => {
 
     void Promise.allSettled([
       getRecentIncidents(),
-      getCrimeCases('', undefined, 1, 50),
+      getCrimeCases('', undefined, 1, 50, canSelectDistrict ? undefined : { district: scopeDistrict || undefined }),
     ]).then(([recentRes, casesRes]) => {
       if (!isMounted) return;
       const recentList = recentRes.status === 'fulfilled' ? recentRes.value : [];
@@ -218,7 +231,7 @@ export const Hotspots: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isProduction]);
+  }, [isProduction, scopeDistrict, canSelectDistrict, setSelectedDistrict, setSelectedStation]);
 
   // Filtered hotspots by category if specified
   const filteredHotspots = useMemo(() => {
@@ -321,7 +334,7 @@ export const Hotspots: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+      <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
         <PageHeader title={t.page_hotspot_title} subtitle={t.page_hotspot_subtitle} icon={<Compass className="w-5 h-5" />} />
         <PageSkeleton />
       </div>
@@ -330,7 +343,7 @@ export const Hotspots: React.FC = () => {
 
   if (error && hotspots.length === 0) {
     return (
-      <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+      <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
         <PageHeader title={t.page_hotspot_title} icon={<Compass className="w-5 h-5" />} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
@@ -348,7 +361,7 @@ export const Hotspots: React.FC = () => {
   }
 
   return (
-    <div className="h-[84vh] flex flex-col gap-4 md:p-1">
+    <div className="min-h-[84vh] flex flex-col gap-4 md:p-1">
 
       {/* Page header */}
       <PageHeader

@@ -6,6 +6,10 @@ interface Props {
   firs: InvestigationFIR[];
 }
 
+const navigateTo = (tab: string, targetId?: string) => {
+  window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab, targetId } }));
+};
+
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'closed':
@@ -32,7 +36,11 @@ const LinkedFIRs: React.FC<Props> = ({ firs }) => {
       ) : (
         <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
           {firs.map((fir) => (
-            <div key={fir.id} className="p-3 bg-[var(--bg-secondary)]/40 border border-border-color/40 rounded hover:border-[var(--accent-blue)]/20 transition-colors">
+            <button
+              key={fir.id}
+              onClick={() => navigateTo('fir', fir.id)}
+              className="w-full text-left cursor-pointer p-3 bg-[var(--bg-secondary)]/40 border border-border-color/40 rounded hover:border-[var(--accent-blue)]/20 transition-colors"
+            >
               {/* FIR Header */}
               <div className="flex justify-between items-start mb-2">
                 <div>
@@ -71,7 +79,7 @@ const LinkedFIRs: React.FC<Props> = ({ firs }) => {
                   {fir.narrative}
                 </p>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
