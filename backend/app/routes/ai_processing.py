@@ -4,7 +4,7 @@ from typing import List
 import uuid
 
 from app.database.postgres import get_db
-from app.services.auth_service import get_current_user
+from app.auth.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.ai_processing import (
     AIProcessingJobResponse, 

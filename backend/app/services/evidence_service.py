@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import hashlib
 from typing import Any
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
@@ -210,15 +211,31 @@ def _upload_to_supabase_storage(file_path: str, storage_key: str, mime_type: str
     return None
 
 
-def save_upload_file(upload_file: UploadFile, owner_id: uuid.UUID, category: str = "evidence") -> tuple[str, str | None]:
+def compute_file_sha256(file_path: str) -> str:
+    """Calculate SHA-256 hash of a file on disk."""
+    p = Path(file_path)
+    if not p.exists() or not p.is_file():
+        return ""
+    hasher = hashlib.sha256()
+    with open(p, "rb") as f:
+        while chunk := f.read(1024 * 1024):
+            hasher.update(chunk)
+    return hasher.hexdigest().upper()
+
+
+def save_upload_file(
+    upload_file: UploadFile,
+    owner_id: uuid.UUID,
+    category: str = "evidence",
+    return_hash: bool = False,
+) -> tuple[str, str | None] | tuple[str, str | None, str]:
     """Save an uploaded file locally (for metadata extraction) and optionally
     push it to Supabase Storage for persistent cloud access.
 
     ``category`` scopes the storage key (e.g. ``evidence`` or ``fir``).
 
-    Returns ``(local_file_path, storage_url)`` where *storage_url* is the
-    Supabase Storage URL when the upload succeeded, or ``None`` when running
-    in local-only mode.
+    Returns ``(local_file_path, storage_url)`` or ``(local_file_path, storage_url, sha256_hash)``
+    when ``return_hash=True``.
     """
     validate_upload_file(upload_file)
 
@@ -237,11 +254,13 @@ def save_upload_file(upload_file: UploadFile, owner_id: uuid.UUID, category: str
 
     file_size = 0
     max_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
+    hasher = hashlib.sha256()
 
     try:
         with open(file_path, "wb") as buffer:
             while chunk := upload_file.file.read(1024 * 1024):
                 file_size += len(chunk)
+                hasher.update(chunk)
                 if file_size > max_bytes:
                     buffer.close()
                     os.remove(file_path)
@@ -291,6 +310,8 @@ def save_upload_file(upload_file: UploadFile, owner_id: uuid.UUID, category: str
     storage_key = f"{category}/{owner_id}/{unique_filename}"
     storage_url = _upload_to_supabase_storage(str(file_path), storage_key, mime_type)
 
+    sha256_hash = hasher.hexdigest().upper()
+
     # When the file is safely in Supabase Storage, remove the local copy to
     # avoid accumulating files on ephemeral server storage.
     if storage_url:
@@ -299,6 +320,8 @@ def save_upload_file(upload_file: UploadFile, owner_id: uuid.UUID, category: str
         except OSError:
             pass
 
+    if return_hash:
+        return str(file_path), storage_url, sha256_hash
     return str(file_path), storage_url
 
 def add_timeline_event(db: Session, evidence_id: uuid.UUID, action: str, current_user: User, description: str = None):

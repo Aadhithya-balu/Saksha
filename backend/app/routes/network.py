@@ -117,6 +117,24 @@ def get_person_network(
     )
 
 
+@router.get("/case/{case_id}", response_model=NetworkGraphResponse)
+def get_case_network(
+    case_id: str,
+    provenance_filter: str | None = Query(None, description="Filter edges by provenance or verification status"),
+    exclude_demo: bool = Query(False, description="Exclude demo/seed records"),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+):
+    """Retrieve relationship network graph centered around a specific crime case."""
+    return network_service.get_case_network_graph(
+        db,
+        case_id=case_id,
+        provenance_filter=provenance_filter,
+        exclude_demo=exclude_demo,
+    )
+
+
+
 @router.get("/search")
 def search_network_entities(
     q: str = Query(..., min_length=1, max_length=200, description="Search term (name, FIR number, case number, station, district)"),

@@ -75,6 +75,9 @@ from app.routes import model_management
 # AI Processing (Phase 2)
 from app.routes import ai_processing
 
+# Forensics Workflow (Phase 4)
+from app.routes import forensics
+
 
 api_router = APIRouter()
 
@@ -141,3 +144,6 @@ api_router.include_router(model_management.router)
 
 # AI Processing (Phase 2)
 api_router.include_router(ai_processing.router)
+
+# Forensics Workflow (Phase 4)
+api_router.include_router(forensics.router)
