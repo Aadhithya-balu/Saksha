@@ -57,6 +57,9 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   '/criminals':      { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Criminal Registry' },
   '/intelligence-engine': { allowedRoles: ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'], moduleName: 'Intelligence Engine' },
   '/intelligence-fusion': { allowedRoles: INSIGHT_ROLES, moduleName: 'Intelligence Fusion Portal' },
+  '/ingestion':   { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Universal Data Ingestion' },
+  '/intelligence-graph': { allowedRoles: ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'], moduleName: 'Knowledge Graph Intelligence' },
+  '/alerts-review': { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Alert Findings Review' },
 };
 
 // Every page path rendered by App.tsx MUST have an explicit rule above. The
@@ -68,6 +71,7 @@ const EXPLICIT_REQUIRED_PATHS = [
   '/anomalies', '/offenders', '/criminals', '/victims', '/reports', '/settings',
   '/admin', '/crime-cases', '/investigation', '/ai-chat', '/face-recognition',
   '/officers', '/evidence', '/notifications', '/sociological', '/strategic', '/docs',
+  '/ingestion', '/intelligence-graph', '/alerts-review',
 ];
 
 // Fail-fast: every page path rendered by App.tsx MUST have an explicit rule

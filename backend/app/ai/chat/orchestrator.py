@@ -41,6 +41,11 @@ _PROVIDER_FAILURE_ANSWER = (
     "Please try again in a few moments or contact your system administrator."
 )
 
+# Sentinel district for district-bound accounts with no resolvable district:
+# matches no record's district, so every scoped query returns empty and chat
+# fails closed (no cross-district leakage) instead of answering broadly.
+_NO_DISTRICT_SENTINEL = "__NO_DISTRICT_ACCESS__"
+
 
 class ChatOrchestrator:
     """Main orchestrator for the Saksha AI Chat pipeline."""
@@ -71,11 +76,32 @@ class ChatOrchestrator:
         if is_platform_q:
             return []
 
+        # District scoping: bound users get their own district; multi-district /
+        # system users get None (all); bound users without a district fail closed
+        # (sentinel) so nothing outside their scope is ever surfaced.
+        district = None
+        fail_closed = False
+        if current_user is not None:
+            from app.auth.scope import enforce_district_scope
+            try:
+                district = enforce_district_scope(current_user, None, db)
+            except Exception:
+                district = _NO_DISTRICT_SENTINEL
+                fail_closed = True
+
         results = self.backend_fetcher.execute(
-            plan, db, redact_pii=not user_may_view_pii(current_user),
+            plan, db,
+            redact_pii=not user_may_view_pii(current_user),
+            district=district,
         )
+        if fail_closed:
+            # Aggregate stats are also recomputed outside the caller's scope;
+            # drop them so a locked-down account gets only an honest refusal.
+            results = [r for r in results if r.source != "analytics"]
         try:
-            rag_result = self.rag_retriever.fetch(db, message)
+            rag_result = self.rag_retriever.fetch(
+                db, message, district=district,
+            )
             if rag_result:
                 results.append(rag_result)
         except Exception:
