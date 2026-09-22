@@ -455,6 +455,19 @@ def _build_timeline(
 
 
 
+def _safe_evidence_url(value: str | None) -> str | None:
+    """Expose a storage reference only when it is a genuine HTTP(S) URL.
+
+    Local filesystem ``storage_path`` values are never handed to the client
+    (AGENTS.md: never expose internal storage paths). Previews in that mode are
+    served through ``GET /evidence/{id}/preview`` which authorizes the request.
+    """
+    v = (value or "").strip()
+    if v.lower().startswith(("http://", "https://")):
+        return v
+    return None
+
+
 def get_investigation(db: Session, case_id: uuid.UUID) -> InvestigationData:
     """Compile full investigation data for a given crime case."""
     # Load case with all relationships
@@ -621,7 +634,7 @@ def get_investigation(db: Session, case_id: uuid.UUID) -> InvestigationData:
             id=str(ev.id),
             evidence_type=ev.evidence_type,
             description=ev.description,
-            file_url=ev.storage_path,
+            file_url=_safe_evidence_url(ev.storage_path),
             collected_by=ev.created_by,
             chain_of_custody=chain_summary,
             created_at=ev.created_at.isoformat() if ev.created_at else "",

@@ -796,9 +796,14 @@ def get_person_network_graph(
     depth: int = 1,
     provenance_filter: str | None = None,
     exclude_demo: bool = False,
+    district: str | None = None,
 ) -> NetworkGraphResponse:
-    """Fetch relationship graph centered on a specific person or node."""
-    nodes, edges = _build_sql_graph(db)
+    """Fetch relationship graph centered on a specific person or node.
+
+    ``district`` restricts the underlying source graph to incidents in one
+    jurisdiction so district-bound users never see cross-district links.
+    """
+    nodes, edges = _build_sql_graph(db, district=district)
 
     target_ids = set()
     pid_clean = person_id.strip()
@@ -908,6 +913,7 @@ def get_case_network_graph(
     case_id: str,
     provenance_filter: str | None = None,
     exclude_demo: bool = False,
+    district: str | None = None,
 ) -> NetworkGraphResponse:
     """Fetch case relationship graph."""
     clean_id = str(case_id).strip()
@@ -935,6 +941,7 @@ def get_case_network_graph(
         depth=2,
         provenance_filter=provenance_filter,
         exclude_demo=exclude_demo,
+        district=district,
     )
 
 

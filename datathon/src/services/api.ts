@@ -226,7 +226,8 @@ export interface NetworkNode {
   id: string;
   name: string;
   category: NetworkNodeCategory;
-  riskScore: number;
+  /** Risk score 0-100. Optional: not every node has a computed risk score. */
+  riskScore?: number;
   details: string;
   casesCount: number;
   phone?: string | null;

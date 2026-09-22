@@ -51,6 +51,7 @@ def _create_user(db, username: str, role_name: str, district: str = "Bengaluru U
         hashed_password=hash_password("Pass123!"),
         role_id=role.id,
         is_active=True,
+        district=district,
     )
     db.add(user)
     db.flush()
@@ -350,3 +351,148 @@ def test_forensic_report_lifecycle_and_pdf_export(test_setup):
     assert "attachment; filename=" in pdf_resp.headers["content-disposition"]
     # Verify PDF magic bytes '%PDF'
     assert pdf_resp.content.startswith(b"%PDF")
+
+
+def test_evidence_lifecycle_district_denied(test_setup):
+    """Cross-district district-bound users are denied evidence item-level endpoints.
+
+    Issue #275 §11: evidence access must respect jurisdiction server-side, not
+    via frontend hiding. All Phase-4 add-ons (verify-hash, custody transfer,
+    preview) plus the pre-existing item endpoints must fail closed.
+    """
+    client = test_setup["client"]
+    db = test_setup["db"]
+    evidence_id = test_setup["evidence"].id
+
+    outsider = _create_user(db, "io_mysuru", "investigator", district="Mysuru")
+    db.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: outsider
+    try:
+        # detail read
+        assert client.get(f"/api/v2/evidence/{evidence_id}").status_code == 403
+        # SHA-256 verify (Phase 4)
+        assert client.post(f"/api/v2/evidence/{evidence_id}/verify-hash").status_code == 403
+        # chain of custody transfer (Phase 4)
+        transfer = {"to_user": outsider.username, "action": "TRANSFERRED_TO_LAB", "location": "SFSL", "reason": "x"}
+        assert client.post(f"/api/v2/evidence/{evidence_id}/custody/transfer", json=transfer).status_code == 403
+        # safe preview (Phase 4)
+        assert client.get(f"/api/v2/evidence/{evidence_id}/preview").status_code == 403
+        # upload / download / summary
+        assert client.get(f"/api/v2/evidence/{evidence_id}/download?format=pdf").status_code == 403
+        files = {"file": ("exhibit.bin", b"data", "application/octet-stream")}
+        assert client.post(f"/api/v2/evidence/{evidence_id}/upload", files=files).status_code == 403
+        assert client.post(f"/api/v2/evidence/{evidence_id}/summary").status_code == 403
+        # assign
+        assert client.post(f"/api/v2/evidence/{evidence_id}/assign", params={"assigned_to": outsider.username}).status_code == 403
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_evidence_preview_inline_local_file(test_setup):
+    """Same-district users can preview a locally stored evidence file inline."""
+    client = test_setup["client"]
+    db = test_setup["db"]
+    evidence_id = test_setup["evidence"].id
+
+    meta = db.query(EvidenceMetadata).filter_by(evidence_id=evidence_id).first()
+    original_url = meta.storage_url
+    meta.storage_url = None  # force local inline serving path
+    db.commit()
+    try:
+        resp = client.get(f"/api/v2/evidence/{evidence_id}/preview")
+        assert resp.status_code == 200
+        assert resp.content == b"EVIDENCE FILE DATA: CUSTODY SAMPLE CONTENT 2026"
+        assert resp.headers.get("content-type") == "video/mp4"
+    finally:
+        meta.storage_url = original_url
+        db.commit()
+
+
+def test_evidence_raw_download_local(test_setup):
+    """Same-district users can fetch the raw evidence bytes for verified exhibits."""
+    client = test_setup["client"]
+    db = test_setup["db"]
+    evidence_id = test_setup["evidence"].id
+
+    meta = db.query(EvidenceMetadata).filter_by(evidence_id=evidence_id).first()
+    original_url = meta.storage_url
+    meta.storage_url = None  # force local file serving path
+    db.commit()
+    try:
+        resp = client.get(f"/api/v2/evidence/{evidence_id}/download?format=raw")
+        assert resp.status_code == 200
+        assert resp.content == b"EVIDENCE FILE DATA: CUSTODY SAMPLE CONTENT 2026"
+    finally:
+        meta.storage_url = original_url
+        db.commit()
+
+
+def test_network_graph_cross_district_not_disclosed(test_setup):
+    """District-bound users get no cross-district nodes from case/person graphs.
+
+    AGENTS.md: network graphs filter incidents to the user's district so bound
+    roles cannot discover links outside their jurisdiction.
+    """
+    client = test_setup["client"]
+    db = test_setup["db"]
+    case_id = test_setup["case"].id
+    fir_id = test_setup["fir"].id
+    criminal_id = test_setup["criminal"].id
+
+    outsider = _create_user(db, "io_mysuru2", "investigator", district="Mysuru")
+    db.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: outsider
+    try:
+        case_graph = client.get(f"/api/v2/network/case/{case_id}")
+        assert case_graph.status_code == 200
+        node_ids = [n["id"] for n in case_graph.json().get("nodes", [])]
+        assert not any(str(fir_id) in nid or str(case_id) in nid for nid in node_ids)
+
+        person_graph = client.get(f"/api/v2/network/person/{criminal_id}")
+        assert person_graph.status_code == 200
+        pnode_ids = [n["id"] for n in person_graph.json().get("nodes", [])]
+        assert not any(str(criminal_id) in nid for nid in pnode_ids)
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_forensics_cross_district_denied(test_setup):
+    """Cross-district district-bound users are denied forensic create/list endpoints."""
+    client = test_setup["client"]
+    db = test_setup["db"]
+    case_id = test_setup["case"].id
+    evidence_id = test_setup["evidence"].id
+
+    outsider = _create_user(db, "for_mysuru", "forensic", district="Mysuru")
+    db.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: outsider
+    try:
+        assert client.get(f"/api/v2/forensics/case/{case_id}").status_code == 403
+
+        payload = {
+            "case_id": str(case_id),
+            "evidence_id": str(evidence_id),
+            "title": "Cross District Test",
+            "forensic_type": "digital",
+            "findings": "should never persist",
+            "methodology": "not applicable",
+        }
+        assert client.post("/api/v2/forensics", json=payload).status_code == 403
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_investigation_dossier_cross_district_denied(test_setup):
+    """Cross-district district-bound users cannot read case dossiers or timelines."""
+    client = test_setup["client"]
+    db = test_setup["db"]
+    case_id = test_setup["case"].id
+
+    outsider = _create_user(db, "io_mysuru3", "investigator", district="Mysuru")
+    db.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: outsider
+    try:
+        assert client.get(f"/api/v2/investigation/{case_id}").status_code == 403
+        assert client.get(f"/api/v2/investigation/{case_id}/timeline").status_code == 403
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)

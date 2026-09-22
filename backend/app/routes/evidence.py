@@ -123,6 +123,30 @@ def _resolve_assignee(db: Session, value: str) -> User | None:
 
     return None
 
+
+def _get_evidence_record(db: Session, evidence_id: uuid.UUID) -> Evidence:
+    evidence = evidence_crud.get(db, evidence_id)
+    if evidence is None:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+    return evidence
+
+
+def _enforce_evidence_district(db: Session, current_user: User, evidence: Evidence) -> None:
+    """Fail closed for district-bound roles outside the evidence's case district.
+
+    Every evidence item belongs to a case which has a jurisdictional district;
+    a district-bound user must never read or mutate evidence attached to a case
+    outside their own district (issue #275: evidence access must respect
+    jurisdiction server-side, not via frontend hiding).
+    """
+    case = evidence.crime_case
+    enforce_record_district(
+        current_user,
+        case.location.district if (case and case.location) else None,
+        db,
+    )
+
+
 @router.get("", response_model=PaginatedResponse[EvidenceOut])
 def list_evidence(
     case_id: uuid.UUID | None = None,
@@ -217,6 +241,13 @@ from sqlalchemy.exc import IntegrityError
 def create_evidence(payload: EvidenceCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     data = payload.model_dump()
     data["created_by"] = current_user.full_name or current_user.username
+    case = db.query(CrimeCase).filter(CrimeCase.id == data.get("case_id")).first()
+    if case is not None:
+        enforce_record_district(
+            current_user,
+            case.location.district if case.location else None,
+            db,
+        )
     try:
         item = evidence_crud.create(db, data)
         _add_custody_record(db, item.id, current_user, "Evidence Registered", to_user=current_user.id)
@@ -229,6 +260,8 @@ def create_evidence(payload: EvidenceCreate, db: Session = Depends(get_db), curr
 
 @router.put("/{evidence_id}", response_model=EvidenceOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_INSPECTOR, ROLE_CRIME_ANALYST))])
 def update_evidence(evidence_id: uuid.UUID, payload: EvidenceUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    item = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, item)
     item = evidence_crud.update(db, evidence_id, payload.model_dump(exclude_unset=True))
     add_timeline_event(db, evidence_id, "Evidence Updated", current_user)
     audit_service.log_action(db, current_user, "UPDATE", "Evidence", str(evidence_id))
@@ -236,7 +269,8 @@ def update_evidence(evidence_id: uuid.UUID, payload: EvidenceUpdate, db: Session
 
 @router.delete("/{evidence_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def delete_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     evidence.status = "Deleted"
     evidence.assigned_to = None
     add_timeline_event(db, evidence_id, "Evidence Deleted", current_user)
@@ -247,9 +281,8 @@ def delete_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), curre
 
 @router.post("/{evidence_id}/upload", response_model=EvidenceMetadataOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def upload_evidence_file(evidence_id: uuid.UUID, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence not found")
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
 
     file_path, storage_url, sha256_hash = save_upload_file(file, evidence_id, return_hash=True)
     # Use local path for metadata extraction only when the file still exists
@@ -297,9 +330,8 @@ def upload_evidence_file(evidence_id: uuid.UUID, file: UploadFile = File(...), d
 @router.post("/{evidence_id}/verify-hash", response_model=EvidenceHashVerificationOut, dependencies=[Depends(require_roles(*ALL_ROLES))])
 def verify_evidence_hash(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Audit and verify cryptographic integrity of the evidence file against stored SHA-256."""
-    evidence = evidence_crud.get(db, evidence_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence record not found.")
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
 
     metadata = db.query(EvidenceMetadata).filter(EvidenceMetadata.evidence_id == evidence_id).first()
     if not metadata:
@@ -342,9 +374,8 @@ def transfer_evidence_custody(
     current_user: User = Depends(get_current_user),
 ):
     """Formal Chain of Custody transfer between handlers or forensic examiners."""
-    evidence = evidence_crud.get(db, evidence_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence not found.")
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
 
     target_user = _resolve_assignee(db, payload.to_user)
     target_user_id = target_user.id if target_user else None
@@ -379,9 +410,8 @@ def preview_evidence_file(
     current_user: User = Depends(get_current_user),
 ):
     """Safe inline media preview (images, PDF, audio, video)."""
-    evidence = evidence_crud.get(db, evidence_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence record not found.")
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
 
     metadata = db.query(EvidenceMetadata).filter(EvidenceMetadata.evidence_id == evidence_id).first()
     if metadata and metadata.storage_url:
@@ -557,9 +587,8 @@ def download_evidence_file(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    evidence = evidence_crud.get(db, evidence_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence record not found.")
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
 
     metadata = db.query(EvidenceMetadata).filter(EvidenceMetadata.evidence_id == evidence_id).first()
     # If raw file format is requested:
@@ -609,7 +638,8 @@ def assign_evidence(
     """Assign evidence to an officer.  ``assigned_to`` may be a user UUID, a
     badge/username (e.g. ``IO-3921``), or an officer/user name — the system
     resolves it to the real User internally."""
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     assignee = _resolve_assignee(db, assigned_to)
     if not assignee:
         raise HTTPException(
@@ -650,7 +680,8 @@ from datetime import datetime, timezone
 
 @router.post("/{evidence_id}/assignments/{assignment_id}/accept", response_model=EvidenceAssignmentOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def accept_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     assignment = _ensure_assignment_actor(
         db.query(EvidenceAssignment).filter(EvidenceAssignment.id == assignment_id, EvidenceAssignment.evidence_id == evidence_id).first(),
         current_user,
@@ -669,7 +700,8 @@ def accept_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Sess
 
 @router.post("/{evidence_id}/assignments/{assignment_id}/complete", response_model=EvidenceAssignmentOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def complete_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     assignment = _ensure_assignment_actor(
         db.query(EvidenceAssignment).filter(EvidenceAssignment.id == assignment_id, EvidenceAssignment.evidence_id == evidence_id).first(),
         current_user,
@@ -688,7 +720,8 @@ def complete_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Se
 
 @router.post("/{evidence_id}/assignments/{assignment_id}/return", response_model=EvidenceAssignmentOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def return_evidence(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     assignment = _ensure_assignment_actor(
         db.query(EvidenceAssignment).filter(EvidenceAssignment.id == assignment_id, EvidenceAssignment.evidence_id == evidence_id).first(),
         current_user,
@@ -717,7 +750,8 @@ def return_evidence(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Sessio
 
 @router.post("/{evidence_id}/assignments/{assignment_id}/reject", response_model=EvidenceAssignmentOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def reject_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     assignment = _ensure_assignment_actor(
         db.query(EvidenceAssignment).filter(EvidenceAssignment.id == assignment_id, EvidenceAssignment.evidence_id == evidence_id).first(),
         current_user,
@@ -735,7 +769,8 @@ def reject_assignment(evidence_id: uuid.UUID, assignment_id: uuid.UUID, db: Sess
 
 @router.post("/{evidence_id}/summary", response_model=EvidenceAISummaryOut, dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_INSPECTOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST))])
 def get_evidence_summary(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    evidence = evidence_crud.get(db, evidence_id)
+    evidence = _get_evidence_record(db, evidence_id)
+    _enforce_evidence_district(db, current_user, evidence)
     metadata = db.query(EvidenceMetadata).filter(EvidenceMetadata.evidence_id == evidence_id).first()
     timeline = db.query(EvidenceTimeline).filter(EvidenceTimeline.evidence_id == evidence_id).all()
     assignments = db.query(EvidenceAssignment).filter(EvidenceAssignment.evidence_id == evidence_id).all()
