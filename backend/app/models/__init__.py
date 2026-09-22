@@ -39,6 +39,7 @@ from app.models.identity import (
 )
 from app.models.model_update import ModelUpdateJob
 from app.models.face_identity import FaceIdentity
+from app.models.ai_processing import AIProcessingJob, AIOcrResult, AIEntity, AIEvent, AIMatchRecord
 
 __all__ = [
     "Role", "User", "Location", "CrimeCategory", "Officer", "Criminal",
@@ -54,5 +55,6 @@ __all__ = [
     "ProxyPattern", "ProxyPatternEvidence",
     "ModelUpdateJob",
     "FaceIdentity",
+    "AIProcessingJob", "AIOcrResult", "AIEntity", "AIEvent", "AIMatchRecord",
 ]
 

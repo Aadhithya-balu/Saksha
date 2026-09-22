@@ -72,6 +72,9 @@ from app.routes import intelligence
 # Unified model management (continuous retraining, versioning, status)
 from app.routes import model_management
 
+# AI Processing (Phase 2)
+from app.routes import ai_processing
+
 
 api_router = APIRouter()
 
@@ -135,3 +138,6 @@ api_router.include_router(intelligence.router)
 
 # Unified model management (continuous retraining, versioning, status)
 api_router.include_router(model_management.router)
+
+# AI Processing (Phase 2)
+api_router.include_router(ai_processing.router)

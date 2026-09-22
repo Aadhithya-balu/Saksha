@@ -91,6 +91,15 @@ export const FIRPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [districtFilter, setDistrictFilter] = useState("");
 
+  // Handle Cross-Linking from other tabs
+  useEffect(() => {
+    const redirectId = sessionStorage.getItem('selected_entity_id');
+    if (redirectId) {
+      sessionStorage.removeItem('selected_entity_id');
+      setSelectedFirId(redirectId);
+    }
+  }, []);
+
   // Fetch FIR List
   const loadFIRList = async () => {
     setIsLoadingList(true);
@@ -340,91 +349,73 @@ export const FIRPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
-      {/* Top Header HUD */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[var(--border-muted)] pb-3 shrink-0">
-        <div>
-          <h2 className="text-md font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#1E6FD9] animate-pulse" />
-            {t.fir_title}
-          </h2>
-          <p className="text-[9.5px] font-mono text-[var(--text-muted)] mt-0.5">
-            {t.fir_subtitle}
-          </p>
-          {error && (
-            <p className="text-[9px] font-mono text-amber-400 uppercase mt-1">
-              {error}
-            </p>
-          )}
+    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-primary)]">
+      {/* LEFT PANE: FIR List */}
+      <div className="w-[320px] lg:w-[360px] shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col overflow-y-auto z-10">
+        
+        {/* Sticky Header & Search */}
+        <div className="sticky top-0 z-20 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] p-4 flex flex-col gap-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[12px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#1E6FD9]" />
+              FIR Directory
+            </h2>
+            {(user?.role === "ADMIN" || user?.role === "IO") && (
+              <button
+                onClick={handleCreateNewClick}
+                className="w-6 h-6 rounded bg-[#1E6FD9]/10 hover:bg-[#1E6FD9]/20 border border-[#1E6FD9]/30 text-[#1E6FD9] flex items-center justify-center transition-colors shadow-glow-blue"
+                title={t.fir_create_new}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          
+          <div className="flex items-center relative">
+            <input
+              type="text"
+              placeholder={t.fir_search_hint}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[var(--text-primary)] text-[11px] font-mono outline-none focus:border-[#1E6FD9]/50 transition-colors"
+            />
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)]" />
+          </div>
+
+          <div className="flex gap-2 text-[10px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex-1 px-2 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md text-[var(--text-secondary)] font-mono outline-none focus:border-[#1E6FD9]/50 cursor-pointer"
+            >
+              <option value="">Status: All</option>
+              <option value="registered">Registered</option>
+              <option value="in_progress">In Inquiry</option>
+              <option value="closed">Resolved</option>
+            </select>
+            <select
+              value={districtFilter}
+              onChange={(e) => setDistrictFilter(e.target.value)}
+              className="flex-1 px-2 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md text-[var(--text-secondary)] font-mono outline-none focus:border-[#1E6FD9]/50 cursor-pointer"
+            >
+              <option value="">District: All</option>
+              {DISTRICTS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Create FIR Button */}
-        {(user?.role === "ADMIN" || user?.role === "IO") && !showForm && (
-          <button
-            onClick={handleCreateNewClick}
-            className="px-3 py-1.5 bg-[#1E6FD9] hover:bg-[#1E6FD9]/80 border border-[#1E6FD9]/20 text-[var(--text-primary)] font-mono text-[10px] uppercase font-bold rounded-btn transition-colors cursor-pointer flex items-center gap-1.5 shadow-glow-blue select-none shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {t.fir_create_new}
-          </button>
+        {error && (
+          <div className="mx-4 mt-4 p-2 bg-[#C94A2A]/10 border border-[#C94A2A]/30 rounded-md text-[9px] font-mono text-[#C94A2A] uppercase">
+            {error}
+          </div>
         )}
-      </div>
 
-      {/* Main split viewport layout */}
-      <div className="flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden min-h-0">
-        {/* Left Side: Filter search list panel */}
-        <div className="lg:col-span-4 bg-[var(--bg-tertiary)]/20 border border-border-color p-4 rounded-card flex flex-col justify-between overflow-hidden">
-          <div className="flex flex-col gap-3 overflow-hidden flex-1">
-            <span className="text-[10px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border-primary)] pb-2 shrink-0">
-              {t.fir_directory}
-            </span>
-
-            {/* Filters panel */}
-            <div className="space-y-2 shrink-0 text-[10px] font-mono">
-              {/* Search text input */}
-              <div className="flex items-center relative">
-                <input
-                  type="text"
-                  placeholder={t.fir_search_hint}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-secondary)]/70 border border-[var(--border-primary)] rounded text-[var(--text-primary)] outline-none focus:border-[#1E6FD9] text-[10.5px]"
-                />
-                <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)]" />
-              </div>
-
-              {/* Filtering selects */}
-              <div className="grid grid-cols-2 gap-2 text-[9px]">
-                {/* Status selector */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
-                >
-                  <option value="">{t.ui_filter_all}</option>
-                  <option value="registered">Registered</option>
-                  <option value="in_progress">In Inquiry</option>
-                  <option value="closed">Resolved</option>
-                </select>
-
-                {/* District selector */}
-                <select
-                  value={districtFilter}
-                  onChange={(e) => setDistrictFilter(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
-                >
-                  <option value="">All Districts</option>
-                  {DISTRICTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* List scroll view */}
-            <div className="flex-grow overflow-y-auto pr-1 flex flex-col gap-2 custom-scrollbar">
+        {/* List scroll view */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {isLoadingList ? (
                 <div className="flex flex-col gap-2">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -477,12 +468,11 @@ export const FIRPage: React.FC = () => {
                   No records matching filters
                 </div>
               )}
-            </div>
-          </div>
         </div>
+      </div>
 
-        {/* Right Side: detail view / form panels */}
-        <div className="lg:col-span-8 flex flex-col overflow-hidden relative">
+      {/* RIGHT PANE: Workspace Details */}
+      <div className="flex-1 relative overflow-y-auto bg-[var(--bg-primary)]">
           {showIntelligence && selectedFir ? (
             <div className="flex-grow overflow-y-auto custom-scrollbar">
               <IntelligenceWorkspace
@@ -609,14 +599,20 @@ export const FIRPage: React.FC = () => {
                 <div className="md:col-span-4 space-y-4 flex flex-col">
                   {/* Case link card */}
                   {selectedFir.crime_case ? (
-                    <div className="bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] rounded-lg p-4 flex-1">
+                    <button
+                      onClick={() => {
+                        sessionStorage.setItem('selected_entity_id', selectedFir.crime_case!.id);
+                        window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'crime_cases', targetId: selectedFir.crime_case!.id } }));
+                      }}
+                      className="text-left w-full bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] hover:border-[#1E6FD9]/50 hover:bg-[#1E6FD9]/5 rounded-lg p-4 flex-1 transition-colors cursor-pointer group"
+                    >
                       <span className="block text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2.5 flex items-center justify-between">
                         Incident Link
-                        <span className="px-1.5 py-0.5 bg-[#1E6FD9]/15 text-[#1E6FD9] border border-[#1E6FD9]/30 rounded text-[7.5px] font-bold">
+                        <span className="px-1.5 py-0.5 bg-[#1E6FD9]/15 text-[#1E6FD9] border border-[#1E6FD9]/30 rounded text-[7.5px] font-bold group-hover:bg-[#1E6FD9]/30 transition-colors">
                           LINKED
                         </span>
                       </span>
-                      <p className="text-[11px] font-bold text-[var(--text-primary)] uppercase truncate">
+                      <p className="text-[11px] font-bold text-[var(--text-primary)] uppercase truncate group-hover:text-[#1E6FD9] transition-colors">
                         {selectedFir.crime_case.case_number}
                       </p>
                       <p className="text-[9px] text-[var(--text-muted)] mt-1">
@@ -628,7 +624,7 @@ export const FIRPage: React.FC = () => {
                       <p className="text-[9.5px] text-[var(--text-secondary)] mt-2 line-clamp-3 leading-relaxed">
                         {selectedFir.crime_case.description}
                       </p>
-                    </div>
+                    </button>
                   ) : (
                     <div className="bg-[var(--bg-secondary)]/40 border border-dashed border-[var(--border-primary)] rounded-lg p-4 flex-1 flex flex-col items-center justify-center text-center">
                       <AlertTriangle className="w-5 h-5 text-amber-500/60 mb-2" />
@@ -836,7 +832,6 @@ export const FIRPage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
   );
 };
 export default FIRPage;

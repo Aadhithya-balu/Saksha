@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,19 +12,19 @@
 /* --- Design Tokens (Dark Theme - Default) --- */
 :root {
   /* Backgrounds */
-  --bg-primary: #0b0f17;
-  --bg-secondary: #131b2e;
-  --bg-tertiary: #1e293b;
-  --bg-elevated: #182238;
-  --bg-surface: rgba(19, 27, 46, 0.65);
-  --bg-surface-hover: rgba(19, 27, 46, 0.85);
-  --bg-overlay: rgba(11, 15, 23, 0.85);
+  --bg-primary: #080b10;
+  --bg-secondary: #0c1118;
+  --bg-tertiary: #111821;
+  --bg-elevated: #141b24;
+  --bg-surface: rgba(24, 33, 44, 0.85);
+  --bg-surface-hover: rgba(29, 39, 51, 0.95);
+  --bg-overlay: rgba(8, 11, 16, 0.85);
 
   /* Borders */
-  --border-primary: rgba(255, 255, 255, 0.08);
-  --border-secondary: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(37, 99, 235, 0.55);
-  --border-muted: rgba(255, 255, 255, 0.05);
+  --border-primary: rgba(255, 255, 255, 0.06);
+  --border-secondary: rgba(255, 255, 255, 0.04);
+  --border-focus: rgba(6, 182, 212, 0.45);
+  --border-muted: rgba(255, 255, 255, 0.02);
 
   /* Brand Colors */
   --accent-blue: #2563eb;
@@ -55,14 +55,14 @@
   /* Text */
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --text-muted: #66728a;
+  --text-muted: #64748b;
   --text-disabled: #475569;
 
   /* Semantic Colors */
   --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #2563eb;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #06b6d4;
 
   /* Shadows */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -98,7 +98,7 @@
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Layout */
@@ -138,20 +138,20 @@
   --chart-tooltip-text: #f8fafc;
 
   /* Map / hotspot visualization */
-  --map-bg: #0b0f17;
-  --map-panel-bg: rgba(19, 27, 46, 0.92);
-  --map-grid: rgba(59, 130, 246, 0.07);
-  --map-graticule: rgba(59, 130, 246, 0.14);
-  --map-boundary: rgba(148, 163, 184, 0.45);
-  --map-boundary-hover: rgba(59, 130, 246, 0.9);
-  --map-district-fill: rgba(59, 130, 246, 0.07);
-  --map-district-selected: rgba(59, 130, 246, 0.17);
+  --map-bg: #080b10;
+  --map-panel-bg: rgba(20, 27, 36, 0.92);
+  --map-grid: rgba(6, 182, 212, 0.05);
+  --map-graticule: rgba(6, 182, 212, 0.10);
+  --map-boundary: rgba(148, 163, 184, 0.35);
+  --map-boundary-hover: rgba(6, 182, 212, 0.8);
+  --map-district-fill: rgba(6, 182, 212, 0.04);
+  --map-district-selected: rgba(6, 182, 212, 0.12);
   --map-label: #94a3b8;
   --map-anchor: #94a3b8;
-  --hotspot-high: #ef4444;
-  --hotspot-medium: #f59e0b;
+  --hotspot-high: #dc2626;
+  --hotspot-medium: #d97706;
   --hotspot-low: #10b981;
-  --hotspot-halo-opacity: 0.14;
+  --hotspot-halo-opacity: 0.12;
 
   /* Status tones (bg / text / border triplets) */
   --tone-neutral-bg: rgba(148, 163, 184, 0.12);

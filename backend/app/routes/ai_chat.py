@@ -136,9 +136,10 @@ def _ndjson(payload: dict[str, Any]) -> bytes:
 @router.post("", response_model=ChatResponse)
 async def chat(
     payload: ChatRequest,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.database.postgres import SessionLocal
+    db = SessionLocal()
     user_sid = f"user:{current_user.username}:{payload.session_id or 'default'}"
     orch = _get_orchestrator()
     conversation, auto_created = _resolve_conversation(db, current_user, payload)
@@ -174,30 +175,26 @@ async def chat(
                                 final_result = obj.get("content")
                     except Exception:
                         continue
-
                 if conversation is not None:
                     result = final_result if isinstance(final_result, dict) else {"answer": acc}
-                    if not str(result.get("answer") or "").strip():
-                        # Nothing usable generated — drop the auto-created shell row.
-                        if auto_created:
-                            history_service.discard_if_empty(db, current_user, conversation)
-                        return
-                    if _persist_exchange(db, current_user, conversation, payload.message, result):
-                        yield _ndjson({
-                            "type": "meta",
-                            "content": {
-                                "conversation_id": str(conversation.id),
-                                "title": conversation.title,
-                                "temporary": False,
-                            },
-                        })
-                    else:
-                        if auto_created:
-                            history_service.discard_if_empty(db, current_user, conversation)
-                        yield _ndjson({
-                            "type": "notice",
-                            "content": "Unable to save this conversation.",
-                        })
+                    persist_db = SessionLocal()
+                    try:
+                        conversation = persist_db.merge(conversation)
+                        if not str(result.get("answer") or "").strip():
+                            if auto_created:
+                                history_service.discard_if_empty(persist_db, current_user, conversation)
+                            return
+                        if _persist_exchange(persist_db, current_user, conversation, payload.message, result):
+                            yield _ndjson({
+                                "type": "meta",
+                                "content": {
+                                    "conversation_id": str(conversation.id),
+                                    "title": conversation.title,
+                                    "temporary": False,
+                                },
+                            })
+                    finally:
+                        persist_db.close()
             except Exception:
                 # Generation failed — make sure no orphan empty conversation remains.
                 try:

@@ -13,14 +13,13 @@ import type {
   OfficerWithUserRecord
 } from '../../services/api';
 import {
-  ArrowLeft,
+  Briefcase,
   Calendar,
   User,
   Clock,
   Sparkles,
   Link,
   MessageSquare,
-  Plus,
   Trash2,
   AlertTriangle,
   MapPin,
@@ -36,7 +35,7 @@ interface CrimeCaseDetailsProps {
 
 const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
   caseId,
-  onBack,
+  onBack, // kept for interface compatibility but won't be rendered
   onEdit
 }) => {
   const t = useTranslation();
@@ -201,22 +200,29 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
           <span>{error || 'Case not found'}</span>
         </div>
         <button onClick={onBack} className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] uppercase font-bold text-[10px]">
-          <ArrowLeft className="w-3.5 h-3.5" /> {t.cc_back}
+          [ CLOSE PREVIEW ]
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Top controls header */}
-      <div className="flex justify-between items-center pb-4 border-b border-border-color">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-xs uppercase font-bold"
-        >
-          <ArrowLeft className="w-4 h-4" /> {t.cc_back}
-        </button>
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
+      {/* Top sticky header */}
+      <div className="flex justify-between items-center px-6 py-4 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-lg flex items-center justify-center text-[var(--text-muted)]">
+            <Briefcase className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-[14px] font-bold text-[var(--text-primary)] uppercase tracking-wider leading-none">
+              {caseData.case_number}
+            </h1>
+            <span className="text-[9px] text-[var(--text-muted)] font-mono tracking-widest uppercase mt-1">
+              Active Investigation Dossier
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -224,321 +230,312 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
                 detail: { query: `Tell me about case ${caseData.case_number}. What is the status, priority, and key details?` }
               }));
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E6FD9]/15 border border-[#1E6FD9]/30 hover:bg-[#1E6FD9]/25 hover:border-[#1E6FD9]/50 rounded font-mono text-[10px] uppercase text-[#1E6FD9] transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E6FD9]/10 border border-[#1E6FD9]/30 hover:bg-[#1E6FD9]/20 hover:border-[#1E6FD9]/50 rounded font-mono text-[10px] uppercase text-[#1E6FD9] transition-all cursor-pointer font-bold tracking-wider"
           >
-            <Sparkles className="w-3 h-3" /> Ask AI
+            <Sparkles className="w-3.5 h-3.5" /> AI Analysis
           </button>
           <button
             onClick={onEdit}
-            className="px-4 py-1.5 border border-border-color hover:border-[#1E6FD9]/40 hover:bg-[#1E6FD9]/10 rounded font-mono text-xs uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+            className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] hover:border-[#1E6FD9]/40 hover:bg-[#1E6FD9]/10 rounded font-mono text-[10px] uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer font-bold tracking-wider"
           >
-            Modify Dossier
+            Modify
           </button>
         </div>
       </div>
 
-      {/* Case Overview Panel */}
-      <div className="p-6 bg-secondary-bg border border-border-color rounded-card shadow-glow-blue/5">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <span className="text-[10px] text-[#0E9E78] font-bold tracking-[0.15em] uppercase">SAKSHA CRIME INCIDENT RECORDS</span>
-            <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] uppercase tracking-wider mt-1">{caseData.case_number}</h1>
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Case Metadata Bar */}
+        <div className="flex flex-wrap items-center gap-6 p-4 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl">
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <span className="text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Status</span>
+            <select
+              value={caseData.status}
+              onChange={(e) => handleUpdateStatus(e.target.value)}
+              className="bg-transparent border-none p-0 text-[11px] font-bold text-[var(--text-primary)] uppercase cursor-pointer focus:ring-0 focus:outline-none"
+            >
+              <option value="open">OPEN</option>
+              <option value="assigned">ASSIGNED</option>
+              <option value="investigating">INVESTIGATING</option>
+              <option value="evidence collected">EVIDENCE COLLECTED</option>
+              <option value="charge sheet filed">CHARGE SHEET</option>
+              <option value="closed">CLOSED</option>
+            </select>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Status Select */}
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] text-[var(--text-muted)] uppercase">Clearance Status</span>
-              <select
-                value={caseData.status}
-                onChange={(e) => handleUpdateStatus(e.target.value)}
-                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
-              >
-                <option value="open">OPEN</option>
-                <option value="assigned">ASSIGNED</option>
-                <option value="investigating">INVESTIGATING</option>
-                <option value="evidence collected">EVIDENCE COLLECTED</option>
-                <option value="charge sheet filed">CHARGE SHEET FILED</option>
-                <option value="closed">CLOSED</option>
-              </select>
-            </div>
+          
+          <div className="w-px h-8 bg-[var(--border-primary)]" />
+          
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <span className="text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Priority</span>
+            <select
+              value={caseData.priority}
+              onChange={(e) => handleUpdatePriority(e.target.value)}
+              className="bg-transparent border-none p-0 text-[11px] font-bold text-[var(--text-primary)] uppercase cursor-pointer focus:ring-0 focus:outline-none"
+            >
+              <option value="low">LOW</option>
+              <option value="medium">MEDIUM</option>
+              <option value="high">HIGH</option>
+              <option value="critical">CRITICAL</option>
+            </select>
+          </div>
 
-            {/* Priority Select */}
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] text-[var(--text-muted)] uppercase">Threat Priority</span>
-              <select
-                value={caseData.priority}
-                onChange={(e) => handleUpdatePriority(e.target.value)}
-                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
-              >
-                <option value="low">LOW</option>
-                <option value="medium">MEDIUM</option>
-                <option value="high">HIGH</option>
-                <option value="critical">CRITICAL</option>
-              </select>
+          <div className="w-px h-8 bg-[var(--border-primary)] hidden md:block" />
+
+          <div className="flex-1 min-w-[200px] flex flex-col gap-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Investigation Progress</span>
+              <span className="text-[10px] font-bold font-mono text-[#0E9E78]">{caseData.progress}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
+                  style={{ width: `${caseData.progress}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between mt-1 text-[8px] text-[var(--text-muted)] font-mono uppercase">
+              <button onClick={() => handleUpdateProgress(25)} className="hover:text-[var(--text-primary)] hover:underline">25%</button>
+              <button onClick={() => handleUpdateProgress(50)} className="hover:text-[var(--text-primary)] hover:underline">50%</button>
+              <button onClick={() => handleUpdateProgress(75)} className="hover:text-[var(--text-primary)] hover:underline">75%</button>
+              <button onClick={() => handleUpdateProgress(100)} className="hover:text-[var(--text-primary)] hover:underline">100%</button>
             </div>
           </div>
         </div>
 
-        {/* Narrative Description */}
-        <p className="text-xs text-[var(--text-secondary)] leading-relaxed border-t border-border-color/60 mt-6 pt-4">
-          {caseData.description || 'NO ADDITIONAL STATEMENT OR BRIEFING ENROLLED FOR THIS DOSSIER.'}
-        </p>
-
-        {/* District metadata info */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-4 border-t border-border-color/30 text-[10px] text-[var(--text-muted)] uppercase">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-[#1E6FD9]" />
-            <span>REPORTED: {formatCaseDate(caseData.reported_at)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-[#0E9E78]" />
-            <span>OCCURRED: {formatCaseDate(caseData.occurred_at)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-[#C94A2A]" />
-            <span>INCIDENT COORDINATES (ID: {caseData.location_id.substring(0, 8)})</span>
+        {/* Overview & Description */}
+        <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl">
+          <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-3">Incident Briefing</h3>
+          <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+            {caseData.description || 'NO ADDITIONAL STATEMENT OR BRIEFING ENROLLED FOR THIS DOSSIER.'}
+          </p>
+          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-[var(--border-primary)]/50">
+            <div className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--text-muted)] uppercase">
+              <Calendar className="w-3.5 h-3.5 text-[#1E6FD9]" />
+              REPORTED: <span className="text-[var(--text-secondary)] font-bold">{formatCaseDate(caseData.reported_at)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--text-muted)] uppercase">
+              <Clock className="w-3.5 h-3.5 text-[#0E9E78]" />
+              OCCURRED: <span className="text-[var(--text-secondary)] font-bold">{formatCaseDate(caseData.occurred_at)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--text-muted)] uppercase">
+              <MapPin className="w-3.5 h-3.5 text-[#C94A2A]" />
+              LOC ID: <span className="text-[var(--text-secondary)] font-bold">{caseData.location_id.substring(0, 8)}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main split details workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Config panels & FIR links (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Progress Tracker Card */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)]">Investigation Progress Bar</h3>
-              <span className="text-xs font-bold text-[#0E9E78]">{caseData.progress}% COMPLETE</span>
-            </div>
-            <div className="h-2.5 bg-[var(--bg-secondary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
-              <div
-                className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
-                style={{ width: `${caseData.progress}%` }}
-              />
-            </div>
-            {/* Direct controller adjustments */}
-            <div className="flex justify-between mt-3 text-[10px] text-[var(--text-muted)]">
-              <span>[INITIATED]</span>
-              <button onClick={() => handleUpdateProgress(25)} className="hover:text-[var(--text-primary)]">25%</button>
-              <button onClick={() => handleUpdateProgress(50)} className="hover:text-[var(--text-primary)]">50%</button>
-              <button onClick={() => handleUpdateProgress(75)} className="hover:text-[var(--text-primary)]">75%</button>
-              <button onClick={() => handleUpdateProgress(100)} className="hover:text-[var(--text-primary)]">100%</button>
-              <span>[RESOLVED]</span>
-            </div>
-          </div>
-
-          {/* Officer Assignment Panel */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
-            <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)] mb-4">Assigned Investigator</h3>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-[#1E6FD9]/10 border border-[#1E6FD9]/20 flex items-center justify-center text-[#1E6FD9]">
+        {/* Grid for main content */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Officer Assignment */}
+            <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl">
+              <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-4 flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-[#1E6FD9]" /> Assigned Officer
+              </h3>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-[#1E6FD9]/10 border border-[#1E6FD9]/20 flex items-center justify-center text-[#1E6FD9]">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[var(--text-primary)] uppercase">
-                    {caseData.assigned_officer ? caseData.assigned_officer.full_name : 'NO INVESTIGATING OFFICER ASSIGNED'}
+                  <div className="text-[12px] font-bold text-[var(--text-primary)] uppercase">
+                    {caseData.assigned_officer ? caseData.assigned_officer.full_name : 'UNASSIGNED'}
                   </div>
-                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5 uppercase">
-                    {caseData.assigned_officer ? `BADGE: ${caseData.assigned_officer.badge_number} | RANK: ${caseData.assigned_officer.rank || 'N/A'}` : 'Clearance allocation pending'}
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">
+                    {caseData.assigned_officer ? `Badge: ${caseData.assigned_officer.badge_number}` : 'Clearance Pending'}
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-1 w-full sm:w-60">
-                <span className="text-[8px] text-[var(--text-muted)] uppercase">Change Assignee</span>
-                <select
-                  value={caseData.assigned_officer_id || ''}
-                  onChange={(e) => handleAssignOfficer(e.target.value)}
-                  className="px-2 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-[11px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
-                >
-                  <option value="">[UNASSIGNED]</option>
-                  {officers.map((off) => (
-                    <option key={off.id} value={off.id}>
-                      {off.full_name} ({off.badge_number})
-                    </option>
-                  ))}
-                </select>
+              
+              <select
+                value={caseData.assigned_officer_id || ''}
+                onChange={(e) => handleAssignOfficer(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[11px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none transition-colors"
+              >
+                <option value="">[ REASSIGN OFFICER ]</option>
+                {officers.map((off) => (
+                  <option key={off.id} value={off.id}>
+                    {off.full_name} ({off.badge_number})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* AI Recommendations */}
+            <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl relative overflow-hidden">
+              <div className="absolute -right-4 -bottom-4 text-[#1E6FD9]/5">
+                <Sparkles className="w-24 h-24" />
               </div>
-            </div>
-          </div>
-
-          {/* Related FIR Linking */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
-            <div className="flex justify-between items-center mb-4 border-b border-border-color/60 pb-3">
-              <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)] flex items-center gap-2">
-                <Link className="w-4 h-4 text-[#1E6FD9]" /> Linked FIR Records
+              
+              <h3 className="text-[10px] font-mono text-[#1E6FD9] uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5" /> AI Analysis & Directives
               </h3>
-              <span className="text-[10px] text-[var(--text-muted)] font-bold">{caseData.firs.length} LINKED</span>
-            </div>
-
-            {/* List of currently linked FIRs */}
-            {caseData.firs.length === 0 ? (
-              <p className="text-[10px] text-[var(--text-muted)] py-3 text-center uppercase">NO STATE FIRs CURRENTLY LINKED TO THIS CRIME DOSSIER</p>
-            ) : (
-              <div className="space-y-3 mb-4 max-h-[220px] overflow-y-auto pr-1">
-                {caseData.firs.map((fir) => (
-                  <div key={fir.id} className="p-3 bg-[var(--bg-secondary)]/40 border border-border-color/40 rounded flex items-center justify-between text-[11px]">
-                    <div>
-                      <div className="font-bold text-[var(--text-primary)] uppercase">{fir.fir_number}</div>
-                      <div className="text-[9.5px] text-[var(--text-muted)] mt-0.5 uppercase">
-                        COMPLAINANT: {fir.complainant_name} | SECTIONS: {fir.sections || 'NONE'}
+              
+              {caseData.ai_recommendations.length === 0 ? (
+                <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase py-4">No AI directives generated.</p>
+              ) : (
+                <div className="space-y-3 relative z-10">
+                  {caseData.ai_recommendations.map((rec, i) => (
+                    <div key={i} className="p-3 bg-[#1E6FD9]/5 border border-[#1E6FD9]/20 rounded-lg flex gap-3">
+                      <div className="mt-0.5 text-[#1E6FD9]">
+                        <Tag className="w-3 h-3" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-[var(--text-primary)] uppercase">{rec.title}</div>
+                        <div className="text-[10px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+                          {rec.description}
+                        </div>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-[#0E9E78]/10 text-[#0E9E78] text-[8.5px] uppercase font-bold">
-                      {fir.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {/* Form to link a new FIR */}
-            <div className="flex flex-col sm:flex-row items-end gap-3 pt-3 border-t border-border-color/40">
-              <div className="flex-grow w-full">
-                <span className="text-[8px] text-[var(--text-muted)] uppercase mb-1 block">Link Additional FIR</span>
+            {/* FIR Linking */}
+            <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl">
+              <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Link className="w-3.5 h-3.5 text-[#0E9E78]" /> Associated FIRs
+              </h3>
+              
+              {caseData.firs.length === 0 ? (
+                <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase py-2">No FIRs Linked</p>
+              ) : (
+                <div className="space-y-2 mb-4">
+                  {caseData.firs.map((fir) => (
+                    <button 
+                      key={fir.id} 
+                      onClick={() => {
+                        sessionStorage.setItem('selected_entity_id', fir.id);
+                        window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'fir', targetId: fir.id } }));
+                      }}
+                      className="w-full text-left p-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] hover:border-[#0E9E78]/50 hover:bg-[#0E9E78]/5 rounded-lg flex items-center justify-between transition-colors cursor-pointer group"
+                    >
+                      <div>
+                        <div className="text-[11px] font-bold text-[var(--text-primary)] uppercase group-hover:text-[#0E9E78] transition-colors">{fir.fir_number}</div>
+                        <div className="text-[9px] font-mono text-[var(--text-muted)] mt-0.5 uppercase">
+                          {fir.sections || 'UNKNOWN SECTION'}
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 bg-[#0E9E78]/10 text-[#0E9E78] border border-[#0E9E78]/20 rounded text-[9px] font-mono font-bold uppercase">
+                        {fir.status}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-3 border-t border-[var(--border-primary)]/50 mt-2">
                 <select
                   value={selectedFirToLink}
                   onChange={(e) => setSelectedFirToLink(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-[11px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
+                  className="flex-1 px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[10px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
                 >
-                  <option value="">[SELECT FIR RECORD]</option>
+                  <option value="">[ LINK FIR RECORD ]</option>
                   {unlinkedFirs.map((f) => (
                     <option key={f.id} value={f.id}>
-                      {f.fir_number} ({f.complainant_name})
+                      {f.fir_number}
                     </option>
                   ))}
                 </select>
+                <button
+                  onClick={handleLinkFir}
+                  disabled={!selectedFirToLink || linking}
+                  className="px-3 py-1.5 bg-[#1E6FD9]/10 hover:bg-[#1E6FD9]/20 border border-[#1E6FD9]/30 disabled:opacity-50 text-[#1E6FD9] rounded-lg text-[10px] font-mono uppercase font-bold transition-colors cursor-pointer"
+                >
+                  Link
+                </button>
               </div>
-              <button
-                onClick={handleLinkFir}
-                disabled={!selectedFirToLink || linking}
-                className="px-4 py-1.5 bg-[#1E6FD9] hover:bg-[#1E6FD9]/80 disabled:opacity-50 text-[var(--text-primary)] rounded text-[10px] uppercase font-bold shrink-0 cursor-pointer h-[30px]"
-              >
-                Link FIR
-              </button>
             </div>
           </div>
 
-          {/* AI Recommendations */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card shadow-glow-blue/5 relative overflow-hidden">
-            {/* Absolute watermark logo */}
-            <div className="absolute right-[-10px] bottom-[-10px] text-[#1E6FD9]/5 rotate-[15deg]">
-              <Sparkles className="w-24 h-24" />
+          {/* Right Column */}
+          <div className="space-y-6 flex flex-col h-full">
+            {/* Investigation Notes */}
+            <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl flex flex-col min-h-[300px]">
+              <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-4 flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-[#C94A2A]" /> Briefings & Notes
+              </h3>
+              
+              <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 min-h-[150px]">
+                {caseData.notes.length === 0 ? (
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase text-center py-8">No briefings submitted.</p>
+                ) : (
+                  caseData.notes.map((note) => (
+                    <div key={note.id} className="p-3 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg relative group/note">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-bold text-[var(--text-primary)] uppercase">
+                          {note.officer_name}
+                        </span>
+                        <span className="text-[8px] font-mono text-[var(--text-muted)]">
+                          {formatCaseDate(note.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                        {note.content}
+                      </p>
+                      <button
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="absolute right-2 top-2 p-1 rounded hover:bg-[#C94A2A]/10 text-[var(--text-muted)] hover:text-[#C94A2A] opacity-0 group-hover/note:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              <form onSubmit={handleAddNote} className="mt-auto shrink-0 space-y-2">
+                <textarea
+                  placeholder="ADD MEMORANDUM..."
+                  rows={2}
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  className="w-full p-3 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[#1E6FD9]/60 focus:outline-none resize-none transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={!noteContent.trim() || addingNote}
+                  className="w-full py-2 bg-[var(--bg-elevated)] border border-[var(--border-primary)] hover:border-[#1E6FD9]/50 hover:bg-[#1E6FD9]/10 disabled:opacity-50 text-[var(--text-primary)] rounded-lg text-[10px] font-mono uppercase font-bold transition-all cursor-pointer"
+                >
+                  Save Note
+                </button>
+              </form>
             </div>
 
-            <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4 border-b border-border-color/60 pb-3">
-              <Sparkles className="w-4 h-4 text-[#1E6FD9] animate-pulse" /> SAKSHA AI Predictive Assistance
-            </h3>
-
-            {/* Displaying mock AI details */}
-            {caseData.ai_recommendations.length === 0 ? (
-              <p className="text-[10px] text-[var(--text-muted)] uppercase text-center py-2">NO AI ASSISTANCE INSIGHTS GENERATED FOR THE CURRENT CLEARANCE STAGE.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {caseData.ai_recommendations.map((rec, i) => (
-                  <div key={i} className="p-3 bg-[var(--bg-secondary)]/40 border border-[#1E6FD9]/15 hover:border-[#1E6FD9]/30 rounded flex gap-2.5 transition-colors">
-                    <div className="p-1 bg-[#1E6FD9]/10 rounded text-[#1E6FD9] shrink-0 h-fit mt-0.5">
-                      <Tag className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] font-bold text-[var(--text-primary)] uppercase">{rec.title}</div>
-                      <div className="text-[9.5px] text-[var(--text-secondary)] leading-relaxed mt-1">
-                        {rec.description}
+            {/* Timeline */}
+            <div className="p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl flex-1 min-h-[250px]">
+              <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-5 flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-purple-400" /> Event Timeline
+              </h3>
+              
+              {caseData.timeline.length === 0 ? (
+                <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase">No telemetry logged.</p>
+              ) : (
+                <div className="relative pl-3 border-l border-[var(--border-primary)] space-y-4">
+                  {caseData.timeline.map((event, i) => (
+                    <div key={i} className="relative">
+                      <div className="absolute -left-[16.5px] top-1.5 w-2 h-2 rounded-full bg-[var(--bg-secondary)] border-2 border-purple-400" />
+                      <div className="text-[8px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
+                        {formatCaseDate(event.timestamp)}
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Timeline & Notes (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Investigation Notes Panel */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
-            <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4 border-b border-border-color/60 pb-3">
-              <MessageSquare className="w-4 h-4 text-[#0E9E78]" /> Case Briefings & Notes
-            </h3>
-
-            {/* Note listing */}
-            {caseData.notes.length === 0 ? (
-              <p className="text-[10px] text-[var(--text-muted)] py-6 text-center uppercase">NO INVESTIGATION NOTES SUBMITTED ON THIS CRIME RECORDS BRIEFING YET.</p>
-            ) : (
-              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 mb-4">
-                {caseData.notes.map((note) => (
-                  <div key={note.id} className="p-3 bg-[var(--bg-secondary)]/30 border border-border-color/40 rounded flex flex-col gap-2 relative group/note">
-                    <div className="flex justify-between items-center text-[9px] text-[var(--text-muted)] border-b border-[var(--border-primary)] pb-1.5">
-                      <span className="font-bold text-[var(--text-primary)] uppercase">
-                        {note.officer_name} ({note.officer_badge})
-                      </span>
-                      <span>{new Date(note.created_at).toLocaleDateString()} {new Date(note.created_at).toLocaleTimeString()}</span>
-                    </div>
-                    <p className="text-[10.5px] text-[var(--text-secondary)] leading-relaxed break-words pr-4">
-                      {note.content}
-                    </p>
-                    <button
-                      onClick={() => handleDeleteNote(note.id)}
-                      className="absolute right-2.5 bottom-2.5 opacity-0 group-hover/note:opacity-100 p-1 hover:bg-[#C94A2A]/10 border border-border-color/40 rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-all cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Submit Note Form */}
-            <form onSubmit={handleAddNote} className="space-y-3 pt-3 border-t border-border-color/40">
-              <textarea
-                placeholder="TYPE CASE MEMORANDUM NOTE DETAILS HERE..."
-                rows={3}
-                value={noteContent}
-                onChange={(e) => setNoteContent(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-tertiary)] border border-border-color rounded font-mono text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[#0E9E78]/60 focus:outline-none uppercase resize-none"
-              />
-              <button
-                type="submit"
-                disabled={!noteContent.trim() || addingNote}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#0E9E78] hover:bg-[#0E9E78]/80 disabled:opacity-50 text-[var(--text-primary)] rounded text-[10px] uppercase font-bold cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Save Investigation Note
-              </button>
-            </form>
-          </div>
-
-          {/* Chronological Timeline */}
-          <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
-            <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4 border-b border-border-color/60 pb-3">
-              <Clock className="w-4 h-4 text-purple-400" /> Chronological Log Timeline
-            </h3>
-
-            {caseData.timeline.length === 0 ? (
-              <p className="text-[10px] text-[var(--text-muted)] py-6 text-center uppercase">NO TELEMETRY WORKFLOW ACTIVITY LOGGED FOR THIS CASE RECORD.</p>
-            ) : (
-              <div className="relative pl-4 border-l border-border-color/60 space-y-5">
-                {caseData.timeline.map((event, i) => (
-                  <div key={i} className="relative text-[11px]">
-                    {/* Pulsing indicator marker dot */}
-                    <div className="absolute left-[-20.5px] top-1.5 w-2 h-2 rounded-full bg-purple-400 border border-[var(--border-primary)]" />
-                    
-                    <div className="text-[9.5px] text-[var(--text-muted)]">
-                      {formatCaseDate(event.timestamp)}
-                    </div>
-                    <div className="font-bold text-[var(--text-primary)] uppercase mt-0.5">
-                      {event.event}
-                    </div>
-                    {event.actor && (
-                      <div className="text-[9px] text-[var(--text-secondary)] mt-0.5">
-                        OPERATOR: {event.actor}
+                      <div className="text-[11px] font-bold text-[var(--text-primary)] uppercase mt-0.5">
+                        {event.event}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                      {event.actor && (
+                        <div className="text-[9px] font-mono text-[var(--text-secondary)] mt-0.5">
+                          OPERATOR: {event.actor}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+          
         </div>
       </div>
     </div>

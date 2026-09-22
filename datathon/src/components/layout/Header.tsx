@@ -14,6 +14,7 @@ import {
   ChevronDown,
   KeyRound,
   LogOut,
+  Sparkles,
 } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 import DataModeBadge from '../ui/DataModeBadge';
@@ -173,6 +174,15 @@ export const Header: React.FC<HeaderProps> = ({ sidebarCollapsed, setSidebarColl
           ) : (
             <Moon className="w-[18px] h-[18px] text-[var(--accent-purple)]" />
           )}
+        </button>
+
+        {/* AI Assistant */}
+        <button
+          onClick={() => useAppStore.getState().setActiveTab('ai_chat')}
+          className="relative shrink-0 flex items-center justify-center h-9 w-9 rounded-full border border-[var(--border-primary)] bg-[var(--bg-tertiary)]/60 text-[var(--accent-blue-light)] hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue-subtle)] hover:border-[var(--accent-blue)]/40 transition-all cursor-pointer"
+          title="Open AI Investigator"
+        >
+          <Sparkles className="w-[18px] h-[18px]" />
         </button>
 
         {/* Notifications */}

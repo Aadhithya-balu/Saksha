@@ -12,9 +12,10 @@ import {
   Clock,
   X,
   Camera,
-  ShieldAlert,
   Shield,
+  ShieldAlert,
   ChevronRight,
+  Radio,
   Fingerprint,
   Bookmark,
   RefreshCw,
@@ -42,6 +43,7 @@ import { useInvestigationPersistence } from '../hooks/useInvestigationPersistenc
 import { PageHeader } from '../components/ui/PageHeader';
 import { PersonAvatar } from '../components/ui/PersonAvatar';
 import { CardSkeleton } from '../components/ui/Skeleton';
+import KarnatakaMap from '../components/map/KarnatakaMap';
 
 const GROUPS: { key: keyof Pick<InvestigationGroupedSearchResponse, 'persons' | 'victims' | 'cases' | 'firs' | 'stations' | 'locations' | 'mo_matches'>; label: string; icon: React.ReactNode }[] = [
   { key: 'persons', label: 'PERSONS', icon: <Users className="w-3.5 h-3.5" /> },
@@ -278,172 +280,15 @@ export const CommandCenter: React.FC = () => {
   );
 
   const renderHome = () => (
-    <div className="space-y-5">
-      {/* Hero search */}
-      <div className="rounded-2xl border border-[var(--border-primary)] bg-gradient-to-br from-[var(--bg-secondary)]/80 to-[var(--bg-secondary)]/30 p-5 sm:p-7">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border-primary)] bg-[var(--bg-secondary)]/60 text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
-            <Fingerprint className="w-3 h-3 text-[#1E6FD9]" /> Investigation Command Center
-          </span>
-          {renderProvenanceBadge(results)}
-        </div>
-        <h1 className="text-lg sm:text-2xl font-mono font-bold text-[var(--text-primary)] uppercase tracking-wide mb-2">
-          What can we investigate{user ? `, ${user.name.split(' ')[0]}` : ''}?
-        </h1>
-        <p className="text-[10px] sm:text-xs font-mono text-[var(--text-muted)] mb-4">
-          One search for person, FIR, case, station, district, location, crime type or MO — in English or Kannada.
-        </p>
-        {renderSearchBar(true)}
-        {/* Quick investigation actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-4">
-          {[
-            { label: 'Search Person', icon: <User className="w-4 h-4" />, a: () => inputRef.current?.focus() },
-            { label: 'Search FIR / Case', icon: <FileText className="w-4 h-4" />, a: () => inputRef.current?.focus() },
-            { label: 'Upload Image', icon: <Camera className="w-4 h-4" />, a: triggerImage },
-            { label: 'Find Similar Cases', icon: <TrendingUp className="w-4 h-4" />, a: () => navigate('investigation') },
-            { label: 'Search MO', icon: <Brain className="w-4 h-4" />, a: () => { setNlOpen(true); } },
-            { label: 'Search Location', icon: <MapPin className="w-4 h-4" />, a: () => navigate('hotspot') },
-          ].map((qa) => (
-            <button
-              key={qa.label}
-              onClick={qa.a}
-              className="flex flex-col items-start gap-1.5 p-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 hover:border-[#1E6FD9]/40 hover:bg-[#1E6FD9]/5 transition-all cursor-pointer text-left"
-            >
-              <span className="text-[#1E6FD9]">{qa.icon}</span>
-              <span className="text-[10px] font-semibold text-[var(--text-primary)]">{qa.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent investigations + saved */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-[#1E6FD9]" />
-            <h4 className="sk-panel-title">Recent Investigations</h4>
-            {recent.length > 0 && (
-              <button onClick={clearRecent} className="ml-auto text-[9px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer">Clear</button>
-            )}
-          </div>
-          {recent.length === 0 ? (
-            <p className="text-[10px] font-mono text-[var(--text-muted)]">No investigations yet. Run a search to begin.</p>
-          ) : (
-            <ul className="divide-y divide-[var(--border-primary)]/50">
-              {recent.slice(0, 6).map((r) => (
-                <li key={`${r.type}-${r.id}`} className="py-2 flex items-center gap-2">
-                  <span style={{ color: ACCENT[r.type] || '#1E6FD9' }}>
-                    {r.type === 'person' ? <User className="w-3.5 h-3.5" /> : r.type === 'case' ? <Briefcase className="w-3.5 h-3.5" /> : r.type === 'fir' ? <FileText className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
-                  </span>
-                  <button
-                    onClick={() => { setQuery(r.label); }}
-                    className="flex-1 min-w-0 text-left"
-                  >
-                    <span className="block text-[10px] font-semibold text-[var(--text-primary)] truncate">{r.label}</span>
-                    {r.detail && <span className="block text-[8.5px] font-mono text-[var(--text-muted)] truncate">{r.detail}</span>}
-                  </button>
-                  <button onClick={() => removeRecent(r)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer" aria-label="Remove"><X className="w-3 h-3" /></button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Bookmark className="w-4 h-4 text-[#f59e0b]" />
-            <h4 className="sk-panel-title">Saved Investigations</h4>
-          </div>
-          {saved.length === 0 ? (
-            <p className="text-[10px] font-mono text-[var(--text-muted)]">Save important investigations to resume them later.</p>
-          ) : (
-            <ul className="divide-y divide-[var(--border-primary)]/50">
-              {saved.slice(0, 6).map((s) => (
-                <li key={`${s.type}-${s.id}`} className="py-2 flex items-center gap-2">
-                  <span style={{ color: ACCENT[s.type] || '#1E6FD9' }}>
-                    {s.type === 'person' ? <User className="w-3.5 h-3.5" /> : s.type === 'case' ? <Briefcase className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
-                  </span>
-                  <button onClick={() => setQuery(s.label)} className="flex-1 min-w-0 text-left">
-                    <span className="block text-[10px] font-semibold text-[var(--text-primary)] truncate">{s.label}</span>
-                    {s.detail && <span className="block text-[8.5px] font-mono text-[var(--text-muted)] truncate">{s.detail}</span>}
-                  </button>
-                  <button onClick={() => toggleSaved(s)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer" aria-label="Remove saved"><Bookmark className="w-3 h-3 fill-current" /></button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {kpis.unread > 0 && (
-            <div className="mt-3 pt-3 border-t border-[var(--border-primary)] flex items-center gap-2 text-[9px] font-mono text-[var(--text-muted)]">
-              <span>{kpis.unread} unread · {kpis.critical} critical</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Important alerts + recent cases */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Important alerts — actionable */}
-        <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ShieldAlert className="w-4 h-4 text-[var(--accent-coral)]" />
-            <h4 className="sk-panel-title">Important Alerts</h4>
-            <button onClick={() => navigate('notifications')} className="ml-auto text-[9px] font-mono text-[#1E6FD9] hover:underline cursor-pointer">View all</button>
-          </div>
-          {loadingHome ? <CardSkeleton /> : alerts.length === 0 ? (
-            <p className="text-[10px] font-mono text-[var(--text-muted)]">No recent alerts.</p>
-          ) : (
-            <ul className="grid grid-cols-1 gap-2">
-              {alerts.slice(0, 4).map((a) => (
-                <li key={a.id} className="rounded-lg border border-[var(--border-primary)] bg-[var(--bg-elevated)]/30 p-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${a.severity === 'critical' ? 'bg-red-950/40 text-red-400' : a.severity === 'high' ? 'bg-orange-950/40 text-orange-400' : 'bg-blue-950/40 text-blue-300'}`}>
-                      {a.severity || 'info'}
-                    </span>
-                    <span className="text-[10px] font-semibold text-[var(--text-primary)] truncate">{a.title || a.subject}</span>
-                  </div>
-                  <p className="text-[9px] text-[var(--text-secondary)] line-clamp-1 mt-1">{a.message}</p>
-                  {a.related_case_number && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <button onClick={() => goTo('crime_cases', isUuid(a.resource_id) ? a.resource_id : undefined)} className="px-2 py-1 rounded border border-[var(--border-primary)] text-[8px] font-mono text-[#1E6FD9] hover:bg-[#1E6FD9]/10 cursor-pointer">Investigate</button>
-                      <button onClick={() => goTo('crime_cases', isUuid(a.resource_id) ? a.resource_id : undefined)} className="px-2 py-1 rounded border border-[var(--border-primary)] text-[8px] font-mono text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] cursor-pointer">View Cases</button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Recent cases */}
-        <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Briefcase className="w-4 h-4 text-[#7c5cff]" />
-            <h4 className="sk-panel-title">Recent Cases</h4>
-            <button onClick={() => navigate('crime_cases')} className="ml-auto text-[9px] font-mono text-[#1E6FD9] hover:underline cursor-pointer">View all</button>
-          </div>
-          {loadingHome ? <CardSkeleton /> : incidents.length === 0 ? (
-            <p className="text-[10px] font-mono text-[var(--text-muted)]">No recent cases.</p>
-          ) : (
-            <ul className="divide-y divide-[var(--border-primary)]/50">
-              {incidents.slice(0, 5).map((inc, idx) => (
-                <li key={idx} className="py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold text-[#1E6FD9] truncate">{inc.case_number}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-mono uppercase ${inc.priority === 'critical' ? 'bg-red-950/40 text-red-400' : inc.priority === 'high' ? 'bg-orange-950/40 text-orange-400' : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'}`}>{inc.priority}</span>
-                  </div>
-                  <div className="text-[9px] text-[var(--text-secondary)] mt-0.5 truncate">{inc.crime_type} · {inc.location}</div>
-                  <div className="text-[8px] font-mono text-[var(--text-muted)] mt-0.5 flex items-center gap-2">
-                    <span>{inc.time ? new Date(inc.time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}</span>
-                    <button onClick={() => goTo('crime_cases')} className="ml-auto inline-flex items-center gap-0.5 text-[#1E6FD9] hover:underline cursor-pointer">Investigate <ChevronRight className="w-2.5 h-2.5" /></button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+    <div className="h-full w-full bg-[var(--bg-primary)] overflow-hidden rounded-xl border border-[var(--border-primary)] shadow-inner">
+      <KarnatakaMap 
+        hotspots={[]}
+        crimeCases={incidents as any}
+        districtDataOverride={{}}
+      />
     </div>
   );
+  // Map takes over renderHome
 
   const renderSearch = () => {
     if (searching) return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)}</div>;
@@ -523,28 +368,125 @@ export const CommandCenter: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5 pb-8">
-      <PageHeader
-        title="Command Center"
-        subtitle="Investigation-first dashboard · Karnataka State Police"
-        icon={<LayoutDashboard className="w-5 h-5" />}
-        actions={
-          <button onClick={() => setRetryKey((k) => k + 1)} className="sk-btn sk-btn-secondary sk-btn-icon" title="Refresh">
-            <RefreshCw className={`w-4 h-4 ${loadingHome ? 'animate-spin' : ''}`} />
-          </button>
-        }
-      />
-
-      {homeError && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--tone-warning-bg)', border: '1px solid var(--tone-warning-border)', color: 'var(--tone-warning-text)' }}>
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          <span className="text-xs">{homeError}</span>
-          <button onClick={() => setRetryKey((k) => k + 1)} className="ml-auto text-[9px] font-mono text-[#1E6FD9] hover:underline cursor-pointer">Retry</button>
+    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-primary)]">
+      {/* Left Panel: Indicators & Search */}
+      <div className="w-[320px] lg:w-[380px] shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col overflow-y-auto">
+        <div className="p-4 border-b border-[var(--border-primary)] bg-[var(--bg-tertiary)]/50">
+          <div className="flex items-center gap-2 mb-4">
+            <LayoutDashboard className="w-5 h-5 text-[var(--accent-blue)]" />
+            <h1 className="text-sm font-bold uppercase tracking-wide text-[var(--text-primary)]">Command Center</h1>
+          </div>
+          {renderSearchBar(false)}
         </div>
-      )}
 
-      {view !== 'home' && <div className="mb-1">{renderSearchBar(false)}</div>}
-      {view === 'home' ? renderHome() : renderSearch()}
+        {/* Indicators */}
+        <div className="p-4 grid grid-cols-2 gap-2">
+          <div className="p-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-elevated)]/30">
+            <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Active Cases</div>
+            <div className="text-xl font-mono font-bold text-[var(--text-primary)] mt-1">1,240</div>
+            <div className="text-[9px] text-[var(--accent-green)] mt-1 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +12%</div>
+          </div>
+          <div className="p-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-elevated)]/30">
+            <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Critical Alerts</div>
+            <div className="text-xl font-mono font-bold text-[var(--accent-coral)] mt-1">{kpis.critical}</div>
+            <div className="text-[9px] text-[var(--text-muted)] mt-1 flex items-center gap-1">Last 24h</div>
+          </div>
+        </div>
+
+        {/* Recent Investigations */}
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-[var(--accent-blue)]" />
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)]">Recent Targets</h4>
+          </div>
+          {recent.length === 0 ? (
+            <p className="text-[10px] font-mono text-[var(--text-muted)]">No investigations yet.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--border-primary)]/50">
+              {recent.slice(0, 5).map((r) => (
+                <li key={`${r.type}-${r.id}`} className="py-2.5 flex items-center gap-2 group">
+                  <span style={{ color: ACCENT[r.type] || '#1E6FD9' }} className="p-1.5 rounded-md bg-[var(--bg-elevated)]">
+                    {r.type === 'person' ? <User className="w-3.5 h-3.5" /> : r.type === 'case' ? <Briefcase className="w-3.5 h-3.5" /> : r.type === 'fir' ? <FileText className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
+                  </span>
+                  <button onClick={() => { setQuery(r.label); }} className="flex-1 min-w-0 text-left">
+                    <span className="block text-[11px] font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-blue)] transition-colors">{r.label}</span>
+                    {r.detail && <span className="block text-[9px] font-mono text-[var(--text-muted)] truncate">{r.detail}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Center Panel: Map or Search Results */}
+      <div className="flex-1 relative flex flex-col p-4 overflow-y-auto">
+        {homeError && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg text-sm bg-red-500/10 border border-red-500/20 text-red-400">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span className="text-xs">{homeError}</span>
+            <button onClick={() => setRetryKey((k) => k + 1)} className="ml-auto text-[9px] font-mono hover:underline cursor-pointer">Retry</button>
+          </div>
+        )}
+        {view === 'home' ? renderHome() : renderSearch()}
+      </div>
+
+      {/* Right Panel: Live Feed */}
+      <div className="w-[280px] lg:w-[340px] shrink-0 border-l border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col overflow-y-auto">
+        <div className="p-4 border-b border-[var(--border-primary)] sticky top-0 bg-[var(--bg-secondary)] z-10">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[var(--accent-coral)] animate-pulse" />
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)]">Live Intelligence Feed</h4>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6">
+          {/* Important Alerts */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Priority Signals</span>
+            </div>
+            {alerts.length === 0 ? (
+              <p className="text-[10px] font-mono text-[var(--text-muted)]">All clear.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {alerts.slice(0, 4).map((a) => (
+                  <li key={a.id} className="relative pl-3 border-l-2 border-[var(--accent-coral)]">
+                    <div className="text-[10px] font-semibold text-[var(--text-primary)] leading-tight">{a.title || a.subject}</div>
+                    <p className="text-[9px] text-[var(--text-secondary)] mt-1 line-clamp-2">{a.message}</p>
+                    {a.related_case_number && (
+                      <button onClick={() => goTo('crime_cases', isUuid(a.resource_id) ? a.resource_id : undefined)} className="mt-1.5 text-[8.5px] font-mono text-[var(--accent-blue)] hover:underline">Investigate Case →</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Recent Cases */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Emerging Cases</span>
+            </div>
+            {incidents.length === 0 ? (
+              <p className="text-[10px] font-mono text-[var(--text-muted)]">No recent cases.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {incidents.slice(0, 5).map((inc, idx) => (
+                  <li key={idx} className="relative p-2.5 rounded-lg bg-[var(--bg-elevated)]/30 border border-[var(--border-primary)] hover:border-[var(--accent-blue)]/30 transition-colors cursor-pointer" onClick={() => goTo('crime_cases')}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold text-[var(--text-primary)]">{inc.case_number}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[7px] font-mono uppercase ${inc.priority === 'critical' ? 'bg-red-950/40 text-red-400' : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'}`}>{inc.priority}</span>
+                    </div>
+                    <div className="text-[9px] text-[var(--text-secondary)] mt-1 truncate">{inc.crime_type}</div>
+                    <div className="text-[8.5px] font-mono text-[var(--text-muted)] mt-1">{inc.location}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* NL / Kannada modal */}
       {nlOpen && (
