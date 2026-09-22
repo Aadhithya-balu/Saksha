@@ -86,7 +86,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [districtFilter, setDistrictFilter] = useState<string>(() => scopeDistrict || '');
+  const [districtFilter, setDistrictFilter] = useState<string>(() => (canSelectDistrict ? '' : scopeDistrict || ''));
   const [priorityFilter, setPriorityFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

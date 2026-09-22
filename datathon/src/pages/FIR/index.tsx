@@ -91,7 +91,7 @@ export const FIRPage: React.FC = () => {
   // Search & Filters State — district defaults to the operator's own district
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [districtFilter, setDistrictFilter] = useState<string>(() => scopeDistrict || "");
+  const [districtFilter, setDistrictFilter] = useState<string>(() => (canSelectDistrict ? "" : scopeDistrict || ""));
 
   // Fetch FIR List
   const loadFIRList = async () => {

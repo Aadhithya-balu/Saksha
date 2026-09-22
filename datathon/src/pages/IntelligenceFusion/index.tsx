@@ -144,7 +144,7 @@ const IntelligenceFusion: React.FC = () => {
   });
 
   const [district, setDistrict] = useState<string>(() =>
-    canSelectDistrict ? sessionStorage.getItem('saksha_fusion_district') || scopeDistrict || '' : scopeDistrict || '',
+    canSelectDistrict ? sessionStorage.getItem('saksha_fusion_district') || '' : scopeDistrict || '',
   );
   const [category, setCategory] = useState<string>(() => sessionStorage.getItem('saksha_fusion_category') || '');
   const [timeWindow, setTimeWindow] = useState<number>(() => Number(sessionStorage.getItem('saksha_fusion_timewindow')) || 30);

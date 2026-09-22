@@ -100,7 +100,8 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
 
   // Filter selection state — district defaults to the operator's own district
   // (from /auth/me) so district-scoped users always work inside their area.
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => scopeDistrict || '');
+  // Multi-district operators start on the statewide view ('' = all).
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => (canSelectDistrict ? '' : scopeDistrict || ''));
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOfficer, setSelectedOfficer] = useState<string>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');

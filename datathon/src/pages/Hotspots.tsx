@@ -54,12 +54,14 @@ export const Hotspots: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // District-scoped officers always begin on their own district.
-    if (scopeDistrict && !useMapStore.getState().selectedDistrict) {
+    // District-scoped officers always begin on their own district. Multi-district
+    // operators (admin/SP/analyst) start on the statewide view — their home
+    // district is often a HQ placeholder ("State HQ") that has no stations.
+    if (!canSelectDistrict && scopeDistrict && !useMapStore.getState().selectedDistrict) {
       setSelectedDistrict(scopeDistrict);
       setSelectedStation(null);
     }
-  }, [scopeDistrict, setSelectedDistrict, setSelectedStation]);
+  }, [scopeDistrict, canSelectDistrict, setSelectedDistrict, setSelectedStation]);
 
   useEffect(() => {
     let isMounted = true;
