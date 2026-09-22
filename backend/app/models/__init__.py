@@ -40,6 +40,10 @@ from app.models.identity import (
 from app.models.model_update import ModelUpdateJob
 from app.models.face_identity import FaceIdentity
 from app.models.ai_processing import AIProcessingJob, AIOcrResult, AIEntity, AIEvent, AIMatchRecord
+from app.models.ai_candidates import AICandidateRecord
+from app.models.knowledge_graph import KGNode, KGRelationship
+from app.models.ingestion import DataSource, IngestionJob
+from app.models.alert_finding import AlertFinding
 
 __all__ = [
     "Role", "User", "Location", "CrimeCategory", "Officer", "Criminal",
@@ -56,5 +60,9 @@ __all__ = [
     "ModelUpdateJob",
     "FaceIdentity",
     "AIProcessingJob", "AIOcrResult", "AIEntity", "AIEvent", "AIMatchRecord",
+    "AICandidateRecord",
+    "KGNode", "KGRelationship",
+    "DataSource", "IngestionJob",
+    "AlertFinding",
 ]
 

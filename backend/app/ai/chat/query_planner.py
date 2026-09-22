@@ -97,6 +97,7 @@ class QueryPlanner:
         if e.person_name:
             calls.append(BackendCall("postgres", "get_criminal", {"name": e.person_name}, 1))
             calls.append(BackendCall("neo4j", "get_person_network", {"name": e.person_name}, 2))
+            calls.append(BackendCall("kg", "fragment_by_person", {"name": e.person_name}, 3))
         else:
             calls.append(BackendCall("analytics", "offender_dossiers", {}, 1))
             if e.district:
@@ -125,6 +126,7 @@ class QueryPlanner:
         calls: list[BackendCall] = []
         if e.person_name:
             calls.append(BackendCall("neo4j", "get_person_network", {"name": e.person_name}, 1))
+            calls.append(BackendCall("kg", "fragment_by_person", {"name": e.person_name}, 2))
         else:
             calls.append(BackendCall("neo4j", "get_full_network", {}, 1))
         calls.append(BackendCall("neo4j", "get_gangs", {}, 2))
@@ -142,9 +144,9 @@ class QueryPlanner:
 
     def _plan_predictions(self, e: ExtractedEntities) -> list[BackendCall]:
         calls: list[BackendCall] = []
-        district = e.district or "Bengaluru Urban"
-        calls.append(BackendCall("ml", "risk_predict", {"district": district}, 1))
-        calls.append(BackendCall("ml", "forecast", {"district": district, "months": 6}, 2))
+        district = e.district  # may be None → ML answers honestly "no district"
+        calls.append(BackendCall("ml", "risk_predict", {"district": district} if district else {}, 1))
+        calls.append(BackendCall("ml", "forecast", ({"district": district} if district else {}) | {"months": 6}, 2))
         return calls
 
     def _plan_notifications(self) -> list[BackendCall]:

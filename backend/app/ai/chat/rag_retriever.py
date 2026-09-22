@@ -50,7 +50,8 @@ class RagRetriever:
         self._index_cache_ts: float = 0.0
         self._index_cache_lock = threading.Lock()
 
-    def fetch(self, db: Session, message: str, *, top_k: int = _TOP_K) -> BackendResult | None:
+    def fetch(self, db: Session, message: str, *, top_k: int = _TOP_K,
+              district: str | None = None) -> BackendResult | None:
         try:
             store = self._get_indexed_store(db)
             if store is None:
@@ -72,6 +73,15 @@ class RagRetriever:
             overlaps.sort(key=lambda item: (-item[0], -item[1]))
             hits = [item[2] for item in overlaps[:top_k]]
 
+            # District scoping: bound users only ever receive documents tagged
+            # with their district. Untagged (e.g. analytics) documents are
+            # excluded so the caller's scope is never widened.
+            district = (district or "").strip() or None
+            if district:
+                hits = [h for h in hits if self._in_district(h, district)]
+            if not hits:
+                return None
+
             lines = [self._display_text(hit)[:_SNIPPET_LIMIT] for hit in hits]
             known_ids = []
             for hit in hits:
@@ -88,6 +98,16 @@ class RagRetriever:
         except Exception:
             # Retrieval augmentation must never break the chat pipeline.
             return None
+
+    @staticmethod
+    def _in_district(hit, district: str) -> bool:
+        doc_districts = (hit.metadata.get("district") or "").strip()
+        if not doc_districts:
+            return False
+        for tagged in doc_districts.split(","):
+            if tagged.strip().lower() == district.strip().lower():
+                return True
+        return False
 
     def _get_indexed_store(self, db: Session) -> InMemoryVectorStore | None:
         """Returns the cached vector store, rebuilding it on cache miss.

@@ -1,4 +1,5 @@
 import uuid
+from difflib import SequenceMatcher
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -14,20 +15,22 @@ class EntityResolutionService:
         if not ai_entity or ai_entity.entity_type != "PERSON":
             return []
             
-        # Basic mock candidate generation for demonstration
+        # Deterministic candidate generation — no fabricated confidence scores.
         candidates = []
-        name = ai_entity.attributes.get("name")
+        name = (ai_entity.attributes.get("name") or "").strip()
         if not name:
             return []
             
         criminals = db.query(Criminal).filter(Criminal.full_name.ilike(f"%{name}%")).limit(5).all()
         for c in criminals:
+            # Honest similarity: character n-gram ratio of the candidate name.
+            score = round(SequenceMatcher(None, name.casefold(), (c.full_name or "").casefold()).ratio(), 3)
             match = AIMatchRecord(
                 candidate_ai_entity_id=ai_entity.id,
                 source_entity_type="criminal",
                 source_entity_id=c.id,
-                match_score=0.85, # Mock score
-                matching_attributes={"name": name, "matched_with": c.full_name},
+                match_score=score,
+                matching_attributes={"name": name, "matched_with": c.full_name, "score_method": "character_similarity"},
                 status="PENDING"
             )
             db.add(match)
@@ -37,8 +40,8 @@ class EntityResolutionService:
         return candidates
 
     @staticmethod
-    def list_pending_matches(db: Session, limit: int = 50) -> List[AIMatchRecord]:
-        return db.query(AIMatchRecord).filter(AIMatchRecord.status == "PENDING").limit(limit).all()
+    def list_pending_matches(db: Session, status: str = "PENDING", limit: int = 50) -> List[AIMatchRecord]:
+        return db.query(AIMatchRecord).filter(AIMatchRecord.status == status).limit(limit).all()
 
     @staticmethod
     def verify_match(db: Session, match_id: uuid.UUID, decision: str, user_id: uuid.UUID) -> Optional[AIMatchRecord]:

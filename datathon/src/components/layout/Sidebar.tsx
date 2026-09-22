@@ -31,6 +31,8 @@ import {
   Sparkles,
   ScanFace,
   Radar,
+  Database,
+  GitBranch,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -116,6 +118,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'command_center', label: t.nav_command_center, path: '/command-center', icon: <Crosshair /> },
         { id: 'network', label: t.nav_network, path: '/network', icon: <Network /> },
         { id: 'identity', label: t.nav_identity, path: '/identity-resolution', icon: <FileWarning /> },
+        { id: 'data_ingestion', label: 'Data Ingestion', path: '/ingestion', icon: <Database /> },
+        { id: 'knowledge_graph', label: 'Knowledge Graph', path: '/intelligence-graph', icon: <GitBranch /> },
+        { id: 'alerts_review', label: 'Alert Findings', path: '/alerts-review', icon: <ShieldAlert /> },
         { id: 'criminals', label: t.nav_criminals, path: '/criminals', icon: <Users /> },
         { id: 'victims', label: t.nav_victims, path: '/victims', icon: <Heart /> },
         { id: 'offenders', label: t.nav_offenders, path: '/offenders', icon: <ShieldAlert /> },

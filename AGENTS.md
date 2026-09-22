@@ -117,3 +117,31 @@ Officers "Filter" button and the dead `ContextSelector`/`ChatContextOptions`
 byte-locked. UI checklist audits (§6-39) all verified or fixed; every change
 gated on `tsc -p tsconfig.app.json --noEmit`, `eslint`, `npm run build`, and
 Landing/Login SHA-256 checks.
+
+## Recent sessions summary (issue #269 — Phase 5 delivery: chat scoping + alerts + frontend)
+
+Completed: **Phase 5 chat scoping + KG retrieval** — district-aware RAG/fetchers
+(`backend/app/ai/chat/backend_fetcher.py`, `orchestrator.py`, `query_planner.py`,
+`rag_retriever.py`, `rag_service.py`); sentinel `__NO_DISTRICT_ACCESS__` in
+orchestrator zeros/drops analytics for district-less bound users. **Analytics
+scoping** — district params on `analytics_service` (`recent_activity`,
+`dashboard_summary`, `category_breakdown`, `district_comparison`, `anomalies`,
+`offender_dossiers` + `_district_fir_ids`/`_district_criminal_ids` helpers);
+`BackendFetcher.execute()` routes analytics-only plans sequentially and
+`_exec_analytics` opens a short session from `db.get_bind()` (sqlite AI-worker
+pool has no tables — never share it for analytics). **Phase 5 alerts** — new
+`AlertFinding` model (`alert_findings`), `alert_finding_service` (CRIME_SPIKE +
+REPEAT_OFFENDER rules, dedup via `grouping_key`, review lifecycle
+confirm|investigate|dismiss, district-scoped, audited),
+`routes/alert_findings.py` (prefix `/alerts/findings*`; generate = admin/SCRB,
+review = REVIEW_ROLES). Non-destructive Alembic migration
+`c9e2a1f4d807_create_alert_findings.py` (head; does NOT touch the destructive
+`67c8dab87ac9`). **Frontend** — new `DataIngestion` (`/ingestion`),
+`KnowledgeGraph` (`/intelligence-graph`), `AlertReview` (`/alerts-review`)
+pages wired to the real v2 endpoints, registered in `App.tsx` routeEntries +
+switch, `Sidebar.tsx` (INTELLIGENCE group), and `useRBAC.ts` (both
+`ROUTE_PERMISSIONS` and `EXPLICIT_REQUIRED_PATHS`; writes gated by role at
+button level). Gates: tsc + eslint + `npm run build` green; Landing/Login
+SHA-256 unchanged; backend batches (alert findings/policy/health + phase5
+scoping/district/RBAC/hardening) green, plus the earlier chat regression suites.
+Pre-existing `test_chat_history.py` streaming failures remain out of scope.

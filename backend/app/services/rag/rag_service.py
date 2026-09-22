@@ -1,13 +1,15 @@
 """RAG Context Retrieval Service for building domain-aware investigation documents."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, DefaultDict
+from collections import defaultdict
 from sqlalchemy.orm import Session
 
-from app.models.fir import FIR
+from app.models.fir import FIR, FIRCriminalLink
 from app.models.criminal import Criminal
 from app.models.evidence import Evidence
 from app.models.crime import CrimeCase
+from app.models.location import Location
 from app.services.analytics_service import category_breakdown, dashboard_summary, district_comparison
 
 # Generous per-entity caps so vector retrieval covers every record in the
@@ -17,6 +19,37 @@ _FIR_CAP = 250
 _CRIMINAL_CAP = 250
 _EVIDENCE_CAP = 250
 _CASE_CAP = 200
+
+
+def _case_districts(db: Session) -> dict[str, str]:
+    """case_id → district (from the case location)."""
+    rows = db.query(
+        CrimeCase.id, Location.district
+    ).join(Location, Location.id == CrimeCase.location_id).all()
+    return {str(case_id): district for case_id, district in rows if district}
+
+
+def _fir_districts(db: Session) -> dict[str, str]:
+    rows = db.query(
+        FIR.id, Location.district
+    ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+        Location, Location.id == CrimeCase.location_id
+    ).all()
+    return {str(fir_id): district for fir_id, district in rows if district}
+
+
+def _criminal_districts(db: Session) -> dict[str, str]:
+    """criminal_id → comma-joined set of districts across their linked FIRs."""
+    acc: DefaultDict[str, set[str]] = defaultdict(set)
+    rows = db.query(
+        FIRCriminalLink.criminal_id, Location.district
+    ).join(FIR, FIR.id == FIRCriminalLink.fir_id).join(
+        CrimeCase, CrimeCase.id == FIR.crime_case_id
+    ).join(Location, Location.id == CrimeCase.location_id).all()
+    for criminal_id, district in rows:
+        if district:
+            acc[str(criminal_id)].add(district)
+    return {k: ", ".join(sorted(v)) for k, v in acc.items()}
 
 
 def build_rag_documents(
@@ -74,6 +107,7 @@ def build_rag_documents(
         if fir_id:
             fir_query = fir_query.filter(FIR.id == fir_id)
         firs = fir_query.order_by(FIR.created_at.desc()).limit(_FIR_CAP).all()
+        fir_district_map = _fir_districts(db)
 
         for fir in firs:
             content_parts = [
@@ -89,14 +123,18 @@ def build_rag_documents(
                 if accused_names:
                     content_parts.append(f"Accused/Suspects: {', '.join(accused_names)}")
 
-            documents.append({
+            doc = {
                 "id": f"fir-{fir.id}",
                 "title": f"FIR Record {fir.fir_number}",
                 "source": "fir",
                 "content": ". ".join(content_parts),
                 "fir_id": str(fir.id),
                 "fir_number": fir.fir_number,
-            })
+            }
+            fir_district = fir_district_map.get(str(fir.id))
+            if fir_district:
+                doc["district"] = fir_district
+            documents.append(doc)
     except Exception:
         pass
 
@@ -106,6 +144,7 @@ def build_rag_documents(
         if criminal_id:
             criminal_query = criminal_query.filter(Criminal.id == criminal_id)
         criminals = criminal_query.order_by(Criminal.created_at.desc()).limit(_CRIMINAL_CAP).all()
+        criminal_district_map = _criminal_districts(db)
 
         for c in criminals:
             content_parts = [
@@ -123,14 +162,18 @@ def build_rag_documents(
             if c.identifying_marks:
                 content_parts.append(f"Identifying Marks: {c.identifying_marks}")
 
-            documents.append({
+            doc = {
                 "id": f"criminal-{c.id}",
                 "title": f"Offender Record: {c.full_name}",
                 "source": "criminal",
                 "content": ". ".join(content_parts),
                 "criminal_id": str(c.id),
                 "name": c.full_name,
-            })
+            }
+            criminal_district = criminal_district_map.get(str(c.id))
+            if criminal_district:
+                doc["district"] = criminal_district
+            documents.append(doc)
     except Exception:
         pass
 
@@ -140,6 +183,7 @@ def build_rag_documents(
         if evidence_id:
             ev_query = ev_query.filter(Evidence.id == evidence_id)
         evidences = ev_query.order_by(Evidence.created_at.desc()).limit(_EVIDENCE_CAP).all()
+        evidence_district_map = _case_districts(db)
 
         for ev in evidences:
             content_parts = [
@@ -149,16 +193,18 @@ def build_rag_documents(
             ]
             if ev.description:
                 content_parts.append(f"Description: {ev.description}")
-            if ev.storage_path:
-                content_parts.append(f"Storage Path: {ev.storage_path}")
 
-            documents.append({
+            doc = {
                 "id": f"evidence-{ev.id}",
                 "title": f"Evidence: {ev.title}",
                 "source": "evidence",
                 "content": ". ".join(content_parts),
                 "evidence_id": str(ev.id),
-            })
+            }
+            evidence_district = evidence_district_map.get(str(ev.case_id))
+            if evidence_district:
+                doc["district"] = evidence_district
+            documents.append(doc)
     except Exception:
         pass
 
@@ -168,6 +214,7 @@ def build_rag_documents(
         if case_id:
             case_query = case_query.filter(CrimeCase.id == case_id)
         cases = case_query.order_by(CrimeCase.created_at.desc()).limit(_CASE_CAP).all()
+        case_district_map = _case_districts(db)
 
         for case in cases:
             content_parts = [
@@ -180,13 +227,17 @@ def build_rag_documents(
             if case.mo_tags:
                 content_parts.append(f"MO Tags: {case.mo_tags}")
 
-            documents.append({
+            doc = {
                 "id": f"case-{case.id}",
                 "title": f"Crime Case {case.case_number}",
                 "source": "case",
                 "content": ". ".join(content_parts),
                 "case_id": str(case.id),
-            })
+            }
+            case_district = case_district_map.get(str(case.id))
+            if case_district:
+                doc["district"] = case_district
+            documents.append(doc)
     except Exception:
         pass
 
