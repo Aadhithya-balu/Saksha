@@ -574,7 +574,7 @@ export const FIRPage: React.FC = () => {
             </div>
           ) : selectedFir ? (
             /* Detailed View */
-            <div className="flex-grow flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1 gap-4">
+            <div className="flex-grow flex flex-col overflow-y-auto custom-scrollbar pr-1 gap-4">
               {/* Detail Header HUD */}
               <div className="p-4 bg-[var(--bg-tertiary)]/35 border border-border-color rounded-card shrink-0 flex flex-col gap-3 w-full">
                 <div className="min-w-0 w-full">
