@@ -210,9 +210,11 @@ def _upload_to_supabase_storage(file_path: str, storage_key: str, mime_type: str
     return None
 
 
-def save_upload_file(upload_file: UploadFile, evidence_id: uuid.UUID) -> tuple[str, str | None]:
+def save_upload_file(upload_file: UploadFile, owner_id: uuid.UUID, category: str = "evidence") -> tuple[str, str | None]:
     """Save an uploaded file locally (for metadata extraction) and optionally
     push it to Supabase Storage for persistent cloud access.
+
+    ``category`` scopes the storage key (e.g. ``evidence`` or ``fir``).
 
     Returns ``(local_file_path, storage_url)`` where *storage_url* is the
     Supabase Storage URL when the upload succeeded, or ``None`` when running
@@ -221,7 +223,7 @@ def save_upload_file(upload_file: UploadFile, evidence_id: uuid.UUID) -> tuple[s
     validate_upload_file(upload_file)
 
     file_ext = os.path.splitext(upload_file.filename)[1].lower()
-    unique_filename = f"{evidence_id}_{uuid.uuid4()}{file_ext}"
+    unique_filename = f"{owner_id}_{uuid.uuid4()}{file_ext}"
     # Path traversal is impossible by construction: the stored name contains
     # only UUIDs and the allow-listed extension, resolved inside UPLOAD_DIR.
     file_path = (UPLOAD_DIR / unique_filename).resolve()
@@ -286,7 +288,7 @@ def save_upload_file(upload_file: UploadFile, evidence_id: uuid.UUID) -> tuple[s
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to save uploaded file")
-    storage_key = f"evidence/{evidence_id}/{unique_filename}"
+    storage_key = f"{category}/{owner_id}/{unique_filename}"
     storage_url = _upload_to_supabase_storage(str(file_path), storage_key, mime_type)
 
     # When the file is safely in Supabase Storage, remove the local copy to

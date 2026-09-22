@@ -14,6 +14,7 @@ from app.auth.rbac import (
     ROLE_POLICYMAKER,
     require_roles,
 )
+from app.auth.scope import enforce_district_scope, enforce_record_district, is_multi_district
 from app.database.postgres import get_db
 from app.models.intervention import Intervention
 from app.models.user import User
@@ -56,8 +57,12 @@ def list_interventions(
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Intervention)
-    if district:
-        query = query.filter(Intervention.district.ilike(f"%{district}%"))
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district:
+        if is_multi_district(current_user):
+            query = query.filter(Intervention.district.ilike(f"%{effective_district}%"))
+        else:
+            query = query.filter(Intervention.district == effective_district)
     if status:
         query = query.filter(Intervention.status == status)
     if workflow_stage:
@@ -91,6 +96,9 @@ def create_intervention(
     current_user: User = Depends(get_current_user),
 ):
     data = payload.model_dump()
+    effective_district = enforce_district_scope(current_user, data.get("district"), db)
+    if effective_district:
+        data["district"] = effective_district
     intervention = Intervention(**data, created_by_id=current_user.id)
     db.add(intervention)
     db.flush()
@@ -106,7 +114,11 @@ def get_intervention(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(Intervention).filter(Intervention.id == intervention_id).first()
+    intervention = db.query(Intervention).filter(Intervention.id == intervention_id).first()
+    if intervention is None:
+        raise HTTPException(status_code=404, detail="Intervention not found")
+    enforce_record_district(current_user, intervention.district, db)
+    return intervention
 
 
 @router.put(
@@ -128,6 +140,7 @@ def update_intervention(
     intervention = db.query(Intervention).filter(Intervention.id == intervention_id).first()
     if intervention is None:
         return Response(status_code=404, content="Intervention not found")
+    enforce_record_district(current_user, intervention.district, db)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(intervention, field, value)
     audit_service.log_action(db, current_user, "UPDATE", "Intervention", str(intervention_id))
@@ -155,6 +168,8 @@ def advance_intervention_stage(
     intervention = db.query(Intervention).filter(Intervention.id == intervention_id).first()
     if intervention is None:
         raise HTTPException(status_code=404, detail="Intervention not found")
+
+    enforce_record_district(current_user, intervention.district, db)
 
     current_stage = intervention.workflow_stage or "draft"
     target_stage = body.target_stage
@@ -227,6 +242,7 @@ def intervention_effectiveness(
     intervention = db.query(Intervention).filter(Intervention.id == intervention_id).first()
     if intervention is None:
         return Response(status_code=404, content="Intervention not found")
+    enforce_record_district(current_user, intervention.district, db)
     result = intervention_service.compute_effectiveness(db, intervention, window_days=window_days)
     db.commit()
     return result

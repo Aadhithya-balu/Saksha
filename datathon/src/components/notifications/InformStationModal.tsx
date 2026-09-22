@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Send, Radio, User, AlertTriangle, Tag, MessageSquare, FileText, Paperclip } from 'lucide-react';
 import { useNotificationStore } from '../../store/notificationStore';
+import { listOfficers } from '../../services/api';
 
-const DEMO_RECIPIENTS = [
-  { id: 'admin', name: 'Platform Administrator', badge: 'admin', role: 'Administrator' },
-  { id: 'SCRB-7740', name: 'DCP Rajesh Kumar', badge: 'SCRB-7740', role: 'Crime Analyst (SCRB)' },
-  { id: 'IO-3921', name: 'Inspector Meera Sen', badge: 'IO-3921', role: 'Investigation Officer' },
-  { id: 'SP-0088', name: 'SP Anil Kumble', badge: 'SP-0088', role: 'Superintendent' },
-];
+interface RecipientOption {
+  id: string;
+  label: string;
+}
 
 const CATEGORIES = [
   { value: 'investigation_update', label: 'Investigation Update' },
@@ -40,6 +39,28 @@ export const InformStationModal: React.FC<InformStationModalProps> = ({ open, on
   const { sendNotification } = useNotificationStore();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [recipients, setRecipients] = useState<RecipientOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await listOfficers(1, 100);
+        if (!active) return;
+        setRecipients(
+          res.results.map((o) => ({
+            id: o.user_id,
+            label: `${o.badge_number} — ${o.rank ?? 'Officer'} · ${o.district}`,
+          })),
+        );
+      } catch {
+        if (active) setRecipients([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [recipient, setRecipient] = useState('');
   const [priority, setPriority] = useState('medium');
@@ -65,7 +86,7 @@ export const InformStationModal: React.FC<InformStationModalProps> = ({ open, on
     if (!subject.trim()) return;
     setSending(true);
 
-    const selectedRecipient = DEMO_RECIPIENTS.find(r => r.id === recipient);
+    const selectedRecipient = recipients.find(r => r.id === recipient);
     const recipientUser = broadcast ? null : (selectedRecipient || null);
 
     const success = await sendNotification({
@@ -145,8 +166,8 @@ export const InformStationModal: React.FC<InformStationModalProps> = ({ open, on
                     className="flex-1 px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-blue)] transition-colors cursor-pointer disabled:opacity-40"
                   >
                     <option value="">Select recipient...</option>
-                    {DEMO_RECIPIENTS.map(r => (
-                      <option key={r.id} value={r.id}>{r.name} ({r.badge}) — {r.role}</option>
+                    {recipients.map(r => (
+                      <option key={r.id} value={r.id}>{r.label}</option>
                     ))}
                   </select>
                   <label className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--text-secondary)] cursor-pointer shrink-0">

@@ -97,6 +97,10 @@ def get_temporal_matrix(
     Closes issue #143 gap 131.3: true observed cross-tabulation (no synthetic
     baseline) with statistically flagged peak cells for patrol planning.
     """
+    from app.auth.scope import enforce_district_scope, is_multi_district
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district and not is_multi_district(current_user):
+        district = effective_district
     return ttl_cached(
         "sociological:temporal-matrix",
         (district, location_id),

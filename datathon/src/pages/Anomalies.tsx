@@ -4,12 +4,14 @@ import { getAnomalies, createNotification } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { ShieldAlert, CheckCircle, Search, MapPin, HardDrive, Loader2, FolderOpen } from 'lucide-react';
 import { TableSkeleton } from '../components/ui/Skeleton';
+import { useUserScope } from '../hooks/useUserScope';
 
 export const Anomalies: React.FC = () => {
   const [alerts, setAlerts] = useState<CrimeAlert[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
+  const { district: scopeDistrict } = useUserScope();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<'ALL' | 'HIGH' | 'WATCH'>('ALL');
@@ -24,7 +26,10 @@ export const Anomalies: React.FC = () => {
     getAnomalies()
       .then((response) => {
         if (!isMounted) return;
-        const mappedAlerts = response.anomalies.map<CrimeAlert>((item) => ({
+        const scoped = scopeDistrict
+          ? response.anomalies.filter((item) => (item.district || '').toLowerCase() === scopeDistrict.toLowerCase())
+          : response.anomalies;
+        const mappedAlerts = scoped.map<CrimeAlert>((item) => ({
           id: item.case_id,
           firNumber: item.case_id,
           caseUuid: item.case_uuid,
@@ -38,10 +43,7 @@ export const Anomalies: React.FC = () => {
           severity: item.score >= 0.8 ? 'HIGH' : 'WATCH',
           timestamp: item.filed_at || new Date().toISOString(),
           status: 'PENDING',
-          featureBreakdown: {
-            'Anomaly Score': Math.round(item.score * 100),
-            'Category Severity': Math.max(40, Math.round(item.score * 90)),
-          },
+          featureBreakdown: {},
         }));
         setAlerts(mappedAlerts);
         setSelectedAlertId(mappedAlerts[0]?.id ?? null);
@@ -59,7 +61,7 @@ export const Anomalies: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [scopeDistrict]);
 
   useEffect(() => {
     return fetchAnomalies();
@@ -71,18 +73,18 @@ export const Anomalies: React.FC = () => {
     setEscalating(alert.id);
     try {
       await createNotification({
-        recipient_id: 'SP-0088',
         subject: `Anomaly Escalation: ${alert.firNumber}`,
         notification_type: 'escalation',
         category: 'case_escalation',
-        title: `Anomaly Escalated to SP — ${alert.firNumber}`,
+        title: `Anomaly Escalated for SP Review — ${alert.firNumber}`,
         message: `An anomaly detected in ${alert.district} (${alert.station}) has been escalated for SP review.\n\nType: ${alert.crimeType}\nScore: ${alert.anomalyScore}%\nDetails: ${alert.offenceDetails}`,
         priority: 'high',
         severity: alert.severity === 'HIGH' ? 'critical' : 'high',
         related_case_number: alert.firNumber,
         related_fir_number: alert.firNumber,
+        is_broadcast: true,
       });
-      setAlerts((current) => current.map((a) => a.id === alert.id ? { ...a, status: 'ESCALATED', severity: 'HIGH', assignedOfficer: user?.name || 'Inspector System' } : a));
+      setAlerts((current) => current.map((a) => a.id === alert.id ? { ...a, status: 'ESCALATED', severity: 'HIGH', assignedOfficer: user?.name ?? 'Unknown officer' } : a));
     } catch {
       // silently fail — button remains functional for retry
     } finally {
@@ -105,7 +107,7 @@ export const Anomalies: React.FC = () => {
   const activeAlert = alerts.find(a => a.id === selectedAlertId) || filteredAlerts[0] || null;
 
   return (
-    <div className="h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
+    <div className="min-h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
       
       {/* Search Filter Top HUD */}
       {loadError && <div className="text-[9px] font-mono text-amber-400 uppercase">{loadError}</div>}
@@ -122,6 +124,14 @@ export const Anomalies: React.FC = () => {
           />
           <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
         </div>
+
+        {/* Scope indicator */}
+        {scopeDistrict && (
+          <span className="order-last md:order-none inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
+            <MapPin className="w-3 h-3 text-[var(--accent-blue)]" />
+            Focus: {scopeDistrict} · {alerts.length} alerts
+          </span>
+        )}
 
         {/* Filters */}
         <div className="w-full md:w-auto flex flex-wrap items-center gap-3">
@@ -290,21 +300,6 @@ export const Anomalies: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Scoring factors checklist */}
-                <div>
-                  <span className="text-[8.5px] font-bold text-[var(--text-muted)] uppercase tracking-widest block mb-2.5">
-                    AI Feature Explanations
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-[9.5px] font-mono">
-                    {Object.entries(activeAlert.featureBreakdown).map(([feat, score]) => (
-                      <div key={feat} className="p-2 bg-[var(--bg-secondary)]/30 border border-[var(--border-primary)]/60 rounded flex justify-between items-center">
-                        <span className="text-[var(--text-secondary)] truncate max-w-[120px]">{feat}</span>
-                        <span className="text-red-400 font-bold font-mono">{score}% weight</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Case files assignments details */}
                 {activeAlert.assignedOfficer && (
                   <div className="p-2.5 bg-[#0E9E78]/5 border border-[#0E9E78]/20 text-[10px] font-mono text-[#0E9E78] rounded flex justify-between">
@@ -343,7 +338,7 @@ export const Anomalies: React.FC = () => {
                 </button>
                 {activeAlert.status === 'PENDING' && (
                   <button
-                    onClick={() => reviewAlert(activeAlert.id, user?.name || 'Inspector System')}
+                    onClick={() => reviewAlert(activeAlert.id, user?.name ?? 'Unknown officer')}
                     className="flex-1 py-2.5 bg-[#0E9E78] hover:bg-[#0E9E78]/80 text-[var(--text-primary)] rounded-btn tracking-wider font-semibold cursor-pointer text-center select-none flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />

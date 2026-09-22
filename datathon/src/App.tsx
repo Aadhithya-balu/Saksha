@@ -167,31 +167,31 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     const tabLabels: Record<string, string> = {
-      dashboard: 'Analytics Dashboard',
-      command_center: 'Command Center',
-      investigation_intelligence: 'Intelligence Engine',
-      intelligence_fusion: 'Intelligence Fusion Portal',
-      identity: 'Identity Resolution & Data Integrity',
-      fir: 'FIR Registry',
-      hotspot: 'Hotspot Map',
-      network: 'Network Graph',
-      predictive: 'Predictive AI',
-      anomaly: 'Anomaly Feed',
+      dashboard: 'Home',
+      command_center: 'Search & Intelligence',
+      investigation_intelligence: 'Case Intelligence',
+      intelligence_fusion: 'Combined Intelligence',
+      identity: 'Identity Matches',
+      fir: 'FIRs',
+      hotspot: 'Hotspots',
+      network: 'Connections',
+      predictive: 'Risk Outlook',
+      anomaly: 'Unusual Activity',
       crime_cases: 'Crime Cases',
       investigation: 'Investigation',
-      notifications: 'Intelligence Center',
-      sociological: 'Sociological Intelligence',
+      notifications: 'Notifications',
+      sociological: 'Community Patterns',
       strategic: 'Strategic Intelligence',
-      offenders: 'Offender Registry',
-      criminals: 'Criminal Dossiers',
-      victims: 'Victims Registry',
-      reports: 'Reports Center',
+      offenders: 'Offenders',
+      criminals: 'Criminals',
+      victims: 'Victims',
+      reports: 'Reports',
       settings_help: 'Settings',
-      admin: 'Admin Panel',
+      admin: 'Administration',
       ai_chat: 'AI Assistant',
-      face_recognition: 'Face Recognition',
-      officers: 'Officer Management',
-      evidence: 'Evidence Handling',
+      face_recognition: 'Face Match',
+      officers: 'Officers',
+      evidence: 'Evidence',
       docs: 'Documentation',
       ai_jobs: 'AI Processing Center',
       ai_review: 'Entity Resolution Review',
@@ -299,7 +299,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="sk-app flex h-dvh w-full overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -309,20 +309,20 @@ function App() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 h-full">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full">
         <Header
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8 sk-page-enter">
+        <main className="flex-1 min-h-0 overflow-y-auto">
+          <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-24 md:pb-8 sk-page-enter">
             {renderActivePage()}
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="h-9 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 pl-6 pr-6 pb-[env(safe-area-inset-bottom)] mb-[64px] md:mb-0 flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] select-none shrink-0 no-print">
+        {/* Footer — desktop only; mobile uses the bottom nav bar */}
+        <footer className="hidden md:flex h-9 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 px-6 flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] select-none shrink-0 no-print">
           <span>SAKSHA v2.0 &middot; Crime Intelligence Platform</span>
           <span className="hidden sm:inline">CLASSIFIED &middot; STAMP: 2026-SCI</span>
         </footer>

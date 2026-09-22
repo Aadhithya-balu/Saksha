@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { getAIJobs, retryAIJob, AIProcessingJob } from '../../services/api';
-import { PlayIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { useEffect, useState } from 'react';
+import { getAIJobs, retryAIJob, type AIProcessingJob } from '../../services/api';
+import { Play, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function ProcessingCenter() {
   const [jobs, setJobs] = useState<AIProcessingJob[]>([]);
@@ -48,9 +48,9 @@ export default function ProcessingCenter() {
                 <tr key={job.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{job.job_type}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {job.status === 'COMPLETED' && <span className="text-green-600 flex items-center gap-1"><CheckCircleIcon className="w-4 h-4"/> Completed</span>}
-                    {job.status === 'FAILED' && <span className="text-red-600 flex items-center gap-1" title={job.error_details || ''}><XCircleIcon className="w-4 h-4"/> Failed</span>}
-                    {job.status === 'QUEUED' && <span className="text-gray-500 flex items-center gap-1"><ClockIcon className="w-4 h-4"/> Queued</span>}
+                    {job.status === 'COMPLETED' && <span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Completed</span>}
+                    {job.status === 'FAILED' && <span className="text-red-600 flex items-center gap-1" title={job.error_details || ''}><XCircle className="w-4 h-4"/> Failed</span>}
+                    {job.status === 'QUEUED' && <span className="text-gray-500 flex items-center gap-1"><Clock className="w-4 h-4"/> Queued</span>}
                     {job.status === 'PROCESSING' && <span className="text-blue-500 flex items-center gap-1">Processing...</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{job.target_entity_type}: {job.target_entity_id.substring(0,8)}...</td>
@@ -58,7 +58,7 @@ export default function ProcessingCenter() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {(job.status === 'FAILED' || job.status === 'QUEUED') && (
                       <button onClick={() => handleRetry(job.id)} className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 ml-auto">
-                        <PlayIcon className="w-4 h-4" /> Retry
+                        <Play className="w-4 h-4" /> Retry
                       </button>
                     )}
                   </td>

@@ -54,6 +54,8 @@ export interface UserSession {
   name: string;
   badgeId: string;
   role: UserRole;
+  district?: string | null;
+  station?: string | null;
 }
 
 interface AuthState {
@@ -85,6 +87,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           name: currentUser.full_name,
           badgeId: currentUser.username,
           role: mapBackendRoleToUiRole(currentUser.role),
+          district: currentUser.district,
+          station: currentUser.station,
         },
         isAuthenticated: true,
         loginError: null,
@@ -141,6 +145,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           name: currentUser.full_name,
           badgeId: currentUser.username,
           role: mapBackendRoleToUiRole(currentUser.role),
+          district: currentUser.district,
+          station: currentUser.station,
         },
         isAuthenticated: true,
         loginError: null,

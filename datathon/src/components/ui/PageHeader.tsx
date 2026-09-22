@@ -7,7 +7,8 @@ interface PageHeaderProps {
   actions?: React.ReactNode;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions }) => (
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions }) => {
+  return (
   <div className="sk-page-head">
     <div className="flex items-center gap-3 min-w-0">
       {icon && (
@@ -21,7 +22,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, a
       </div>
     </div>
     {actions && <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>}
-  </div>
-);
+    </div>
+  );
+};
 
 export default PageHeader;

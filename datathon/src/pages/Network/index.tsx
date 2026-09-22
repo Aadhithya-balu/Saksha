@@ -543,7 +543,7 @@ export const NetworkPageWorkspace: React.FC = () => {
         )}
 
         {activeView === 'ai_insights' && (
-          <AIGraphInsightsModal insights={insights} onSelectNodeIn3D={setSelectedNode} />
+          <AIGraphInsightsModal insights={insights} nodes={graphData?.nodes || []} onSelectNodeIn3D={setSelectedNode} />
         )}
       </div>
     </div>

@@ -11,6 +11,7 @@ from sqlalchemy import or_
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, require_roles
+from app.auth.scope import enforce_district_scope, is_multi_district
 from app.database.postgres import get_db
 from app.models.network import (
     AIGraphInsight,
@@ -77,6 +78,8 @@ def get_full_graph(
     within a single comma-separated parameter are OR-ed. All filters are optional,
     so existing unfiltered queries are unchanged.
     """
+    if not is_multi_district(current_user):
+        district = enforce_district_scope(current_user, None, db)
     return network_service.get_full_network_graph(
         db,
         category_filter=category_filter,
@@ -125,27 +128,51 @@ def search_network_entities(
     from app.models.criminal import Criminal
     from app.models.victim import Victim
     from app.models.officer import Officer
-    from app.models.fir import FIR
+    from app.models.fir import FIR, FIRCriminalLink, FIRVictimLink
     from app.models.crime import CrimeCase
     from app.models.location import Location
+
+    from app.auth.scope import enforce_district_scope, is_multi_district
+    effective_district = enforce_district_scope(current_user, None, db)
+    scoped = bool(effective_district and not is_multi_district(current_user))
 
     pattern = f"%{q}%"
     results: list[dict[str, Any]] = []
 
-    criminals = db.query(Criminal).filter(
+    criminal_query = db.query(Criminal).filter(
         or_(Criminal.full_name.ilike(pattern), Criminal.aliases.ilike(pattern))
-    ).limit(limit).all()
+    )
+    if scoped:
+        criminal_query = (
+            criminal_query.join(FIRCriminalLink, FIRCriminalLink.criminal_id == Criminal.id)
+            .join(FIR, FIR.id == FIRCriminalLink.fir_id)
+            .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+            .distinct()
+        )
+    criminals = criminal_query.limit(limit).all()
     for c in criminals:
         results.append({
             "id": f"criminal-{c.id}",
             "type": "criminal",
             "name": c.full_name,
-            "detail": f"Status: {c.status or 'unknown'} | Cases: {len(c.fir_links)}",
+            "detail": f"Status: {c.status or 'unknown'} | Linked FIRs: {len(c.fir_links)}",
             "status": c.status,
-            "risk_score": min(100.0, 45.0 + len(c.fir_links) * 10),
+            "risk_score": None,
         })
 
-    victims = db.query(Victim).filter(Victim.full_name.ilike(pattern)).limit(limit).all()
+    victim_query = db.query(Victim).filter(Victim.full_name.ilike(pattern))
+    if scoped:
+        victim_query = (
+            victim_query.join(FIRVictimLink, FIRVictimLink.victim_id == Victim.id)
+            .join(FIR, FIR.id == FIRVictimLink.fir_id)
+            .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+            .distinct()
+        )
+    victims = victim_query.limit(limit).all()
     for v in victims:
         results.append({
             "id": f"victim-{v.id}",
@@ -155,9 +182,12 @@ def search_network_entities(
             "status": "victim",
         })
 
-    officers = db.query(Officer).filter(
+    officer_query = db.query(Officer).filter(
         or_(Officer.name.ilike(pattern), Officer.badge_number.ilike(pattern))
-    ).limit(limit).all()
+    )
+    if scoped:
+        officer_query = officer_query.filter(Officer.district == effective_district)
+    officers = officer_query.limit(limit).all()
     for o in officers:
         results.append({
             "id": f"officer-{o.id}",
@@ -167,9 +197,16 @@ def search_network_entities(
             "status": o.status,
         })
 
-    firs = db.query(FIR).filter(
+    fir_query = db.query(FIR).filter(
         or_(FIR.fir_number.ilike(pattern), FIR.complainant_name.ilike(pattern))
-    ).limit(limit).all()
+    )
+    if scoped:
+        fir_query = (
+            fir_query.join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+            .join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+        )
+    firs = fir_query.limit(limit).all()
     for f in firs:
         results.append({
             "id": f"case-{f.id}",
@@ -179,9 +216,15 @@ def search_network_entities(
             "status": "filed",
         })
 
-    cases = db.query(CrimeCase).filter(
+    case_query = db.query(CrimeCase).filter(
         or_(CrimeCase.case_number.ilike(pattern), CrimeCase.description.ilike(pattern))
-    ).limit(limit).all()
+    )
+    if scoped:
+        case_query = (
+            case_query.join(Location, Location.id == CrimeCase.location_id)
+            .filter(Location.district == effective_district)
+        )
+    cases = case_query.limit(limit).all()
     for c in cases:
         results.append({
             "id": f"case-{c.id}",
@@ -191,9 +234,12 @@ def search_network_entities(
             "status": c.status,
         })
 
-    locations = db.query(Location).filter(
+    location_query = db.query(Location).filter(
         or_(Location.station.ilike(pattern), Location.district.ilike(pattern))
-    ).limit(limit).all()
+    )
+    if scoped:
+        location_query = location_query.filter(Location.district == effective_district)
+    locations = location_query.limit(limit).all()
     for loc in locations:
         results.append({
             "id": f"location-{loc.id}",
@@ -285,6 +331,8 @@ def find_connection_path(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please select two different entities.",
         )
+    if not is_multi_district(current_user):
+        district = enforce_district_scope(current_user, None, db)
     return network_service.find_connection_path(
         db,
         source_id=source_id,

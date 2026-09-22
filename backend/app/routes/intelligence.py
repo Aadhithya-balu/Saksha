@@ -351,6 +351,11 @@ def get_emerging_patterns(
     """Detect and fuse emerging crime patterns across jurisdictions using multi-signal analytics."""
     from datetime import datetime, timezone
 
+    from app.auth.scope import enforce_district_scope, is_multi_district
+    effective_district = enforce_district_scope(current_user, district, db)
+    if effective_district and not is_multi_district(current_user):
+        district = effective_district
+
     thresholds = intelligence_engine.FusionThresholds(
         min_supporting_signals=min_signals,
         min_risk_score=min_risk,
@@ -447,10 +452,12 @@ def get_emerging_pattern_by_id(
     current_user: User = Depends(get_current_user),
 ):
     """Retrieve details for a single fused intelligence pattern by ID."""
+    from app.auth.scope import enforce_record_district
     patterns = intelligence_engine.detect_emerging_patterns(db, min_signals=1, min_risk=0.1, min_confidence=0.1)
     matching = next((p for p in patterns if p["intelligence_id"] == intelligence_id), None)
     if not matching:
         raise HTTPException(status_code=404, detail="Intelligence pattern not found or expired")
+    enforce_record_district(current_user, matching.get("location", {}).get("district"), db)
     return matching
 
 

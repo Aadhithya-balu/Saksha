@@ -6,6 +6,10 @@ interface Props {
   criminals: InvestigationCriminal[];
 }
 
+const navigateTo = (tab: string, targetId?: string) => {
+  window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab, targetId } }));
+};
+
 const getRiskColor = (score: number) => {
   if (score >= 80) return 'text-red-400 bg-red-950/30 border-red-900/40';
   if (score >= 60) return 'text-orange-400 bg-orange-950/30 border-orange-900/40';
@@ -82,7 +86,11 @@ const LinkedCriminals: React.FC<Props> = ({ criminals }) => {
 
       <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
         {criminals.map((criminal) => (
-          <div key={criminal.id} className="p-3 bg-[var(--bg-secondary)]/40 border border-border-color/40 rounded hover:border-red-900/30 transition-colors">
+          <button
+            key={criminal.id}
+            onClick={() => navigateTo('criminals', criminal.id)}
+            className="w-full text-left cursor-pointer p-3 bg-[var(--bg-secondary)]/40 border border-border-color/40 rounded hover:border-red-900/30 transition-colors"
+          >
             {/* Header */}
             <div className="flex justify-between items-start">
               <div>
@@ -127,7 +135,7 @@ const LinkedCriminals: React.FC<Props> = ({ criminals }) => {
                 <span>{criminal.mo_summary}</span>
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>

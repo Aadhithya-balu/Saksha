@@ -30,44 +30,7 @@ interface AuditStore {
   clearLogs: () => void;
 }
 
-const INITIAL_LOGS: AuditLogEntry[] = [
-  {
-    id: 'log-001',
-    timestamp: '2026-07-06T09:00:22Z',
-    officerName: 'DCP Rajesh Kumar',
-    badgeId: 'SCRB-7740',
-    actionType: 'AUTH',
-    details: 'Successful biometric authentication via Facial ID',
-    ipAddress: '10.144.12.89',
-  },
-  {
-    id: 'log-002',
-    timestamp: '2026-07-06T09:01:05Z',
-    officerName: 'DCP Rajesh Kumar',
-    badgeId: 'SCRB-7740',
-    actionType: 'PAGE_VIEW',
-    details: 'Accessed Overview Dashboard',
-    ipAddress: '10.144.12.89',
-  },
-  {
-    id: 'log-003',
-    timestamp: '2026-07-06T09:02:15Z',
-    officerName: 'DCP Rajesh Kumar',
-    badgeId: 'SCRB-7740',
-    actionType: 'SEARCH',
-    details: 'Queried offender network database for term "Ramu"',
-    ipAddress: '10.144.12.89',
-  },
-  {
-    id: 'log-004',
-    timestamp: '2026-07-06T09:03:54Z',
-    officerName: 'DCP Rajesh Kumar',
-    badgeId: 'SCRB-7740',
-    actionType: 'EXPORT',
-    details: 'Exported crime density heatmap as CONFIDENTIAL PDF for Bengaluru Urban',
-    ipAddress: '10.144.12.89',
-  }
-];
+const INITIAL_LOGS: AuditLogEntry[] = [];
 
 export const useAuditStore = create<AuditStore>((set) => ({
   logs: INITIAL_LOGS,
@@ -80,7 +43,10 @@ export const useAuditStore = create<AuditStore>((set) => ({
       badgeId,
       actionType,
       details,
-      ipAddress: '10.0.' + (Math.floor(Math.random() * 254) + 1) + '.' + (Math.floor(Math.random() * 254) + 1)
+      // Client-side session note. The authoritative, IP-stamped audit trail is
+      // written server-side by audit_service.log_action; we must not invent an
+      // IP address here.
+      ipAddress: ''
     };
     return { logs: [newLog, ...state.logs] };
   }),

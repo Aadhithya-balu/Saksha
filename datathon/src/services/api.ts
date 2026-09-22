@@ -614,7 +614,9 @@ export const mapBackendRoleToUiRole = (role: string): UserRole => {
     case 'viewer':
       return 'VIEWER';
     default:
-      return 'SCRB';
+      // Fail closed: an unrecognised backend role must not be granted
+      // analyst-level clearance. Least privilege is read-only.
+      return 'VIEWER';
   }
 };
 
@@ -1063,14 +1065,6 @@ export async function chatQuery(message: string, sessionId?: string, options?: {
   });
 }
 
-/** Optional entity scoping for AI chat answers (selected via the chat UI). */
-export interface ChatContextOptions {
-  firId?: string;
-  criminalId?: string;
-  evidenceId?: string;
-  caseId?: string;
-}
-
 export interface ChatStreamChunk {
   type: 'status' | 'token' | 'final' | 'error' | 'meta' | 'notice';
   content: any;
@@ -1372,6 +1366,18 @@ export interface CrimeCaseDetailRecord extends CrimeCaseRecord {
     filed_at: string;
   }>;
   ai_recommendations: AIRecommendation[];
+  location?: {
+    id: string;
+    district: string;
+    station: string;
+    pincode?: string | null;
+  } | null;
+  category?: {
+    id: string;
+    name: string;
+    section_code?: string | null;
+    severity?: string | null;
+  } | null;
 }
 
 export interface OfficerWithUserRecord {
@@ -1604,6 +1610,56 @@ export async function deleteFIR(firId: string) {
   return apiRequest<{ message: string }>(`/firs/${firId}`, {
     method: 'DELETE',
   });
+}
+
+export interface FIRAttachmentRecord {
+  id: string;
+  name: string;
+  size: number;
+  mime_type?: string;
+  uploaded_at?: string;
+  uploaded_by?: string;
+  has_file?: boolean;
+}
+
+export async function uploadFIRAttachment(firId: string, file: File): Promise<FIRAttachmentRecord[]> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiRequest<FIRAttachmentRecord[]>(`/firs/${firId}/attachments`, {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function deleteFIRAttachment(firId: string, attachmentId: string): Promise<FIRAttachmentRecord[]> {
+  return apiRequest<FIRAttachmentRecord[]>(`/firs/${firId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function downloadFIRAttachment(firId: string, attachmentId: string, filename?: string): Promise<void> {
+  const tokens = getStoredTokens();
+  const response = await fetch(`${API_BASE_URL}/firs/${firId}/attachments/${attachmentId}/download`, {
+    headers: {
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download attachment (${response.statusText})`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'attachment';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 500);
 }
 
 export async function addInvestigationNote(caseId: string, content: string) {

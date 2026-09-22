@@ -114,7 +114,8 @@ def get_risk_scores(
     current_user: User = Depends(get_current_user),
 ):
     """Return latest district risk scores based on crime records."""
-    del current_user
+    from app.auth.scope import enforce_district_scope
+    district_id = enforce_district_scope(current_user, district_id, db)
     try:
         cases = db.query(CrimeCase).options(joinedload(CrimeCase.location), joinedload(CrimeCase.category)).all()
         from app.services.analytics_service import derive_data_provenance

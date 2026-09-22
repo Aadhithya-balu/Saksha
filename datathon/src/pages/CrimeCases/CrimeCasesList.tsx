@@ -11,23 +11,72 @@ import type { CrimeCaseDetailRecord, CrimeCaseInsights } from '../../services/ap
 import { Search, Plus, Eye, Edit2, Trash2, ShieldAlert, X, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeStore } from '../../store/realtimeStore';
-
+import CrimeInsightsBar from '../../components/crimeCases/CrimeInsightsBar';
+import PageHeader from '../../components/ui/PageHeader';
+import { useUserScope } from '../../hooks/useUserScope';
 import { useTranslation } from '../../i18n';
 
 interface CrimeCasesListProps {
   onSelectCase: (id: string) => void;
   onCreateCase: () => void;
   onEditCase: (id: string) => void;
-  selectedCaseId?: string | null;
 }
+
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  assigned: 'Assigned',
+  investigating: 'Under investigation',
+  'evidence collected': 'Evidence collected',
+  'charge sheet filed': 'Charge sheet filed',
+  closed: 'Closed',
+};
+
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+const STATUS_TONE: Record<string, { color: string; background: string }> = {
+  open: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  assigned: { color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' },
+  investigating: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  'evidence collected': { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  'charge sheet filed': { color: 'var(--accent-blue-light)', background: 'var(--accent-blue-subtle)' },
+  closed: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+};
+
+const PRIORITY_TONE: Record<string, { color: string; background: string }> = {
+  critical: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  high: { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  medium: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  low: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+};
+
+const NEEDS_ATTENTION_STATUSES = new Set(['open', 'assigned', 'investigating']);
+
+const daysSince = (iso?: string | null) =>
+  iso ? Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 86400000)) : 0;
+
+const sortAttentionFirst = (rows: CrimeCaseDetailRecord[]) =>
+  [...rows].sort(
+    (a, b) =>
+      (a.priority === 'critical' ? 0 : a.priority === 'high' ? 1 : a.priority === 'medium' ? 2 : 3) -
+        (b.priority === 'critical' ? 0 : b.priority === 'high' ? 1 : b.priority === 'medium' ? 2 : 3) ||
+      String(a.case_number).localeCompare(String(b.case_number)),
+  );
+
+const needsAttention = (c: CrimeCaseDetailRecord) =>
+  NEEDS_ATTENTION_STATUSES.has(c.status) && (c.progress ?? 0) < 40;
 
 const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   onSelectCase,
   onCreateCase,
-  onEditCase,
-  selectedCaseId
+  onEditCase
 }) => {
   const t = useTranslation();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const user = useAuthStore((state) => state.user);
   const canWrite = user?.role === 'ADMIN' || user?.role === 'IO' || user?.role === 'SCRB';
   const canDelete = user?.role === 'ADMIN';
@@ -37,7 +86,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [districtFilter, setDistrictFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState<string>(() => (canSelectDistrict ? '' : scopeDistrict || ''));
   const [priorityFilter, setPriorityFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +100,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
       const result = await getCrimeCaseInsights({
         status: statusFilter || undefined,
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
       setInsights(result);
@@ -66,10 +115,10 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     try {
       const response = await getCrimeCases(search || undefined, statusFilter || undefined, 1, 20, {
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
-      setCases(response.results);
+      setCases(sortAttentionFirst(response.results));
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch crime cases');
     } finally {
@@ -102,17 +151,17 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     try {
       const response = await getCrimeCases(search || undefined, statusFilter || undefined, 1, 20, {
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
-      setCases(response.results);
+      setCases(sortAttentionFirst(response.results));
       setError(null);
     } catch { /* silent */ }
     try {
       const result = await getCrimeCaseInsights({
         status: statusFilter || undefined,
         category_id: categoryFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         priority: priorityFilter || undefined,
       });
       setInsights(result);
@@ -169,38 +218,14 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
     }
   };
 
-  const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'open':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
-      case 'assigned':
-        return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30';
-      case 'investigating':
-        return 'bg-purple-500/10 text-purple-400 border border-purple-500/30';
-      case 'evidence collected':
-        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30';
-      case 'charge sheet filed':
-        return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
-      case 'closed':
-        return 'bg-[#0E9E78]/10 text-[#0E9E78] border border-[#0E9E78]/30';
-      default:
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/30';
-    }
+  const getStatusStyle = (status: string) => STATUS_TONE[status.toLowerCase()] || {
+    color: 'var(--text-secondary)',
+    background: 'var(--bg-tertiary)',
   };
 
-  const getPriorityStyle = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'low':
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/20';
-      case 'medium':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
-      case 'high':
-        return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
-      case 'critical':
-        return 'bg-[#C94A2A]/15 text-[#C94A2A] border border-[#C94A2A]/40 font-bold';
-      default:
-        return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-secondary)]/20';
-    }
+  const getPriorityStyle = (priority: string) => PRIORITY_TONE[priority.toLowerCase()] || {
+    color: 'var(--text-secondary)',
+    background: 'var(--bg-tertiary)',
   };
   const formatCaseDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '—';
@@ -221,158 +246,260 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] relative z-10">
-      {/* Header & Create */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)] shrink-0 bg-[var(--bg-secondary)] sticky top-0 z-20">
-        <div>
-          <h2 className="text-xs uppercase tracking-widest font-bold text-[var(--text-primary)]">Investigations</h2>
-          <p className="text-[9px] font-mono text-[var(--text-muted)] mt-0.5">{cases.length} active cases</p>
-        </div>
-        {canWrite && (
-          <button
-            onClick={onCreateCase}
-            className="flex items-center gap-1.5 px-2 py-1.5 bg-[#1E6FD9]/10 hover:bg-[#1E6FD9]/20 border border-[#1E6FD9]/30 transition-colors rounded text-[9px] text-[#1E6FD9] cursor-pointer uppercase font-bold tracking-wider"
-          >
-            <Plus className="w-3.5 h-3.5" /> New
-          </button>
-        )}
-      </div>
+    <div className="space-y-6">
+      {/* Header — plain-language entry with operating-area chip */}
+      <PageHeader
+        title={t.cc_title}
+        subtitle={t.cc_subtitle}
+        icon={<ShieldAlert className="w-5 h-5" />}
+        actions={
+          <>
+            {scopeDistrict && (
+              <span
+                className="sk-header-chip hidden sm:inline-flex"
+                data-accent="cyan"
+                title="Your operating area — set from your profile"
+              >
+                <Search className="w-3 h-3" />
+                {scopeDistrict}
+              </span>
+            )}
+            {canWrite && (
+              <button
+                onClick={onCreateCase}
+                className="sk-btn cursor-pointer"
+                style={{ background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' }}
+              >
+                <Plus className="w-4 h-4" /> {t.cc_create}
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {/* Visual Crime Telemetry & Insights Ribbon */}
+      <CrimeInsightsBar
+        insights={insights}
+        activeStatus={statusFilter}
+        activePriority={priorityFilter}
+        onSelectStatus={(s) => setStatusFilter(s)}
+        onSelectPriority={(p) => setPriorityFilter(p)}
+        onResetFilters={() => {
+          setSearch('');
+          setStatusFilter('');
+          setCategoryFilter('');
+          setDistrictFilter(canSelectDistrict ? '' : scopeDistrict || '');
+          setPriorityFilter('');
+        }}
+      />
 
       {/* Filter and Search Bar */}
-      <div className="p-3 border-b border-[var(--border-primary)] shrink-0 bg-[var(--bg-tertiary)]/50 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-muted)]" />
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="SEARCH INVESTIGATIONS..."
+            placeholder={t.cc_search_hint}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded font-mono text-[10px] text-[var(--text-primary)] uppercase placeholder-[var(--text-muted)] focus:border-[#1E6FD9]/60 focus:outline-none transition-colors"
+            className="sk-input w-full pl-9 pr-3 py-1.5"
           />
         </div>
-        
-        <div className="flex gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="sk-select w-full md:w-44 px-3 py-1.5 cursor-pointer"
+        >
+          <option value="">{t.cc_all_status}</option>
+          <option value="open">Open</option>
+          <option value="assigned">Assigned</option>
+          <option value="investigating">Under investigation</option>
+          <option value="evidence collected">Evidence collected</option>
+          <option value="charge sheet filed">Charge sheet filed</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="sk-select w-full md:w-48 px-3 py-1.5 cursor-pointer"
+        >
+          <option value="">{t.cc_all_categories}</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+        {canSelectDistrict ? (
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 px-2 py-1.5 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded font-mono text-[9px] text-[var(--text-primary)] uppercase focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
+            value={districtFilter}
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            className="sk-select w-full md:w-44 px-3 py-1.5 cursor-pointer"
           >
-            <option value="">ALL STATUS</option>
-            <option value="open">OPEN</option>
-            <option value="assigned">ASSIGNED</option>
-            <option value="investigating">INVESTIGATING</option>
-            <option value="evidence collected">EVIDENCE</option>
-            <option value="charge sheet filed">CHARGE SHEET</option>
-            <option value="closed">CLOSED</option>
+            <option value="">{t.cc_all_districts}</option>
+            {districts.map((dist) => (
+              <option key={dist} value={dist}>{dist}</option>
+            ))}
           </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="flex-1 px-2 py-1.5 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded font-mono text-[9px] text-[var(--text-primary)] uppercase focus:border-[#1E6FD9]/60 focus:outline-none cursor-pointer"
+        ) : scopeDistrict ? (
+          <div
+            className="sk-select w-full md:w-44 px-3 py-1.5 !cursor-not-allowed opacity-90 select-none"
+            title="Your data scope is fixed to your operating area"
           >
-            <option value="">ALL PRIORITY</option>
-            <option value="low">LOW</option>
-            <option value="medium">MEDIUM</option>
-            <option value="high">HIGH</option>
-            <option value="critical">CRITICAL</option>
-          </select>
-        </div>
-
+            {scopeDistrict}
+          </div>
+        ) : null}
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+          className="sk-select w-full md:w-40 px-3 py-1.5 cursor-pointer"
+        >
+          <option value="">{t.cc_all_priorities}</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
         {(search || statusFilter || categoryFilter || districtFilter || priorityFilter) && (
           <button
             onClick={() => {
               setSearch('');
               setStatusFilter('');
               setCategoryFilter('');
-              setDistrictFilter('');
+              setDistrictFilter(canSelectDistrict ? '' : scopeDistrict || '');
               setPriorityFilter('');
             }}
-            className="w-full py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded font-mono text-[9px] text-[var(--text-muted)] hover:text-[#1E6FD9] hover:border-[#1E6FD9]/60 transition-colors uppercase cursor-pointer tracking-wider"
+            className="sk-btn sk-btn-secondary cursor-pointer uppercase"
           >
-            Clear Filters
+            {t.cc_reset}
           </button>
         )}
       </div>
 
-      {/* Main List View */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <div className="w-6 h-6 rounded-full border-2 border-[#1E6FD9] border-t-transparent animate-spin" />
+      {/* Main Grid View */}
+      {loading ? (
+        <div className="min-h-[40vh] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#1E6FD9] border-t-transparent animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="p-5 border border-[#C94A2A]/20 bg-[#C94A2A]/5 text-[#C94A2A] rounded-card text-xs flex items-center gap-3">
+          <ShieldAlert className="w-5 h-5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : cases.length === 0 ? (
+        <div className="p-8 border border-border-color bg-secondary-bg rounded-card text-center text-xs text-[var(--text-muted)]">
+          {t.cc_no_cases}
+        </div>
+      ) : (
+        <div className="border border-border-color rounded-card overflow-hidden bg-secondary-bg">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse font-mono text-xs text-left">
+              <thead>
+                <tr className="border-b border-border-color bg-[var(--bg-secondary)]/40 text-[var(--text-muted)] uppercase select-none">
+                  <th className="p-4">{t.cc_case_details}</th>
+                  <th className="p-4">{t.cc_occurred_at}</th>
+                  <th className="p-4">{t.cc_district}</th>
+                  <th className="p-4">{t.cc_category}</th>
+                  <th className="p-4 text-center">{t.cc_status}</th>
+                  <th className="p-4 text-center">{t.cc_priority}</th>
+                  <th className="p-4">{t.cc_progress}</th>
+                  <th className="p-4 text-right">{t.cc_actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-color/65">
+                {cases.map((c) => (
+                   <tr
+                    key={c.id}
+                    onClick={() => onSelectCase(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectCase(c.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    className="hover:bg-[var(--bg-surface-hover)] transition-colors group cursor-pointer"
+                  >
+                    <td className="p-4">
+                      <div className="font-bold text-[var(--text-primary)] group-hover:text-[var(--text-primary)] uppercase">
+                        {c.case_number}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-1 max-w-sm">
+                        {c.description || t.cc_no_description}
+                      </div>
+                    </td>
+                    <td className="p-4 text-[var(--text-secondary)]">
+                      {formatCaseDate(c.occurred_at)}
+                    </td>
+                    <td className="p-4 text-[var(--text-secondary)]">
+                      {c.location?.district || '—'}
+                    </td>
+                    <td className="p-4 text-[var(--text-secondary)]">
+                      {c.category?.name || '—'}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="sk-chip px-2 py-0.5" style={getStatusStyle(c.status)}>
+                        {STATUS_LABEL[c.status] || c.status.replace(/_/g, ' ')}
+                      </span>
+                      {needsAttention(c) && (
+                        <div className="mt-1 flex items-center justify-center gap-1 text-[9px] text-[var(--accent-coral-light)]">
+                          <span className="w-1 h-1 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+                          {daysSince(c.reported_at)} days open
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="sk-chip px-2 py-0.5" style={getPriorityStyle(c.priority)}>
+                        {PRIORITY_LABEL[c.priority] || c.priority}
+                      </span>
+                    </td>
+                    <td className="p-4 min-w-[150px]">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
+                            style={{ width: `${c.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-[var(--text-primary)] shrink-0">
+                          {c.progress}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-end gap-2.5">
+                        <button
+                          onClick={() => onSelectCase(c.id)}
+                          title={t.cc_view}
+                          className="p-1.5 hover:bg-[#1E6FD9]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#1E6FD9] transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        {canWrite && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onEditCase(c.id); }}
+                          title={t.cc_edit}
+                          className="p-1.5 hover:bg-[#0E9E78]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#0E9E78] transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        )}
+                        {canDelete && (
+<button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(c); }}
+                            title={t.cc_purge}
+                            className="p-1.5 hover:bg-[#C94A2A]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : error ? (
-          <div className="p-3 border border-[#C94A2A]/20 bg-[#C94A2A]/5 text-[#C94A2A] rounded-lg text-[10px] flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        ) : cases.length === 0 ? (
-          <div className="p-6 border border-dashed border-[var(--border-primary)] rounded-lg text-center text-[10px] font-mono text-[var(--text-muted)] uppercase">
-            No active investigations
-          </div>
-        ) : (
-          cases.map((c) => (
-            <div
-              key={c.id}
-              onClick={() => onSelectCase(c.id)}
-              className={`p-3 rounded-xl border transition-all cursor-pointer relative group flex flex-col gap-2 ${
-                selectedCaseId === c.id
-                  ? 'bg-[#1E6FD9]/10 border-[#1E6FD9]/50 shadow-[0_0_15px_rgba(30,111,217,0.1)]'
-                  : 'bg-[var(--bg-elevated)]/30 border-[var(--border-primary)] hover:border-[#1E6FD9]/30 hover:bg-[var(--bg-elevated)]/70'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className={`font-bold text-[11px] uppercase truncate transition-colors ${selectedCaseId === c.id ? 'text-[#1E6FD9]' : 'text-[var(--text-primary)] group-hover:text-[#1E6FD9]'}`}>
-                    {c.case_number}
-                  </div>
-                  <div className="text-[9px] text-[var(--text-secondary)] mt-0.5 line-clamp-1">
-                    {c.description || 'No description available'}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider ${getPriorityStyle(c.priority)}`}>
-                    {c.priority}
-                  </span>
-                  <span className="text-[8px] font-mono text-[var(--text-muted)]">
-                    {formatCaseDate(c.occurred_at).split(',')[0]}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 mt-1">
-                <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-semibold border ${getStatusStyle(c.status)}`}>
-                  {c.status}
-                </span>
-                
-                <div className="flex items-center gap-1.5 flex-1 max-w-[100px]">
-                  <div className="flex-1 h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
-                      style={{ width: `${c.progress}%` }}
-                    />
-                  </div>
-                  <span className="text-[8px] font-mono text-[var(--text-primary)] w-6 text-right">
-                    {c.progress}%
-                  </span>
-                </div>
-              </div>
-              
-              {canDelete && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(c);
-                  }}
-                  className="absolute top-2.5 right-2.5 p-1 rounded-md text-[var(--text-muted)] hover:text-[#C94A2A] hover:bg-[#C94A2A]/10 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Purge Case"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {pendingDelete && (

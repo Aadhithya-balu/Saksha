@@ -100,19 +100,20 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
 
     const c = pattern.change_from_baseline;
     const pct = c ? Math.round(c.change_percentage || 0) : 0;
+    const baselineLabel = c?.baseline_window_days ? `${c.baseline_window_days}-day` : 'historical';
     const rec = pattern.recommended_action_input;
 
     setRecTitle(rec?.title || `Review night patrol allocation — ${pattern.pattern_type}`);
     setRecActionType(rec?.action_type || 'patrol_surge');
     setRecArea(areaStr);
-    setRecTimePeriod(pattern.time_window ? `Next 14-30 days (based on ${pattern.time_window.replace(/_/g, ' ')})` : 'Next 14 days (Night shifts 22:00-04:00)');
+    setRecTimePeriod(pattern.time_window ? `Next 14-30 days (based on ${pattern.time_window.replace(/_/g, ' ')})` : 'Next 14 days');
     setRecReason(
       pattern.explanation ||
-        `Detected ${pattern.pattern_type} in ${district} with ${pct >= 0 ? '+' : ''}${pct}% deviation from the 90-day baseline average.`
+        `Detected ${pattern.pattern_type} in ${district} with ${pct >= 0 ? '+' : ''}${pct}% deviation from the ${baselineLabel} baseline average.`
     );
-    setRecAssumptions(
-      'Deployment assumes 2-3 sector patrol vehicles active during peak hours, uninterrupted officer availability, and consistent baseline FIR reporting.'
-    );
+    // No pre-filled assumptions — the officer must state their own, since we
+    // have no real resource-availability data to assert.
+    setRecAssumptions('');
 
     // Look up if an intervention is already created for this intelligence_id
     listInterventions({ intelligence_id: pattern.intelligence_id })
@@ -141,12 +142,25 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
 
   if (!isOpen || !pattern) return null;
 
-  // Dynamic simulation estimates based on sliders
-  const currentCoverage = 35; // Standard baseline patrol coverage %
-  const simulatedCoverage = Math.min(98, Math.round(currentCoverage + (simPatrolVehicles * 12) + (simPatrolFrequency * 3.5)));
-  const currentExposure = Math.round((pattern.risk_score || 0.8) * 100);
-  const simulatedExposure = Math.max(15, Math.round(currentExposure * (1 - (simulatedCoverage - currentCoverage) / 100)));
-  const estimatedPrevented = Math.max(1, Math.round(((pattern.forecast?.predicted_crime_count || 12) * (simulatedCoverage - currentCoverage)) / 100));
+  // Planning heuristic only. Every number below is either (a) a real field
+  // from the unified-intelligence result, or (b) an explicit function of the
+  // officer's own slider inputs — never a placeholder masquerading as data.
+  // No coverage telemetry or resource-availability feed exists, so the
+  // "current deployment" column is reported as not instrumented.
+  const hasRiskScore = Number.isFinite(pattern.risk_score);
+  const predictedCrimes = pattern.forecast?.predicted_crime_count ?? null;
+  const h3CellCount = pattern.affected_h3_cells?.length ?? 0;
+
+  const simulatedCoverage = Math.min(98, Math.round(simPatrolVehicles * 8 + simPatrolFrequency * 4));
+  const baselineExposure = hasRiskScore ? Math.round(pattern.risk_score * 100) : null;
+  const simulatedExposure =
+    baselineExposure === null
+      ? null
+      : Math.max(0, Math.round(baselineExposure * (1 - Math.min(0.85, simulatedCoverage / 100))));
+  const estimatedPrevented =
+    predictedCrimes === null || predictedCrimes <= 0
+      ? null
+      : Math.round(predictedCrimes * (simulatedCoverage / 100));
 
   // Current workflow stage
   const currentStage: InterventionWorkflowStage = existingIntervention?.workflow_stage || 'draft';
@@ -172,10 +186,11 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
       estimated_coverage: simulatedCoverage,
       assumptions: recAssumptions,
       simulation_data: JSON.stringify({
-        current_coverage: currentCoverage,
+        current_coverage: null,
         proposed_coverage: simulatedCoverage,
-        current_exposure: currentExposure,
+        current_exposure: baselineExposure,
         proposed_exposure: simulatedExposure,
+        predicted_crime_count: predictedCrimes,
         vehicles: simPatrolVehicles,
         frequency: simPatrolFrequency,
         label: 'Planning simulation — not a causal guarantee of crime reduction.',
@@ -618,28 +633,36 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
                   <div className="text-emerald-400">Proposed Intervention (Simulated)</div>
                 </div>
 
+                <div className="px-2.5 py-1.5 bg-[var(--bg-primary)]/40 border-b border-[var(--border-primary)]/50 text-[7px] font-mono text-[var(--text-muted)]">
+                  No patrol-coverage or resource telemetry is available, so the current column is reported as not instrumented. Proposed figures are transparent planning heuristics computed from your slider inputs.
+                </div>
+
                 <div className="divide-y divide-[var(--border-primary)]/50 bg-[var(--bg-secondary)]/40 text-[9px] font-mono">
                   {/* Row 1: Coverage */}
                   <div className="grid grid-cols-3 p-2.5 items-center">
                     <span className="text-[var(--text-primary)] font-semibold">Hotspot Area Coverage</span>
-                    <span className="text-amber-300">{currentCoverage}% baseline presence</span>
+                    <span className="text-[var(--text-muted)]">Not instrumented</span>
                     <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      {simulatedCoverage}% estimated coverage
-                      <span className="text-[7.5px] px-1 py-0.2 rounded bg-emerald-500/20">+{simulatedCoverage - currentCoverage}%</span>
+                      {simulatedCoverage}% heuristic estimate
+                      <span className="text-[7.5px] px-1 py-0.2 rounded bg-emerald-500/20">simulated</span>
                     </span>
                   </div>
 
                   {/* Row 2: Exposure Index */}
                   <div className="grid grid-cols-3 p-2.5 items-center">
                     <span className="text-[var(--text-primary)] font-semibold">Risk Exposure Index</span>
-                    <span className="text-rose-400 font-bold">{currentExposure}/100 (Elevated)</span>
-                    <span className="text-emerald-400 font-bold">{simulatedExposure}/100 (Suppressed)</span>
+                    <span className="text-rose-400 font-bold">
+                      {baselineExposure !== null ? `${baselineExposure}/100 (baseline risk score)` : 'No risk score available'}
+                    </span>
+                    <span className="text-emerald-400 font-bold">
+                      {simulatedExposure !== null ? `${simulatedExposure}/100 (heuristic estimate)` : 'Insufficient data'}
+                    </span>
                   </div>
 
                   {/* Row 3: Resource Requirements */}
                   <div className="grid grid-cols-3 p-2.5 items-center">
                     <span className="text-[var(--text-primary)] font-semibold">Resource Commitment</span>
-                    <span className="text-[var(--text-muted)]">1 standard patrol car</span>
+                    <span className="text-[var(--text-muted)]">Not recorded</span>
                     <span className="text-[var(--text-primary)] font-semibold">
                       {simPatrolVehicles} vehicles · {simPatrolVehicles * 2} officers ({simShiftDuration}h window)
                     </span>
@@ -650,16 +673,20 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
                     <span className="text-[var(--text-primary)] font-semibold">Simulated Suppression Aid</span>
                     <span className="text-[var(--text-muted)]">Baseline trend unchecked</span>
                     <span className="text-emerald-400 font-bold">
-                      ~{estimatedPrevented} potential incidents deterred
+                      {estimatedPrevented !== null
+                        ? `~${estimatedPrevented} potential incidents deterred`
+                        : 'Forecast unavailable'}
                     </span>
                   </div>
 
                   {/* Row 5: H3 Hex Coverage */}
                   <div className="grid grid-cols-3 p-2.5 items-center">
                     <span className="text-[var(--text-primary)] font-semibold">Geospatial Hex Spread</span>
-                    <span className="text-[var(--text-muted)]">1-2 cells monitored</span>
+                    <span className="text-[var(--text-muted)]">
+                      {h3CellCount > 0 ? `${h3CellCount} cells monitored` : 'No hex cells mapped'}
+                    </span>
                     <span className="text-emerald-400 font-bold">
-                      {pattern.affected_h3_cells?.length || 4} of {pattern.affected_h3_cells?.length || 4} cells enveloped
+                      {h3CellCount > 0 ? `${h3CellCount} of ${h3CellCount} cells enveloped` : 'No hex cells mapped'}
                     </span>
                   </div>
                 </div>
@@ -1037,7 +1064,9 @@ export const SentinelWorkflowModal: React.FC<SentinelWorkflowModalProps> = ({
                   <div className="p-2 rounded bg-[var(--bg-primary)]/50 border border-[var(--border-primary)]">
                     <span className="text-[7px] text-[var(--text-muted)] block uppercase">Baseline Period</span>
                     <strong className="text-[var(--text-primary)]">
-                      {pattern.change_from_baseline?.baseline_window_days || 90} days lookback
+                      {pattern.change_from_baseline?.baseline_window_days != null
+                        ? `${pattern.change_from_baseline.baseline_window_days} days lookback`
+                        : 'Not specified'}
                     </strong>
                   </div>
                   <div className="p-2 rounded bg-[var(--bg-primary)]/50 border border-[var(--border-primary)]">

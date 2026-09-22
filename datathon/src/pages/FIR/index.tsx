@@ -30,11 +30,12 @@ import {
   Activity,
   FolderOpen,
   UserCheck,
-  ArrowRight,
   Brain,
 } from "lucide-react";
 import { ExportMenu } from "../../components/reports";
 import { CardSkeleton } from "../../components/ui/Skeleton";
+import PageHeader from "../../components/ui/PageHeader";
+import { useUserScope } from "../../hooks/useUserScope";
 
 const DISTRICTS = [
   "Bengaluru Urban",
@@ -73,12 +74,14 @@ const DISTRICTS = [
 export const FIRPage: React.FC = () => {
   const t = useTranslation();
   const { user } = useAuthStore();
+  const { district: scopeDistrict, canSelectDistrict } = useUserScope();
   const { addLog } = useAuditStore();
 
   // Page States
   const [firs, setFirs] = useState<FIRRecord[]>([]);
   const [selectedFirId, setSelectedFirId] = useState<string | null>(null);
   const [selectedFir, setSelectedFir] = useState<FIRDetailRecord | null>(null);
+  const [detailRetry, setDetailRetry] = useState(0);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -86,19 +89,10 @@ export const FIRPage: React.FC = () => {
   const [showIntelligence, setShowIntelligence] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Search & Filters State
+  // Search & Filters State — district defaults to the operator's own district
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [districtFilter, setDistrictFilter] = useState("");
-
-  // Handle Cross-Linking from other tabs
-  useEffect(() => {
-    const redirectId = sessionStorage.getItem('selected_entity_id');
-    if (redirectId) {
-      sessionStorage.removeItem('selected_entity_id');
-      setSelectedFirId(redirectId);
-    }
-  }, []);
+  const [districtFilter, setDistrictFilter] = useState<string>(() => (canSelectDistrict ? "" : scopeDistrict || ""));
 
   // Fetch FIR List
   const loadFIRList = async () => {
@@ -125,8 +119,16 @@ export const FIRPage: React.FC = () => {
   };
 
   useEffect(() => {
+    const redirectId = sessionStorage.getItem('selected_entity_id');
+    if (redirectId && /^[0-9a-f-]{36}$/i.test(redirectId)) {
+      sessionStorage.removeItem('selected_entity_id');
+      setSelectedFirId(redirectId);
+    }
+  }, []);
+
+  useEffect(() => {
     void loadFIRList();
-  }, [searchQuery, statusFilter, districtFilter]);
+  }, [searchQuery, statusFilter, districtFilter, scopeDistrict, canSelectDistrict]);
 
   // Auto-open the enrolment form when reached from a dashboard Quick Action
   useEffect(() => {
@@ -144,7 +146,7 @@ export const FIRPage: React.FC = () => {
       const response = await listFIRs({
         search: searchQuery || undefined,
         status: statusFilter || undefined,
-        district: districtFilter || undefined,
+        district: canSelectDistrict ? districtFilter || undefined : scopeDistrict || undefined,
         page_size: 100,
       });
       setFirs(response.results || []);
@@ -182,7 +184,7 @@ export const FIRPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedFirId]);
+  }, [selectedFirId, detailRetry]);
 
   // Form Handlers
   const handleCreateNewClick = () => {
@@ -311,6 +313,16 @@ export const FIRPage: React.FC = () => {
     );
   };
 
+  const handleOpenLinkedCase = () => {
+    const caseId = selectedFir?.crime_case?.id;
+    if (!caseId) return;
+    window.dispatchEvent(
+      new CustomEvent('navigate-tab', {
+        detail: { tab: 'crime_cases', targetId: caseId },
+      }),
+    );
+  };
+
   const handleAttachmentAdded = (updatedAttachments: any[]) => {
     if (selectedFir) {
       setSelectedFir({
@@ -349,73 +361,119 @@ export const FIRPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-primary)]">
-      {/* LEFT PANE: FIR List */}
-      <div className="w-[320px] lg:w-[360px] shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col overflow-y-auto z-10">
-        
-        {/* Sticky Header & Search */}
-        <div className="sticky top-0 z-20 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] p-4 flex flex-col gap-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[12px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#1E6FD9]" />
-              FIR Directory
-            </h2>
-            {(user?.role === "ADMIN" || user?.role === "IO") && (
-              <button
-                onClick={handleCreateNewClick}
-                className="w-6 h-6 rounded bg-[#1E6FD9]/10 hover:bg-[#1E6FD9]/20 border border-[#1E6FD9]/30 text-[#1E6FD9] flex items-center justify-center transition-colors shadow-glow-blue"
-                title={t.fir_create_new}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          
-          <div className="flex items-center relative">
-            <input
-              type="text"
-              placeholder={t.fir_search_hint}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[var(--text-primary)] text-[11px] font-mono outline-none focus:border-[#1E6FD9]/50 transition-colors"
-            />
-            <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)]" />
-          </div>
-
-          <div className="flex gap-2 text-[10px]">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex-1 px-2 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md text-[var(--text-secondary)] font-mono outline-none focus:border-[#1E6FD9]/50 cursor-pointer"
-            >
-              <option value="">Status: All</option>
-              <option value="registered">Registered</option>
-              <option value="in_progress">In Inquiry</option>
-              <option value="closed">Resolved</option>
-            </select>
-            <select
-              value={districtFilter}
-              onChange={(e) => setDistrictFilter(e.target.value)}
-              className="flex-1 px-2 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md text-[var(--text-secondary)] font-mono outline-none focus:border-[#1E6FD9]/50 cursor-pointer"
-            >
-              <option value="">District: All</option>
-              {DISTRICTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
+    <div className="min-h-[84vh] flex flex-col gap-4 p-1 md:p-3 select-none">
+      {/* Top Header */}
+      <div className="pb-3 shrink-0 flex flex-col gap-2">
+        <PageHeader
+          title={t.fir_title}
+          subtitle={t.fir_subtitle}
+          icon={<FileText className="w-5 h-5" />}
+          actions={
+            <>
+              {scopeDistrict && (
+                <span
+                  className="sk-header-chip hidden sm:inline-flex"
+                  data-accent="cyan"
+                  title="Your operating area — set from your profile"
+                >
+                  <MapPin className="w-3 h-3" />
+                  {scopeDistrict}
+                </span>
+              )}
+              {(user?.role === "ADMIN" || user?.role === "IO") && !showForm && (
+                <button
+                  onClick={handleCreateNewClick}
+                  className="sk-btn cursor-pointer"
+                  style={{ background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' }}
+                >
+                  <Plus className="w-4 h-4" /> {t.fir_create_new}
+                </button>
+              )}
+            </>
+          }
+        />
         {error && (
-          <div className="mx-4 mt-4 p-2 bg-[#C94A2A]/10 border border-[#C94A2A]/30 rounded-md text-[9px] font-mono text-[#C94A2A] uppercase">
-            {error}
-          </div>
+          <p className="text-xs font-medium text-[var(--accent-coral-light)]">{error}</p>
         )}
+      </div>
 
-        {/* List scroll view */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      {/* Main split viewport layout */}
+      <div className="flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden min-h-0">
+        {/* Left Side: Filter search list panel */}
+        <div className="lg:col-span-4 bg-[var(--bg-tertiary)]/20 border border-border-color p-4 rounded-card flex flex-col justify-between overflow-hidden">
+          <div className="flex flex-col gap-3 overflow-hidden flex-1">
+            <span className="text-[10px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border-primary)] pb-2 shrink-0">
+              {t.fir_directory}
+            </span>
+
+            {/* Filters panel */}
+            <div className="space-y-2 shrink-0 text-[10px] font-mono">
+              {/* Search text input */}
+              <div className="flex items-center relative">
+                <input
+                  type="text"
+                  placeholder={t.fir_search_hint}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-secondary)]/70 border border-[var(--border-primary)] rounded text-[var(--text-primary)] outline-none focus:border-[#1E6FD9] text-[10.5px]"
+                />
+                <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+
+              {/* Filtering selects */}
+              <div className="grid grid-cols-2 gap-2 text-[9px]">
+                {/* Status selector */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+                >
+                  <option value="">{t.ui_filter_all}</option>
+                  <option value="registered">Registered</option>
+                  <option value="in_progress">In Inquiry</option>
+                  <option value="closed">Resolved</option>
+                </select>
+
+                {/* District selector — locked for district-scoped operators */}
+                {canSelectDistrict ? (
+                  <select
+                    value={districtFilter}
+                    onChange={(e) => setDistrictFilter(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+                  >
+                    <option value="">All Districts</option>
+                    {DISTRICTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                ) : scopeDistrict ? (
+                  <div
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] !cursor-not-allowed opacity-90 select-none"
+                    title="Your data scope is fixed to your operating area"
+                  >
+                    {scopeDistrict}
+                  </div>
+                ) : (
+                  <select
+                    value={districtFilter}
+                    onChange={(e) => setDistrictFilter(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] outline-none focus:border-[#1E6FD9] cursor-pointer"
+                  >
+                    <option value="">All Districts</option>
+                    {DISTRICTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* List scroll view */}
+            <div className="flex-grow overflow-y-auto pr-1 flex flex-col gap-2 custom-scrollbar">
               {isLoadingList ? (
                 <div className="flex flex-col gap-2">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -468,11 +526,12 @@ export const FIRPage: React.FC = () => {
                   No records matching filters
                 </div>
               )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* RIGHT PANE: Workspace Details */}
-      <div className="flex-1 relative overflow-y-auto bg-[var(--bg-primary)]">
+        {/* Right Side: detail view / form panels */}
+        <div className="lg:col-span-8 flex flex-col overflow-hidden relative">
           {showIntelligence && selectedFir ? (
             <div className="flex-grow overflow-y-auto custom-scrollbar">
               <IntelligenceWorkspace
@@ -496,9 +555,26 @@ export const FIRPage: React.FC = () => {
             <div className="flex-grow p-4">
               <CardSkeleton />
             </div>
+          ) : error ? (
+            /* Detail fetch failed while a FIR is selected — explicit error + retry */
+            <div className="flex-grow flex flex-col items-center justify-center p-12 border border-dashed border-[var(--border-primary)] rounded-lg text-center space-y-4">
+              <AlertTriangle className="w-8 h-8 text-[var(--accent-coral)] mx-auto" />
+              <div className="space-y-1 select-none">
+                <span className="text-xs uppercase tracking-wider text-[var(--text-primary)] font-bold font-mono">
+                  Failed to load FIR details
+                </span>
+                <p className="text-[9.5px] text-[var(--text-muted)] font-mono uppercase">{error}</p>
+              </div>
+              <button
+                onClick={() => setDetailRetry((n) => n + 1)}
+                className="sk-btn sk-btn-primary cursor-pointer"
+              >
+                Retry
+              </button>
+            </div>
           ) : selectedFir ? (
             /* Detailed View */
-            <div className="flex-grow flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1 gap-4">
+            <div className="flex-grow flex flex-col overflow-y-auto custom-scrollbar pr-1 gap-4">
               {/* Detail Header HUD */}
               <div className="p-4 bg-[var(--bg-tertiary)]/35 border border-border-color rounded-card shrink-0 flex flex-col gap-3 w-full">
                 <div className="min-w-0 w-full">
@@ -512,6 +588,15 @@ export const FIRPage: React.FC = () => {
                     SAKSHA CASE COMMAND DOSSIER INDEXID:{" "}
                     {selectedFir.id.slice(0, 8)}...
                   </p>
+                  {selectedFir.investigating_officer?.district && (
+                    <p className="text-[8.5px] font-mono text-[var(--text-secondary)] mt-1.5 uppercase break-words flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-[var(--accent-coral)] shrink-0" />
+                      JURISDICTION: {selectedFir.investigating_officer.district}
+                      {selectedFir.investigating_officer.station
+                        ? ` · ${selectedFir.investigating_officer.station}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions Toolbar */}
@@ -599,20 +684,25 @@ export const FIRPage: React.FC = () => {
                 <div className="md:col-span-4 space-y-4 flex flex-col">
                   {/* Case link card */}
                   {selectedFir.crime_case ? (
-                    <button
-                      onClick={() => {
-                        sessionStorage.setItem('selected_entity_id', selectedFir.crime_case!.id);
-                        window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'crime_cases', targetId: selectedFir.crime_case!.id } }));
+                    <div
+                      onClick={handleOpenLinkedCase}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleOpenLinkedCase();
+                        }
                       }}
-                      className="text-left w-full bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] hover:border-[#1E6FD9]/50 hover:bg-[#1E6FD9]/5 rounded-lg p-4 flex-1 transition-colors cursor-pointer group"
+                      className="bg-[var(--bg-tertiary)]/15 border border-[var(--border-primary)] rounded-lg p-4 flex-1 cursor-pointer transition-colors hover:bg-[var(--bg-tertiary)]/30 hover:border-[#1E6FD9]/40"
                     >
                       <span className="block text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-wider mb-2.5 flex items-center justify-between">
                         Incident Link
-                        <span className="px-1.5 py-0.5 bg-[#1E6FD9]/15 text-[#1E6FD9] border border-[#1E6FD9]/30 rounded text-[7.5px] font-bold group-hover:bg-[#1E6FD9]/30 transition-colors">
+                        <span className="px-1.5 py-0.5 bg-[#1E6FD9]/15 text-[#1E6FD9] border border-[#1E6FD9]/30 rounded text-[7.5px] font-bold">
                           LINKED
                         </span>
                       </span>
-                      <p className="text-[11px] font-bold text-[var(--text-primary)] uppercase truncate group-hover:text-[#1E6FD9] transition-colors">
+                      <p className="text-[11px] font-bold text-[var(--text-primary)] uppercase truncate">
                         {selectedFir.crime_case.case_number}
                       </p>
                       <p className="text-[9px] text-[var(--text-muted)] mt-1">
@@ -624,7 +714,7 @@ export const FIRPage: React.FC = () => {
                       <p className="text-[9.5px] text-[var(--text-secondary)] mt-2 line-clamp-3 leading-relaxed">
                         {selectedFir.crime_case.description}
                       </p>
-                    </button>
+                    </div>
                   ) : (
                     <div className="bg-[var(--bg-secondary)]/40 border border-dashed border-[var(--border-primary)] rounded-lg p-4 flex-1 flex flex-col items-center justify-center text-center">
                       <AlertTriangle className="w-5 h-5 text-amber-500/60 mb-2" />
@@ -652,7 +742,7 @@ export const FIRPage: React.FC = () => {
                           <p className="text-[8px] text-[var(--text-muted)] truncate">
                             {selectedFir.investigating_officer.rank ||
                               "Officer"}{" "}
-                            â€¢ {selectedFir.investigating_officer.station}
+                            • {selectedFir.investigating_officer.station}
                           </p>
                         </div>
                       </div>
@@ -716,7 +806,7 @@ export const FIRPage: React.FC = () => {
                           </p>
                           {v.gender && v.age && (
                             <span className="text-[var(--text-muted)] text-[8px] uppercase">
-                              {v.gender} â€¢ AGE: {v.age}
+                              {v.gender} • AGE: {v.age}
                             </span>
                           )}
                         </div>
@@ -734,75 +824,11 @@ export const FIRPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Dynamic widgets grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-                {/* AI Risk Meter */}
-                <FIRRiskScore
-                  score={selectedFir.ai_risk_score}
-                  reasons={selectedFir.ai_analysis_reasons}
-                />
-
-                {/* Hotspot prediction mini panel */}
-                <div className="bg-[var(--bg-tertiary)]/30 border border-border-color p-5 rounded-card flex flex-col justify-between overflow-hidden relative">
-                  <div className="flex items-center justify-between border-b border-[var(--border-primary)] pb-3 mb-4 font-mono">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-rose-500" />
-                      <span className="text-[10px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                        Linked Hotspot Metrics
-                      </span>
-                    </div>
-                    <span className="text-[8px] text-[var(--text-muted)] uppercase">
-                      GRID DECK.GL COORDS
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 font-mono text-xs items-center">
-                    {/* Location specs */}
-                    <div className="space-y-3">
-                      <div>
-                        <span className="text-[8px] text-[var(--text-muted)] uppercase block">
-                          District Precinct
-                        </span>
-                        <span className="text-[var(--text-primary)] font-bold block mt-0.5 uppercase tracking-wide">
-                          {selectedFir.investigating_officer?.district ||
-                            (selectedFir.crime_case ? `Location ID: ${selectedFir.crime_case.location_id.slice(0, 8)}` : "State HQ")}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[8px] text-[var(--text-muted)] uppercase block">
-                          Coordinates
-                        </span>
-                        <span className="text-[var(--text-primary)] block mt-0.5 text-[10px] select-all">
-                          {"12.9716"}
-                          ,{" "}
-                          {"77.5946"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Stats metrics */}
-                    <div className="p-3 bg-[var(--bg-secondary)]/50 border border-[var(--border-primary)] rounded space-y-2 text-center">
-                      <span className="text-[7.5px] text-[var(--text-muted)] uppercase tracking-widest block font-bold">
-                        {t.fir_risk_index}
-                      </span>
-                      <span className="text-xl font-extrabold text-red-400 block leading-none">
-                        82%
-                      </span>
-                      <span className="text-[8px] text-emerald-400 font-semibold block uppercase">
-                        TRENDING UPWARD
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="border border-[var(--border-primary)] p-2.5 rounded bg-[var(--bg-secondary)]/20 text-[9.5px] font-mono leading-relaxed text-[var(--text-secondary)] flex items-center justify-between gap-3 mt-3">
-                    <span>
-                      Target beat patrol recommendation generated. Dispatching
-                      auto-telemetry alerts.
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-[#1E6FD9] shrink-0" />
-                  </div>
-                </div>
-              </div>
+              {/* AI Risk Meter */}
+              <FIRRiskScore
+                score={selectedFir.ai_risk_score}
+                reasons={selectedFir.ai_analysis_reasons}
+              />
 
               {/* Uploads and timeline grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
@@ -832,6 +858,7 @@ export const FIRPage: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
   );
 };
 export default FIRPage;

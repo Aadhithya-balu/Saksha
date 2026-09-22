@@ -46,31 +46,35 @@ export const SentinelAlertCard: React.FC<SentinelAlertCardProps> = ({
   const h3Cells = pattern.affected_h3_cells || [];
 
   // 4. Time Window
-  const timeWindow = pattern.time_window || 'Last 30 days';
+  const timeWindow = pattern.time_window || 'Window not specified';
   const timeWindowText = timeWindow.replace(/_/g, ' ');
 
-  // 5. Risk Score (e.g. 87/100)
-  const riskNum = Math.min(100, Math.max(0, Math.round((pattern.risk_score || 0) * 100)));
-  const riskDisplay = `${riskNum}/100`;
-  const riskBadgeCls =
-    riskNum >= 75
-      ? 'border-[#C94A2A]/50 bg-[#C94A2A]/15 text-[#FF6B4A]'
-      : riskNum >= 45
-      ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
-      : 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400';
+  // 5. Risk Score (e.g. 87/100) — never invent a score when none is provided
+  const hasRisk = Number.isFinite(pattern.risk_score);
+  const riskNum = hasRisk ? Math.min(100, Math.max(0, Math.round(pattern.risk_score * 100))) : 0;
+  const riskDisplay = hasRisk ? `${riskNum}/100` : 'No data';
+  const riskBadgeCls = !hasRisk
+    ? 'border-[var(--border-primary)] bg-[var(--bg-primary)]/40 text-[var(--text-muted)]'
+    : riskNum >= 75
+    ? 'border-[#C94A2A]/50 bg-[#C94A2A]/15 text-[#FF6B4A]'
+    : riskNum >= 45
+    ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
+    : 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400';
 
   // 6. Confidence (e.g. 87%)
-  const confNum = Math.min(100, Math.max(0, Math.round((pattern.confidence || 0) * 100)));
-  const confidenceDisplay = `${confNum}%`;
+  const hasConfidence = Number.isFinite(pattern.confidence);
+  const confNum = hasConfidence ? Math.min(100, Math.max(0, Math.round(pattern.confidence * 100))) : 0;
+  const confidenceDisplay = hasConfidence ? `${confNum}%` : 'No data';
 
   // 7. Change from baseline (e.g. +34%)
   const baseline = pattern.change_from_baseline;
-  const pctChange = baseline ? Math.round(baseline.change_percentage || 0) : 0;
-  const changeDisplay = `${pctChange >= 0 ? '+' : ''}${pctChange}%`;
-  const changeIsPositive = pctChange >= 0;
+  const hasChange = Boolean(baseline) && Number.isFinite(baseline?.change_percentage);
+  const pctChange = hasChange ? Math.round(baseline!.change_percentage || 0) : 0;
+  const changeDisplay = hasChange ? `${pctChange >= 0 ? '+' : ''}${pctChange}%` : 'No data';
+  const changeIsPositive = hasChange && pctChange >= 0;
 
-  // 8. Forecast (e.g. Elevated — next 14 days)
-  let forecastDisplay = 'Stable — next 14 days';
+  // 8. Forecast — only shown from the real forecast payload
+  let forecastDisplay = 'No forecast available';
   if (pattern.forecast) {
     const trendWord =
       pattern.forecast.trend === 'increasing'
@@ -78,10 +82,10 @@ export const SentinelAlertCard: React.FC<SentinelAlertCardProps> = ({
         : pattern.forecast.trend === 'decreasing'
         ? 'Decreasing'
         : 'Steady';
-    const periodWord = 'next 14 days';
+    const periodWord = pattern.forecast.period
+      ? pattern.forecast.period.replace(/_/g, ' ')
+      : `${pattern.forecast.predicted_crime_count} incidents predicted`;
     forecastDisplay = `${trendWord} — ${periodWord}`;
-  } else if (riskNum >= 70) {
-    forecastDisplay = 'Elevated — next 14 days';
   }
 
   // 9. Pattern Type
@@ -89,8 +93,8 @@ export const SentinelAlertCard: React.FC<SentinelAlertCardProps> = ({
 
   // 10. Recommended Action
   const rec = pattern.recommended_action_input;
-  const recommendedActionTitle = rec?.title || 'Review night patrol allocation';
-  const recommendedActionDesc = rec?.description || 'Deploy targeted sector patrols to mitigate observed spike.';
+  const recommendedActionTitle = rec?.title || 'No recommendation generated';
+  const recommendedActionDesc = rec?.description || 'No automated recommendation is available for this pattern.';
 
   return (
     <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]/60 shadow-lg hover:border-[#C94A2A]/40 transition-all duration-200 overflow-hidden select-none">
@@ -203,7 +207,7 @@ export const SentinelAlertCard: React.FC<SentinelAlertCardProps> = ({
             </div>
           </div>
           <span className="text-[7px] font-mono uppercase px-2 py-0.5 rounded border border-[#1E6FD9]/30 text-[#93c5fd] bg-[#1E6FD9]/10 shrink-0">
-            {rec?.action_type || 'patrol_surge'}
+            {rec?.action_type || 'Unclassified'}
           </span>
         </div>
 

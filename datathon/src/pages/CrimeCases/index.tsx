@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import CrimeCasesList from './CrimeCasesList';
 import CrimeCaseDetails from './CrimeCaseDetails';
 import CreateCrimeCase from './CreateCrimeCase';
@@ -40,52 +40,38 @@ const CrimeCases: React.FC = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-primary)]">
-      {/* LEFT PANE: Case List */}
-      <div className="w-[320px] lg:w-[360px] shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col overflow-y-auto z-10">
+    <div className="w-full h-full min-h-[80vh] flex flex-col font-mono text-[var(--text-primary)]">
+      {view === 'list' && (
         <CrimeCasesList
           onSelectCase={handleSelectCase}
           onCreateCase={() => setView('create')}
           onEditCase={handleEditCase}
-          selectedCaseId={selectedCaseId}
         />
-      </div>
+      )}
 
-      {/* RIGHT PANE: Workspace Details */}
-      <div className="flex-1 relative overflow-y-auto bg-[var(--bg-primary)]">
-        {view === 'list' && (
-          <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)]">
-            <div className="w-16 h-16 rounded-full bg-[var(--bg-elevated)]/50 border border-[var(--border-primary)] flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-[#1E6FD9]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest">Select an Investigation</p>
-          </div>
-        )}
+      {view === 'create' && (
+        <CreateCrimeCase
+          intent={intent}
+          onCancel={() => setView('list')}
+          onSuccess={() => setView('list')}
+        />
+      )}
 
-        {view === 'create' && (
-          <CreateCrimeCase
-            intent={intent}
-            onCancel={() => setView('list')}
-            onSuccess={() => setView('list')}
-          />
-        )}
+      {view === 'details' && selectedCaseId && (
+        <CrimeCaseDetails
+          caseId={selectedCaseId}
+          onBack={() => setView('list')}
+          onEdit={() => setView('edit')}
+        />
+      )}
 
-        {view === 'details' && selectedCaseId && (
-          <CrimeCaseDetails
-            caseId={selectedCaseId}
-            onBack={() => setView('list')} // Keeping for prop compatibility if needed
-            onEdit={() => setView('edit')}
-          />
-        )}
-
-        {view === 'edit' && selectedCaseId && (
-          <EditCrimeCase
-            caseId={selectedCaseId}
-            onCancel={() => setView('details')}
-            onSuccess={() => setView('details')}
-          />
-        )}
-      </div>
+      {view === 'edit' && selectedCaseId && (
+        <EditCrimeCase
+          caseId={selectedCaseId}
+          onCancel={() => setView('list')}
+          onSuccess={() => setView('list')}
+        />
+      )}
     </div>
   );
 };

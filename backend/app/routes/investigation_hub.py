@@ -35,9 +35,10 @@ from app.auth.rbac import (
     require_roles,
 )
 from app.database.postgres import get_db
+from app.auth.scope import enforce_district_scope, is_multi_district
 from app.models.crime import CrimeCase
 from app.models.criminal import Criminal
-from app.models.fir import FIR
+from app.models.fir import FIR, FIRCriminalLink, FIRVictimLink
 from app.models.location import Location
 from app.models.officer import Officer
 from app.models.victim import Victim
@@ -442,13 +443,21 @@ def investigation_search(
     pattern = f"%{query}%"
     attempt_mo = current_user.role.name in _MO_ROLES if hasattr(current_user, "role") else True
 
+    effective_district = enforce_district_scope(current_user, None, db)
+    scoped = bool(effective_district and not is_multi_district(current_user))
+
     result = GroupedSearchResult(query=query)
     result.provenance = "LIVE"
 
     # ── Persons (criminals) ──
-    persons = db.query(Criminal).options(
-        selectinload(Criminal.fir_links)
-    ).filter(
+    persons = db.query(Criminal)
+    if scoped:
+        persons = persons.join(FIRCriminalLink, FIRCriminalLink.criminal_id == Criminal.id)
+        persons = persons.join(FIR, FIR.id == FIRCriminalLink.fir_id)
+        persons = persons.join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+        persons = persons.join(Location, Location.id == CrimeCase.location_id)
+        persons = persons.filter(Location.district == effective_district).distinct()
+    persons = persons.options(selectinload(Criminal.fir_links)).filter(
         or_(
             Criminal.full_name.ilike(pattern),
             Criminal.aliases.ilike(pattern),
@@ -468,7 +477,14 @@ def investigation_search(
         ))
 
     # ── Victims / witnesses ──
-    victims = db.query(Victim).filter(
+    victims = db.query(Victim)
+    if scoped:
+        victims = victims.join(FIRVictimLink, FIRVictimLink.victim_id == Victim.id)
+        victims = victims.join(FIR, FIR.id == FIRVictimLink.fir_id)
+        victims = victims.join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+        victims = victims.join(Location, Location.id == CrimeCase.location_id)
+        victims = victims.filter(Location.district == effective_district).distinct()
+    victims = victims.filter(
         or_(
             Victim.full_name.ilike(pattern),
             Victim.contact_number.ilike(pattern),
@@ -487,7 +503,11 @@ def investigation_search(
         ))
 
     # ── Cases (locations batch-loaded to avoid N+1) ──
-    cases = db.query(CrimeCase).filter(
+    cases = db.query(CrimeCase)
+    if scoped:
+        cases = cases.join(Location, Location.id == CrimeCase.location_id)
+        cases = cases.filter(Location.district == effective_district)
+    cases = cases.filter(
         or_(
             CrimeCase.case_number.ilike(pattern),
             CrimeCase.description.ilike(pattern),
@@ -518,7 +538,12 @@ def investigation_search(
         ))
 
     # ── FIRs ──
-    firs = db.query(FIR).filter(
+    firs = db.query(FIR)
+    if scoped:
+        firs = firs.join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+        firs = firs.join(Location, Location.id == CrimeCase.location_id)
+        firs = firs.filter(Location.district == effective_district)
+    firs = firs.filter(
         or_(
             FIR.fir_number.ilike(pattern),
             FIR.complainant_name.ilike(pattern),
@@ -537,7 +562,10 @@ def investigation_search(
         ))
 
     # ── Locations ──
-    locations = db.query(Location).filter(
+    locations = db.query(Location)
+    if scoped:
+        locations = locations.filter(Location.district == effective_district)
+    locations = locations.filter(
         or_(
             Location.station.ilike(pattern),
             Location.district.ilike(pattern),
@@ -561,7 +589,10 @@ def investigation_search(
 
     # ── Police stations (deduplicated district/station pairs incl. all) ──
     stations: dict[str, SearchItem] = {}
-    station_rows = db.query(Location).filter(Location.station.isnot(None)).limit(200).all()
+    station_rows = db.query(Location).filter(Location.station.isnot(None))
+    if scoped:
+        station_rows = station_rows.filter(Location.district == effective_district)
+    station_rows = station_rows.limit(200).all()
     for s in station_rows:
         key2 = f"{s.district}|{s.station}"
         if key2 in stations:
@@ -583,8 +614,34 @@ def investigation_search(
     if attempt_mo and query:
         try:
             mo = search_similar_mo(db, query, top_k=limit)
+
+            def _mo_doc_district(m):
+                kind = m.get("kind")
+                doc_id = m.get("doc_id") or ""
+                raw = doc_id.partition("-")[2] if "-" in doc_id else doc_id
+                try:
+                    uid = uuid.UUID(raw)
+                except (ValueError, TypeError, AttributeError):
+                    return None
+                if kind == "crime_case":
+                    case = db.query(CrimeCase).filter(CrimeCase.id == uid).first()
+                    return case.location.district if case and case.location else None
+                if kind == "fir":
+                    fir = db.query(FIR).filter(FIR.id == uid).first()
+                    return fir.crime_case.location.district if fir and fir.crime_case and fir.crime_case.location else None
+                if kind == "criminal":
+                    crim = db.query(Criminal).filter(Criminal.id == uid).first()
+                    if crim:
+                        for link in crim.fir_links or []:
+                            if link.fir and link.fir.crime_case and link.fir.crime_case.location:
+                                return link.fir.crime_case.location.district
+                    return None
+                return None
+
             for m in mo.get("results", []):
                 if m.get("kind") not in ("criminal", "crime_case", "fir"):
+                    continue
+                if scoped and _mo_doc_district(m) != effective_district:
                     continue
                 meta = m.get("meta") or {}
                 result.mo_matches.append(SearchItem(

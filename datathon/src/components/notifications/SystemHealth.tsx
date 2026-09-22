@@ -9,23 +9,37 @@ interface ServiceHealth {
   latency: string;
 }
 
-const BASE_SERVICES: ServiceHealth[] = [
-  { name: 'PostgreSQL Database', status: 'healthy', icon: <Database className="w-4 h-4" />, latency: '8ms' },
-  { name: 'Neo4j Graph Engine', status: 'healthy', icon: <Server className="w-4 h-4" />, latency: '12ms' },
-  { name: 'AI Predictive Inference', status: 'healthy', icon: <Activity className="w-4 h-4" />, latency: '24ms' },
-  { name: 'Realtime SSE Stream', status: 'standby', icon: <Radio className="w-4 h-4" />, latency: 'Standby' },
-  { name: 'Authentication & RBAC', status: 'healthy', icon: <Shield className="w-4 h-4" />, latency: '6ms' },
-];
+interface ReadinessResponse {
+  status?: string;
+  postgresql?: string;
+  data_source?: string;
+  neo4j?: string;
+}
+
+const mapBackendState = (value: string | undefined): ServiceHealth['status'] => {
+  switch (value) {
+    case 'up': return 'healthy';
+    case 'degraded': return 'degraded';
+    case 'down': return 'down';
+    case 'off':
+    case 'disabled': return 'standby';
+    default: return 'standby';
+  }
+};
+
+const BACKEND_ICON = <Activity className="w-4 h-4" />;
+const DB_ICON = <Database className="w-4 h-4" />;
+const GRAPH_ICON = <Server className="w-4 h-4" />;
+const SOURCE_ICON = <Database className="w-4 h-4" />;
 
 interface SystemHealthProps {
   compact?: boolean;
 }
 
 export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) => {
-  const [services, setServices] = useState<ServiceHealth[]>(BASE_SERVICES);
+  const [services, setServices] = useState<ServiceHealth[]>([]);
   const [loading, setLoading] = useState(false);
-  const [uptime] = useState(127.4);
-  const [lastUpdated, setLastUpdated] = useState(new Date().toISOString());
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const sseStatus = useRealtimeStore((state) => state.status);
 
   // The SSE stream is request-scoped: it is only open while a subscriber page
@@ -45,17 +59,23 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
     try {
       const res = await fetch('/health/ready');
       const elapsed = Math.round(performance.now() - start);
-      const isOk = res.ok;
-      
+      const body: ReadinessResponse = await res.json().catch(() => ({}));
+      const backendOk = res.ok && (body.status ? body.status === 'ok' : true);
+
+      // Only report components the readiness probe actually measures. No
+      // invented per-service latency or uptime numbers.
       setServices([
-        { name: 'PostgreSQL Database', status: isOk ? 'healthy' : 'degraded', icon: <Database className="w-4 h-4" />, latency: `${elapsed}ms` },
-        { name: 'Neo4j Graph Engine', status: isOk ? 'healthy' : 'degraded', icon: <Server className="w-4 h-4" />, latency: `${Math.round(elapsed * 1.2)}ms` },
-        { name: 'AI Predictive Inference', status: isOk ? 'healthy' : 'degraded', icon: <Activity className="w-4 h-4" />, latency: `${Math.max(15, elapsed * 2)}ms` },
+        { name: 'Backend API', status: backendOk ? 'healthy' : 'degraded', icon: BACKEND_ICON, latency: `${elapsed}ms` },
+        { name: 'PostgreSQL Database', status: mapBackendState(body.postgresql), icon: DB_ICON, latency: body.postgresql ?? 'unknown' },
+        { name: 'Neo4j Graph Engine', status: mapBackendState(body.neo4j), icon: GRAPH_ICON, latency: body.neo4j ?? 'unknown' },
+        { name: 'Data Source', status: 'standby', icon: SOURCE_ICON, latency: body.data_source ?? 'unknown' },
         sseService,
-        { name: 'Authentication & RBAC', status: isOk ? 'healthy' : 'degraded', icon: <Shield className="w-4 h-4" />, latency: `${Math.max(4, Math.round(elapsed * 0.8))}ms` },
       ]);
     } catch {
-      setServices(prev => prev.map(s => s.name === 'Realtime SSE Stream' ? { ...sseService } : { ...s, status: 'degraded', latency: 'Unreachable' }));
+      setServices([
+        { name: 'Backend API', status: 'down', icon: BACKEND_ICON, latency: 'Unreachable' },
+        sseService,
+      ]);
     } finally {
       setLoading(false);
       setLastUpdated(new Date().toISOString());
@@ -68,10 +88,12 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
     return () => clearInterval(interval);
   }, [sseStatus]);
 
-  const overallStatus = services.some(s => s.status === 'down') 
-    ? 'critical' 
-    : services.some(s => s.status === 'degraded') 
-    ? 'degraded' 
+  const overallStatus = services.length === 0
+    ? 'unknown'
+    : services.some(s => s.status === 'down')
+    ? 'critical'
+    : services.some(s => s.status === 'degraded')
+    ? 'degraded'
     : 'healthy';
 
   const getStatusColor = (status: string) => {
@@ -109,10 +131,11 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
           overallStatus === 'healthy' ? 'bg-[#0E9E78]' :
-          overallStatus === 'degraded' ? 'bg-[#D4820A]' : 'bg-[#C94A2A]'
-        } ${overallStatus === 'healthy' ? 'animate-pulse' : 'animate-ping'}`} />
+          overallStatus === 'degraded' ? 'bg-[#D4820A]' :
+          overallStatus === 'unknown' ? 'bg-[var(--text-muted)]' : 'bg-[#C94A2A]'
+        } ${overallStatus === 'healthy' ? 'animate-pulse' : overallStatus === 'unknown' ? '' : 'animate-ping'}`} />
         <span className="text-[8px] font-mono text-[var(--text-muted)]">
-          {overallStatus.toUpperCase()} • {uptime.toFixed(1)}h uptime
+          {overallStatus.toUpperCase()}
         </span>
       </div>
     );
@@ -134,7 +157,7 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-[7px] font-mono text-[var(--text-muted)]">
             <Clock className="w-2.5 h-2.5" />
-            {new Date(lastUpdated).toLocaleTimeString()}
+            {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Checking…'}
           </div>
           <button
             onClick={refreshHealth}
@@ -170,10 +193,10 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
         ))}
       </div>
 
-      {/* Uptime Footer */}
+      {/* Footer */}
       <div className="flex items-center justify-between text-[8px] font-mono text-[var(--text-muted)] border-t border-border-color pt-2">
-        <span>Uptime: {uptime.toFixed(1)} hours</span>
-        <span>All systems: {services.filter(s => s.status === 'healthy').length}/{services.length}</span>
+        <span>Probe: /health/ready</span>
+        <span>Healthy: {services.filter(s => s.status === 'healthy').length}/{services.length}</span>
       </div>
     </div>
   );

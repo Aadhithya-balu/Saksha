@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { getPendingAIMatches, verifyAIMatch, AIMatchRecord } from '../../services/api';
+import { useEffect, useState } from 'react';
+import { getPendingAIMatches, verifyAIMatch, type AIMatchRecord } from '../../services/api';
 
 export default function AIReview() {
   const [matches, setMatches] = useState<AIMatchRecord[]>([]);
