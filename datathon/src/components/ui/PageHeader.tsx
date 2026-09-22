@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTitle } from '../../hooks/useTitle';
 
 interface PageHeaderProps {
   title: string;
@@ -9,7 +8,6 @@ interface PageHeaderProps {
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions }) => {
-  useTitle(title);
   return (
   <div className="sk-page-head">
     <div className="flex items-center gap-3 min-w-0">

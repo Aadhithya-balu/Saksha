@@ -81,6 +81,7 @@ export const FIRPage: React.FC = () => {
   const [firs, setFirs] = useState<FIRRecord[]>([]);
   const [selectedFirId, setSelectedFirId] = useState<string | null>(null);
   const [selectedFir, setSelectedFir] = useState<FIRDetailRecord | null>(null);
+  const [detailRetry, setDetailRetry] = useState(0);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -183,7 +184,7 @@ export const FIRPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedFirId]);
+  }, [selectedFirId, detailRetry]);
 
   // Form Handlers
   const handleCreateNewClick = () => {
@@ -554,6 +555,23 @@ export const FIRPage: React.FC = () => {
             <div className="flex-grow p-4">
               <CardSkeleton />
             </div>
+          ) : error ? (
+            /* Detail fetch failed while a FIR is selected — explicit error + retry */
+            <div className="flex-grow flex flex-col items-center justify-center p-12 border border-dashed border-[var(--border-primary)] rounded-lg text-center space-y-4">
+              <AlertTriangle className="w-8 h-8 text-[var(--accent-coral)] mx-auto" />
+              <div className="space-y-1 select-none">
+                <span className="text-xs uppercase tracking-wider text-[var(--text-primary)] font-bold font-mono">
+                  Failed to load FIR details
+                </span>
+                <p className="text-[9.5px] text-[var(--text-muted)] font-mono uppercase">{error}</p>
+              </div>
+              <button
+                onClick={() => setDetailRetry((n) => n + 1)}
+                className="sk-btn sk-btn-primary cursor-pointer"
+              >
+                Retry
+              </button>
+            </div>
           ) : selectedFir ? (
             /* Detailed View */
             <div className="flex-grow flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1 gap-4">
@@ -570,6 +588,15 @@ export const FIRPage: React.FC = () => {
                     SAKSHA CASE COMMAND DOSSIER INDEXID:{" "}
                     {selectedFir.id.slice(0, 8)}...
                   </p>
+                  {selectedFir.investigating_officer?.district && (
+                    <p className="text-[8.5px] font-mono text-[var(--text-secondary)] mt-1.5 uppercase break-words flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-[var(--accent-coral)] shrink-0" />
+                      JURISDICTION: {selectedFir.investigating_officer.district}
+                      {selectedFir.investigating_officer.station
+                        ? ` · ${selectedFir.investigating_officer.station}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions Toolbar */}
