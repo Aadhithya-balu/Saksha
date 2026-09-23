@@ -56,8 +56,15 @@ def detect_anomalies(
         if payload.model_path:
             from pathlib import Path as _Path
             resolved = _Path(payload.model_path).resolve()
-            if not str(resolved).endswith(".json") or ".." in str(resolved):
-                raise ValueError("Invalid model path")
+            # Confine reads to this deployment's model store so a crafted path
+            # can never point at arbitrary JSON files elsewhere on disk.
+            models_root = _Path(__file__).resolve().parents[1] / "models"
+            try:
+                resolved.relative_to(models_root)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="model_path must point inside this deployment's model store")
+            if not str(resolved).endswith(".json"):
+                raise HTTPException(status_code=400, detail="model_path must reference a .json model file")
             model_path = str(resolved)
         alerts = run_anomaly_inference(payload.events, model_path=model_path)
         return AnomalyDetectResponse(alerts=alerts)

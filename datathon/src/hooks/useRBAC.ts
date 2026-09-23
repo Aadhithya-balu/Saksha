@@ -49,6 +49,8 @@ const FACE_OPS_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'FORENSI
 // policymaker (backend read set); only admin may write officers.
 const OFFICER_READ_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'];
 
+const REPORT_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'];
+
 export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   // ---- Read-only insight modules (all roles, VIEWER included) ----
   '/dashboard':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Analytics Dashboard' },
@@ -59,7 +61,7 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   '/anomalies':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Anomaly Detection Engine' },
   '/sociological':   { allowedRoles: INSIGHT_ROLES, moduleName: 'Sociological Intelligence' },
   '/strategic':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Strategic Intelligence' },
-  '/reports':        { allowedRoles: INSIGHT_ROLES, moduleName: 'Reports Center' },
+  '/reports':        { allowedRoles: REPORT_ROLES, moduleName: 'Reports Center' },
   '/offenders':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Offender Registry' },
   '/victims':        { allowedRoles: INSIGHT_ROLES, moduleName: 'Victim Registry' },
   '/notifications':  { allowedRoles: INSIGHT_ROLES, moduleName: 'Intelligence Center' },
@@ -82,6 +84,8 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   '/ingestion':   { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Universal Data Ingestion' },
   '/intelligence-graph': { allowedRoles: ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'], moduleName: 'Knowledge Graph Intelligence' },
   '/alerts-review': { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Alert Findings Review' },
+  '/ai/jobs':     { allowedRoles: INVESTIGATION_ROLES, moduleName: 'AI Processing Center' },
+  '/ai/review':   { allowedRoles: INVESTIGATION_ROLES, moduleName: 'AI Entity Resolution Review' },
 };
 
 // Every page path rendered by App.tsx MUST have an explicit rule above. The
@@ -93,7 +97,7 @@ const EXPLICIT_REQUIRED_PATHS = [
   '/anomalies', '/offenders', '/criminals', '/victims', '/reports', '/settings',
   '/admin', '/crime-cases', '/investigation', '/ai-chat', '/face-recognition',
   '/officers', '/evidence', '/notifications', '/sociological', '/strategic', '/docs',
-  '/ingestion', '/intelligence-graph', '/alerts-review',
+  '/ingestion', '/intelligence-graph', '/alerts-review', '/ai/jobs', '/ai/review',
 ];
 
 // Fail-fast: every page path rendered by App.tsx MUST have an explicit rule

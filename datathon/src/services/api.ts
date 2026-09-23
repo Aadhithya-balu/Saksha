@@ -1254,8 +1254,22 @@ export async function getOffenderDossiers() {
   return apiRequest<OffenderDossiersResponse>('/ai/offenders/dossiers');
 }
 
-export async function listReports(page = 1, pageSize = 100) {
-  return apiRequest<PaginatedResponse<ReportRecord>>(`/reports${buildQueryString({ page, page_size: pageSize })}`);
+export async function listReports(
+  page = 1,
+  pageSize = 100,
+  params?: {
+    status?: string;
+    report_type?: string;
+    case_id?: string;
+    district?: string;
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+) {
+  return apiRequest<PaginatedResponse<ReportRecord>>(
+    `/reports${buildQueryString({ page, page_size: pageSize, ...params })}`
+  );
 }
 
 // --- Issue #176: Production report lifecycle API ---
@@ -1333,6 +1347,12 @@ export async function getReportAudit(reportId: string, page = 1, pageSize = 20) 
 
 export async function downloadManagedReport(reportId: string, format: 'pdf' | 'csv' | 'docx' | 'txt' | 'xlsx') {
   return apiRequest<unknown>(`/reports/${reportId}/download?export_format=${format}`, { method: 'GET' });
+}
+
+export async function deleteReport(reportId: string) {
+  return apiRequest<{ success: boolean; message: string; id: string }>(`/reports/${reportId}`, {
+    method: 'DELETE',
+  });
 }
 
 // --- Crime Case Management Types & Routes ---
@@ -4253,8 +4273,8 @@ export async function retryAIJob(jobId: string): Promise<AIProcessingJob> {
   return apiRequest<AIProcessingJob>(`/ai/jobs/${jobId}/retry`, { method: 'POST' });
 }
 
-export async function getPendingAIMatches(): Promise<AIMatchRecord[]> {
-  return apiRequest<AIMatchRecord[]>('/ai/matches');
+export async function getPendingAIMatches(statusFilter: string = 'PENDING'): Promise<AIMatchRecord[]> {
+  return apiRequest<AIMatchRecord[]>(`/ai/matches${buildQueryString({ status_filter: statusFilter })}`);
 }
 
 export async function verifyAIMatch(matchId: string, decision: 'CONFIRM' | 'REJECT'): Promise<AIMatchRecord> {

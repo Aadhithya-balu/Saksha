@@ -23,6 +23,7 @@ from app.services.mo_matching_service import (
 )
 from app.services.mo_pattern_service import detect_recurring_mo_patterns, sync_mo_tags
 from app.services.mo_semantic_service import extract_case_entities, extract_entities, search_similar_mo
+from app.services.audit_service import log_action
 
 router = APIRouter(
     prefix="/ai/mo",
@@ -166,4 +167,16 @@ def sync_normalized_mo_tags(
 
     Idempotent — safe to call repeatedly; returns creation/skip counts.
     """
-    return sync_mo_tags(db)
+    result = sync_mo_tags(db)
+    log_action(
+        db, current_user, "SYNC", "MOTag",
+        resource_id="mo_tags",
+        details=(
+            f"Backfill normalized MO tags (tags_created={result.get('tags_created', 0)}, "
+            f"case_links_created={result.get('case_links_created', 0)}, "
+            f"criminal_links_created={result.get('criminal_links_created', 0)}, "
+            f"already_synced={result.get('already_synced', 0)})"
+        ),
+    )
+    db.commit()
+    return result

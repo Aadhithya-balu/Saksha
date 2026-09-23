@@ -232,6 +232,11 @@ def delete_history(
     if run is None:
         raise HTTPException(status_code=404, detail="History entry not found")
     db.delete(run)
+    log_action(
+        db, current_user, "DELETE", "IntelligenceReportRun",
+        resource_id=str(run_uuid),
+        details=f"Deleted intelligence history entry ({run.entity_type}:{run.entity_id})",
+    )
     db.commit()
     return {"deleted": True}
 
@@ -400,6 +405,12 @@ def fuse_intelligence(
     """Execute on-demand multi-signal intelligence fusion with optional custom threshold overrides."""
     from datetime import datetime, timezone
 
+    from app.auth.scope import enforce_district_scope
+
+    # Server-side district scoping: a district-bound user can never fuse across
+    # (or outside) their own district, regardless of the client-supplied value.
+    district = enforce_district_scope(current_user, body.district, db)
+
     thresholds = intelligence_engine.FusionThresholds()
     if body.thresholds:
         thresholds.min_anomaly_score = body.thresholds.min_anomaly_score
@@ -413,19 +424,19 @@ def fuse_intelligence(
 
     patterns = intelligence_engine.detect_emerging_patterns(
         db,
-        district=body.district,
+        district=district,
         category=body.category,
         custom_thresholds=thresholds,
     )
 
     # Persist a single history record summarising this fusion run
-    _record_fusion_run(db, current_user, patterns, body.district, body.category)
+    _record_fusion_run(db, current_user, patterns, district, body.category)
 
     log_action(
         db, current_user, "INTELLIGENCE_FUSION_RUN", "IntelligenceFusion",
-        resource_id=body.district or "all_districts",
+        resource_id=district or "all_districts",
         details=f"On-demand intelligence fusion produced {len(patterns)} pattern(s)",
-        metadata_json=f'{{"district":"{body.district}","category":"{body.category}","patterns":{len(patterns)}}}',
+        metadata_json=f'{{"district":"{district}","category":"{body.category}","patterns":{len(patterns)}}}',
     )
     db.commit()
 

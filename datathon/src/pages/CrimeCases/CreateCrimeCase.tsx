@@ -55,10 +55,8 @@ const CreateCrimeCase: React.FC<CreateCrimeCaseProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate placeholder case number
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
     const year = new Date().getFullYear();
-    setCaseNumber(`CR-${year}-BLR-${randomNum}`);
+    setCaseNumber(`CR-${year}-BLR-`);
 
     // Load category, location, and officer lists
     Promise.all([getCrimeCategories(), getLocationsList(), getUnassignedOfficers()])
@@ -155,7 +153,7 @@ const CreateCrimeCase: React.FC<CreateCrimeCaseProps> = ({
 
         const year = new Date().getFullYear();
         const station = locationId ? (locations.find(l => l.id === locationId)?.station || 'PS') : 'PS';
-        const firNumber = `FIR-${Math.floor(100 + Math.random() * 900)}/${station.replace(/[^A-Z0-9]/gi, '').slice(0, 10).toUpperCase()}/${year}`;
+        const firNumber = `FIR-NEW/${station.replace(/[^A-Z0-9]/gi, '').slice(0, 10).toUpperCase()}/${year}`;
 
         await createFIR({
           fir_number: firNumber,
@@ -182,7 +180,7 @@ const CreateCrimeCase: React.FC<CreateCrimeCaseProps> = ({
 
         const year = new Date().getFullYear();
         const station = locationId ? (locations.find(l => l.id === locationId)?.station || 'PS') : 'PS';
-        const firNumber = `FIR-${Math.floor(100 + Math.random() * 900)}/${station.replace(/[^A-Z0-9]/gi, '').slice(0, 10).toUpperCase()}/${year}`;
+        const firNumber = `FIR-NEW/${station.replace(/[^A-Z0-9]/gi, '').slice(0, 10).toUpperCase()}/${year}`;
         let complainantNameValue = complainantName.trim();
         if (!complainantNameValue && !foundByPolice) {
           complainantNameValue = victimName.trim();

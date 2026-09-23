@@ -111,13 +111,25 @@ def list_sample_images(db: Session) -> list[dict]:
     return out
 
 
+_DEMO_IDS = frozenset(spec.demo_id for spec in synthetic.IDENTITIES)
+
+
 def resolve_image_bytes(ref: str) -> bytes | None:
-    """Resolve a logical ref like ``DEMO-001/frontal`` to raw bytes (internal use)."""
+    """Resolve a logical ref like ``DEMO-001/frontal`` to raw bytes (internal use).
+
+    Confined to the bundled DEMO dataset: ``person`` must be one of the known
+    demo identities and ``var`` is reduced to its file name, so a crafted ref
+    (``..``, arbitrary dirs, etc.) can never read outside the demo image root.
+    """
     root = _root()
     if "/" not in ref:
         return None
     person, var = ref.split("/", 1)
+    if person not in _DEMO_IDS:
+        return None
     var = var.replace("\\", "/").split("/")[-1]
+    if not var:
+        return None
     path = os.path.join(root, person, f"{var}.png")
     if not os.path.isfile(path):
         return None

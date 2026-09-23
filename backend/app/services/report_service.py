@@ -25,6 +25,8 @@ from app.models.crime import CrimeCase
 from app.models.criminal import Criminal
 from app.models.evidence import Evidence
 from app.models.fir import FIR
+from app.models.intervention import Intervention
+from app.models.location import Location
 from app.models.officer import Officer
 from app.models.audit_log import AuditLog
 from app.models.report import (
@@ -80,6 +82,11 @@ REPORT_TYPE_CRIMINALS = "criminals"
 REPORT_TYPE_EVIDENCE = "evidence"
 REPORT_TYPE_DOSSIER = "dossier"
 REPORT_TYPE_INVESTIGATION = "investigation"
+REPORT_TYPE_HOTSPOTS = "hotspots"
+REPORT_TYPE_INTERVENTIONS = "interventions"
+REPORT_TYPE_NETWORK = "network"
+REPORT_TYPE_VICTIMOLOGY = "victimology"
+REPORT_TYPE_STRATEGIC = "strategic"
 REPORT_TYPES = {
     REPORT_TYPE_CASES,
     REPORT_TYPE_OFFICERS,
@@ -87,6 +94,11 @@ REPORT_TYPES = {
     REPORT_TYPE_EVIDENCE,
     REPORT_TYPE_DOSSIER,
     REPORT_TYPE_INVESTIGATION,
+    REPORT_TYPE_HOTSPOTS,
+    REPORT_TYPE_INTERVENTIONS,
+    REPORT_TYPE_NETWORK,
+    REPORT_TYPE_VICTIMOLOGY,
+    REPORT_TYPE_STRATEGIC,
 }
 
 
@@ -753,9 +765,15 @@ def legacy_report_provenance(db: Session, report_type: str, rows: list[dict], re
         REPORT_TYPE_CRIMINALS: Criminal,
         REPORT_TYPE_OFFICERS: Officer,
         REPORT_TYPE_EVIDENCE: Evidence,
+        REPORT_TYPE_HOTSPOTS: Location,
+        REPORT_TYPE_INTERVENTIONS: Intervention,
+        REPORT_TYPE_NETWORK: Criminal,
+        REPORT_TYPE_VICTIMOLOGY: Victim,
+        REPORT_TYPE_STRATEGIC: CrimeCase,
+        REPORT_TYPE_DOSSIER: CrimeCase,
     }
     model = model_map.get(report_type)
-    if model is not None:
+    if model is not None and hasattr(model, "dataset_provenance"):
         for prov, in db.query(model.dataset_provenance).distinct().all():
             if prov:
                 values.add(prov)

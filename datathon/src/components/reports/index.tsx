@@ -1,7 +1,17 @@
 import React from 'react';
 import { Download, FileText, RefreshCw, Search } from 'lucide-react';
 
-export type ReportType = 'cases' | 'officers' | 'criminals' | 'evidence';
+export type ReportType =
+  | 'cases'
+  | 'hotspots'
+  | 'interventions'
+  | 'network'
+  | 'victimology'
+  | 'strategic'
+  | 'dossier'
+  | 'officers'
+  | 'evidence'
+  | 'criminals';
 
 export interface ReportFiltersValue {
   reportType: ReportType;
@@ -23,10 +33,16 @@ export interface ReportPreviewData {
 }
 
 const reportLabels: Record<ReportType, string> = {
-  cases: 'Case Report',
-  officers: 'Officer Report',
-  criminals: 'Criminal Report',
-  evidence: 'Evidence Report',
+  cases: 'Case Incident Report',
+  hotspots: 'District Hotspot Brief',
+  interventions: 'Operational Interventions',
+  network: 'Syndicate Network Intelligence',
+  victimology: 'Victimology Report',
+  strategic: 'Strategic Command Brief',
+  dossier: 'Target Intelligence Dossier',
+  officers: 'Officer Registry Report',
+  criminals: 'Offender Registry Report',
+  evidence: 'Forensic Evidence Report',
 };
 
 export const StatisticsCards: React.FC<{ stats: Record<string, number> }> = ({ stats }) => (
@@ -138,3 +154,9 @@ export const ReportPreview: React.FC<{ data: ReportPreviewData | null }> = ({ da
     <p className="mt-1 text-[10px] text-[var(--text-muted)]">Generated from authenticated backend APIs with the current filter set.</p>
   </div>
 );
+
+export * from './ReportTemplateGallery';
+export * from './ReportBuilder';
+export * from './ReportDocumentPreview';
+export * from './ReportHistoryPanel';
+export * from './ManagedReportLifecycle';

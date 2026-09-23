@@ -1,0 +1,1 @@
+template,report_type,title,requested_by_id,district,date_from,date_to,format,status,file_url,version,case_id,provenance,integrity_hash,generation_method,analysis_fingerprint,failure_reason,source_record_count,evidence_count,generated_at,reviewed_at,finalized_at,archived_at,reviewed_by_id,finalized_by_id,content_snapshot,ai_reported,ai_metadata,id,created_at,updated_at

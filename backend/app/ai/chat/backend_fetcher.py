@@ -861,12 +861,22 @@ class BackendFetcher:
     def _ml_hotspot_predict(self, params: dict) -> BackendResult:
         from app.ai.inference.hotspot import predict as hotspot_predict
         from datetime import datetime
+        lat = params.get("lat")
+        lon = params.get("lon")
+        if lat is None or lon is None:
+            # Honest unavailable: never fabricate coordinates for a prediction.
+            return BackendResult(
+                source="ml",
+                data_type="hotspot",
+                content="Hotspot prediction needs real coordinates from a FIR/crime record — no fabricated estimate is produced.",
+                raw_data=None,
+            )
         try:
             result = hotspot_predict([{
                 "CaseMasterID": f"CHAT-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 "IncidentFromDate": datetime.now().isoformat(),
-                "latitude": params.get("lat", 12.97),
-                "longitude": params.get("lon", 77.59),
+                "latitude": lat,
+                "longitude": lon,
                 "PoliceStationID": params.get("station", "PS001"),
                 "GravityOffenceID": params.get("gravity", "G001"),
                 "CrimeMajorHeadID": params.get("category", "Theft"),

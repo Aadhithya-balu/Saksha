@@ -1,0 +1,8 @@
+name,description,id,created_at,updated_at
+forensic,forensic role,4d99961e-651d-4271-a5fc-ce8723cbbbe0,2026-08-29 12:45:07,2026-08-29 12:45:07
+viewer,viewer role,58186c53-eff2-4d0d-a9e6-d5b1e4ec5490,2026-08-29 12:45:07,2026-08-29 12:45:07
+inspector,inspector role,764d50c6-cfa8-4e56-bd0e-22e2df9275f3,2026-08-29 12:45:07,2026-08-29 12:45:07
+investigator,investigator role,9595abe0-85f8-405d-a6f0-d04db175d810,2026-08-29 12:45:07,2026-08-29 12:45:07
+policymaker,policymaker role,a15565b9-0cc8-441b-8bfa-363775c12ecb,2026-08-29 12:45:07,2026-08-29 12:45:07
+admin,admin role,a27b0392-e833-4529-9166-feba3ff4f93e,2026-08-29 12:45:07,2026-08-29 12:45:07
+crime_analyst,crime_analyst role,da79cab3-3725-414a-926d-6e94a7f42180,2026-08-29 12:45:07,2026-08-29 12:45:07

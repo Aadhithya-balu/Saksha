@@ -1,0 +1,1 @@
+job_id,row_number,source_row_ref,raw_data,mapped_data,validation_status,validation_errors,validation_warnings,duplicate_status,duplicate_of,reconciliation_status,reconciliation_details,trust_level,promoted,promoted_record_id,promoted_at,id
