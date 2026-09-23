@@ -87,6 +87,12 @@ export interface BackendUser {
   full_name: string;
   district: string | null;
   station: string | null;
+  organization_id?: string | null;
+  organization_name?: string | null;
+  authority_type?: string | null;
+  designation?: string | null;
+  jurisdiction?: string | null;
+  scope_level?: string | null;
   is_active: boolean;
   role: string;
   created_at: string;
@@ -612,6 +618,12 @@ export const mapBackendRoleToUiRole = (role: string): UserRole => {
       return 'SP';
     case 'forensic':
       return 'FORENSIC';
+    case 'court_admin':
+      return 'COURT_ADMIN';
+    case 'judicial_authority':
+      return 'JUDICIAL_AUTHORITY';
+    case 'court_analyst':
+      return 'COURT_ANALYST';
     case 'viewer':
       return 'VIEWER';
     default:
@@ -4458,4 +4470,245 @@ export async function regenerateAlertFindings(): Promise<{
   return apiRequest<{ generated: number; empty: boolean; total_open: number }>('/alerts/findings/generate', {
     method: 'POST',
   });
+}
+
+// ============================================================================
+// Multi-Authority & Organization Management (Issue #286)
+// ============================================================================
+
+export interface OrganizationRecord {
+  id: string;
+  name: string;
+  code: string;
+  authority_type: string;
+  jurisdiction: string | null;
+  parent_organization_id: string | null;
+  status: string;
+  org_metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface CaseAccessRecord {
+  id: string;
+  case_id: string;
+  case_number: string | null;
+  organization_id: string;
+  organization_name: string | null;
+  authority_type: string | null;
+  access_level: string;
+  scope: string;
+  status: string;
+  granted_by: string | null;
+  granted_at: string | null;
+  expires_at: string | null;
+  notes: string | null;
+}
+
+export async function getOrganizations(params?: {
+  status?: string;
+  authority_type?: string;
+}): Promise<{ results: OrganizationRecord[] }> {
+  return apiRequest<{ results: OrganizationRecord[] }>(
+    `/admin/organizations${buildQueryString(params)}`,
+  );
+}
+
+export async function createOrganization(payload: {
+  name: string;
+  code: string;
+  authority_type: string;
+  jurisdiction?: string | null;
+  parent_organization_id?: string | null;
+  org_metadata?: Record<string, unknown> | null;
+}): Promise<OrganizationRecord> {
+  return apiRequest<OrganizationRecord>('/admin/organizations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateOrganization(
+  orgId: string,
+  payload: Partial<OrganizationRecord>,
+): Promise<OrganizationRecord> {
+  return apiRequest<OrganizationRecord>(`/admin/organizations/${orgId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteOrganization(orgId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/admin/organizations/${orgId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getAuthorities(): Promise<string[]> {
+  const res = await apiRequest<string[] | { results: Array<{ type: string }> | string[] }>(
+    '/admin/authority-types',
+  );
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray((res as any).results)) {
+    return (res as any).results.map((item: any) => (typeof item === 'string' ? item : item.type));
+  }
+  return [];
+}
+
+export async function getCapabilities(): Promise<string[]> {
+  const res = await apiRequest<string[] | { results: string[] }>('/admin/capabilities');
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray((res as any).results)) return (res as any).results;
+  return [];
+}
+
+export async function getCaseAccesses(caseId?: string): Promise<{ results: CaseAccessRecord[] }> {
+  const path = caseId ? `/admin/cases/${caseId}/access` : '/admin/case-access';
+  return apiRequest<{ results: CaseAccessRecord[] }>(path);
+}
+
+export async function grantCaseAccess(
+  caseId: string,
+  payload: {
+    organization_id: string;
+    access_level?: string;
+    scope?: string;
+    expires_at?: string | null;
+    notes?: string | null;
+  },
+): Promise<CaseAccessRecord> {
+  return apiRequest<CaseAccessRecord>(`/admin/cases/${caseId}/access`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function revokeCaseAccess(
+  caseId: string,
+  accessId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/admin/cases/${caseId}/access/${accessId}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================================================
+// Data Staging & Quality Lifecycle (Task D-01)
+// ============================================================================
+
+export interface ImportJobQualityReport {
+  job_id: string;
+  quality_grade: string;
+  recomputed_grade: string;
+  problem_ratio: number | null;
+  grade_thresholds: Record<string, number>;
+  metrics: Record<string, number>;
+  trust_summary: {
+    promotable_now: number;
+    requires_review: number;
+    rejected_or_duplicated: number;
+    promoted: number;
+  };
+}
+
+export interface StagedRecordItem {
+  id: string;
+  job_id: string;
+  row_number: number;
+  raw_payload: Record<string, unknown>;
+  normalized_payload: Record<string, unknown>;
+  validation_status: 'valid' | 'invalid' | 'warning';
+  validation_errors: Array<Record<string, unknown>> | null;
+  duplicate_status: 'exact_duplicate' | 'potential_duplicate' | 'unique';
+  reconciliation_status: string;
+  trust_level: string;
+  promoted: boolean;
+  promoted_at: string | null;
+}
+
+export async function getImportJobQuality(jobId: string): Promise<ImportJobQualityReport> {
+  return apiRequest<ImportJobQualityReport>(`/data-import/jobs/${jobId}/quality`);
+}
+
+export async function getImportJobRecords(
+  jobId: string,
+  params?: {
+    validation_status?: string;
+    reconciliation_status?: string;
+    duplicate_status?: string;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<{ total: number; limit: number; offset: number; results: StagedRecordItem[] }> {
+  return apiRequest<{ total: number; limit: number; offset: number; results: StagedRecordItem[] }>(
+    `/data-import/jobs/${jobId}/records${buildQueryString(params)}`,
+  );
+}
+
+export async function promoteImportJob(
+  jobId: string,
+  includeReview = false,
+): Promise<{ job_id: string; promoted_rows: number; skipped_rows: number }> {
+  const form = new FormData();
+  form.append('include_review', String(includeReview));
+  return apiRequest<{ job_id: string; promoted_rows: number; skipped_rows: number }>(
+    `/data-import/jobs/${jobId}/promote`,
+    {
+      method: 'POST',
+      body: form,
+    },
+  );
+}
+
+export async function rollbackImportJob(
+  jobId: string,
+): Promise<{ job_id: string; removed_records: number; status: string }> {
+  return apiRequest<{ job_id: string; removed_records: number; status: string }>(
+    `/data-import/jobs/${jobId}/rollback`,
+    { method: 'POST' },
+  );
+}
+
+export async function getRecordLineage(
+  entityType: string,
+  recordId: string,
+): Promise<{
+  entity_type: string;
+  record_id: string;
+  provenance: string;
+  source_file: string | null;
+  source_row: number | null;
+  import_job_id: string | null;
+}> {
+  return apiRequest<{
+    entity_type: string;
+    record_id: string;
+    provenance: string;
+    source_file: string | null;
+    source_row: number | null;
+    import_job_id: string | null;
+  }>(`/data-import/lineage/${entityType}/${recordId}`);
+}
+
+// ============================================================================
+// Dashboard Forecast (Task DSH-01)
+// ============================================================================
+
+export interface ForecastSeriesPoint {
+  day: string;
+  value: number;
+  type: 'historical' | 'today' | 'predicted';
+  color: number;
+  hexColor: string;
+}
+
+export interface ForecastResponse {
+  next_day_forecast: number;
+  next_week_forecast: number;
+  expected_change_percent: number;
+  trend_direction: 'up' | 'down' | 'stable';
+  series: ForecastSeriesPoint[];
+}
+
+export async function getDashboardForecast(district?: string | null): Promise<ForecastResponse> {
+  return apiRequest<ForecastResponse>(`/dashboard/forecast${buildQueryString({ district })}`);
 }

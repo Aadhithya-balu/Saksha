@@ -101,13 +101,39 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
   // Filter selection state — district defaults to the operator's own district
   // (from /auth/me) so district-scoped users always work inside their area.
   // Multi-district operators start on the statewide view ('' = all).
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => (canSelectDistrict ? '' : scopeDistrict || ''));
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedOfficer, setSelectedOfficer] = useState<string>('');
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => {
+    const saved = sessionStorage.getItem('saksha_filter_district');
+    if (saved !== null) return saved;
+    return canSelectDistrict ? '' : scopeDistrict || '';
+  });
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_category') || '',
+  );
+  const [selectedOfficer, setSelectedOfficer] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_officer') || '',
+  );
+  const [selectedPriority, setSelectedPriority] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_priority') || '',
+  );
+  const [selectedStatus, setSelectedStatus] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_status') || '',
+  );
+  const [startDate, setStartDate] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_start_date') || '',
+  );
+  const [endDate, setEndDate] = useState<string>(
+    () => sessionStorage.getItem('saksha_filter_end_date') || '',
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem('saksha_filter_district', selectedDistrict);
+    sessionStorage.setItem('saksha_filter_category', selectedCategory);
+    sessionStorage.setItem('saksha_filter_officer', selectedOfficer);
+    sessionStorage.setItem('saksha_filter_priority', selectedPriority);
+    sessionStorage.setItem('saksha_filter_status', selectedStatus);
+    sessionStorage.setItem('saksha_filter_start_date', startDate);
+    sessionStorage.setItem('saksha_filter_end_date', endDate);
+  }, [selectedDistrict, selectedCategory, selectedOfficer, selectedPriority, selectedStatus, startDate, endDate]);
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -591,6 +617,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     authority: 'Watch the district picture, force readiness, and where incidents and risk are climbing.',
     forensic: 'Track exhibits through the chain of custody and clear the verification queue.',
     admin: 'Keep the platform healthy — users, roles, audit trail, and system readiness.',
+    court: 'Inspect authorized cases, audit evidence custody chains, and review judicial reports with strict neutrality.',
     viewer: 'Read-only picture of incidents, risk, and operational posture.',
   };
 
@@ -601,6 +628,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     authority: ['active', 'total', 'hotspots', 'solved', 'highrisk'],
     admin: ['platform_users', 'roles', 'audit_events', 'firs'],
     forensic: ['active', 'hotspots', 'highrisk'],
+    court: ['active', 'total', 'firs', 'solved'],
     viewer: ['total', 'active', 'hotspots'],
     default: ['total', 'solved', 'active', 'hotspots', 'highrisk', 'firs', 'hotrisk'],
   };
@@ -1012,7 +1040,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           </div>
 
           <div className="flex-1 min-h-[220px]">
-            <ForecastChart />
+            <ForecastChart data={forecastData} />
           </div>
         </div>
       </div>

@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 from PIL import Image
 from PyPDF2 import PdfReader
-from pymediainfo import MediaInfo
+try:
+    from pymediainfo import MediaInfo
+except ImportError:
+    MediaInfo = None
 
 from app.models.evidence import Evidence
 from app.models.evidence_metadata import EvidenceMetadata
@@ -177,6 +180,16 @@ def extract_metadata(file_path: str, mime_type: str) -> dict[str, Any]:
                     "subject": reader.metadata.subject,
                     "title": reader.metadata.title
                 })
+            try:
+                extracted_texts = []
+                for page in reader.pages[:20]:
+                    page_text = page.extract_text()
+                    if page_text:
+                        extracted_texts.append(page_text.strip())
+                if extracted_texts:
+                    metadata["text_content"] = "\n\n".join(extracted_texts)[:50000]
+            except Exception:
+                pass
     except Exception as e:
         metadata["extraction_error"] = str(e)
     

@@ -28,6 +28,10 @@ class UserBase(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     district: str | None = Field(default=None, max_length=100)
     station: str | None = Field(default=None, max_length=100)
+    organization_id: uuid.UUID | None = None
+    designation: str | None = Field(default=None, max_length=100)
+    jurisdiction: str | None = Field(default=None, max_length=100)
+    scope_level: str | None = Field(default="DISTRICT", max_length=30)
 
 
 class UserCreate(UserBase):
@@ -44,6 +48,10 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     district: str | None = None
     station: str | None = None
+    organization_id: uuid.UUID | None = None
+    designation: str | None = None
+    jurisdiction: str | None = None
+    scope_level: str | None = None
     is_active: bool | None = None
 
 
@@ -53,4 +61,6 @@ class UserOut(UserBase):
     id: uuid.UUID
     is_active: bool
     role: str
+    organization_name: str | None = None
+    authority_type: str | None = None
     created_at: datetime

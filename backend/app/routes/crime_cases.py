@@ -32,7 +32,7 @@ from app.services.case_status import (
 )
 from app.services.crime_service import apply_status_transition, crime_crud
 from app.services.realtime.bus import realtime_bus
-from app.services.ttl_cache import ttl_cached
+from app.services.ttl_cache import invalidate_ttl_cache_prefix, ttl_cached
 
 router = APIRouter(prefix="/crime-cases", tags=["Crime Case Management"], dependencies=[Depends(require_roles(*ALL_ROLES))])
 
@@ -158,6 +158,21 @@ def list_cases(
             )
         else:
             query = query.filter(Location.district == effective_district)
+
+    from app.auth.scope import is_court_user
+    if is_court_user(current_user) and not is_multi_district(current_user):
+        org_id = getattr(current_user, "organization_id", None)
+        if org_id:
+            from app.models.case_access import CaseAccess
+            allowed_case_ids = (
+                db.query(CaseAccess.case_id)
+                .filter(CaseAccess.organization_id == org_id, CaseAccess.status == "active")
+                .subquery()
+            )
+            query = query.filter(CrimeCase.id.in_(allowed_case_ids))
+        else:
+            from sqlalchemy import false
+            query = query.filter(false())
     if q:
         query = query.filter(
             (CrimeCase.case_number.ilike(f"%{q}%")) | (CrimeCase.description.ilike(f"%{q}%"))
@@ -377,6 +392,10 @@ def get_case(
 
     enforce_record_district(current_user, case.location.district if case.location else None, db)
 
+    from app.auth.scope import is_court_user, check_case_access
+    if is_court_user(current_user) and not check_case_access(current_user, case.id, db):
+        raise HTTPException(status_code=403, detail="Your organization is not authorized to access this case")
+
     # 1. Fetch linked FIRs from existing table
     firs_list = db.query(FIR).filter(FIR.crime_case_id == case.id).all()
     firs_out = [FIROut.model_validate(fir) for fir in firs_list]
@@ -504,6 +523,7 @@ def create_case(
         pass
 
     mark_data_changed("crime_case", db=db)
+    invalidate_ttl_cache_prefix("dashboard")
     return case
 
 
@@ -544,6 +564,7 @@ def update_case(
         audit_service.log_action(db, current_user, "UPDATE", "CrimeCase", str(case_id))
 
     mark_data_changed("crime_case", db=db)
+    invalidate_ttl_cache_prefix("dashboard")
     return case
 
 

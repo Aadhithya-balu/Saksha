@@ -6,7 +6,20 @@ export interface RoutePermission {
   moduleName: string;
 }
 
-export const ALL_UI_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'SP', 'INSPECTOR', 'FORENSIC', 'VIEWER'];
+export const ALL_UI_ROLES: UserRole[] = [
+  'ADMIN',
+  'SCRB',
+  'IO',
+  'SP',
+  'INSPECTOR',
+  'FORENSIC',
+  'VIEWER',
+  'COURT_ADMIN',
+  'JUDICIAL_AUTHORITY',
+  'COURT_ANALYST',
+];
+
+export const COURT_ROLES: UserRole[] = ['COURT_ADMIN', 'JUDICIAL_AUTHORITY', 'COURT_ANALYST'];
 
 // Role clearance sets (per CONTEXT.md RBAC).
 // crime_analyst -> SCRB, investigator -> IO, inspector -> INSPECTOR,
@@ -20,6 +33,15 @@ const INSIGHT_ROLES: UserRole[] = ALL_UI_ROLES;
 // Roles that own and mutate case-linked records + review identity findings.
 // Mirrors backend REVIEW_ROLES (admin, crime_analyst, investigator, inspector).
 const INVESTIGATION_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR'];
+const CASE_VIEW_ROLES: UserRole[] = [
+  'ADMIN',
+  'SCRB',
+  'IO',
+  'INSPECTOR',
+  'COURT_ADMIN',
+  'JUDICIAL_AUTHORITY',
+  'COURT_ANALYST',
+];
 // Face identification of persons of interest is an operational/forensic act;
 // the demo gallery (synthetic images) stays public. Mirrors the face router.
 const FACE_OPS_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'FORENSIC'];
@@ -46,13 +68,13 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   '/settings':       { allowedRoles: INSIGHT_ROLES, moduleName: 'Settings & Operator Help' },
 
   // ---- Admin / operational write modules (role-narrowed) ----
-  '/admin':          { allowedRoles: ['ADMIN'], moduleName: 'System Security Control Center' },
+  '/admin':          { allowedRoles: ['ADMIN', 'COURT_ADMIN'], moduleName: 'System Security Control Center' },
   '/officers':       { allowedRoles: OFFICER_READ_ROLES, moduleName: 'Officer Management' },
-  '/evidence':       { allowedRoles: ['ADMIN', 'IO', 'INSPECTOR', 'FORENSIC', 'SCRB'], moduleName: 'Evidence Handling' },
+  '/evidence':       { allowedRoles: ['ADMIN', 'IO', 'INSPECTOR', 'FORENSIC', 'SCRB', 'JUDICIAL_AUTHORITY', 'COURT_ANALYST'], moduleName: 'Evidence Handling' },
   '/face-recognition': { allowedRoles: FACE_OPS_ROLES, moduleName: 'Face Identification' },
   '/identity-resolution': { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Identity Resolution & Data Integrity' },
-  '/crime-cases':    { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Crime Case Management' },
-  '/investigation':  { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Investigation Workspace' },
+  '/crime-cases':    { allowedRoles: CASE_VIEW_ROLES, moduleName: 'Crime Case Management' },
+  '/investigation':  { allowedRoles: CASE_VIEW_ROLES, moduleName: 'Investigation Workspace' },
   '/firs':           { allowedRoles: INVESTIGATION_ROLES, moduleName: 'FIR Lifecycle Management' },
   '/criminals':      { allowedRoles: INVESTIGATION_ROLES, moduleName: 'Criminal Registry' },
   '/intelligence-engine': { allowedRoles: ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'], moduleName: 'Intelligence Engine' },
@@ -96,6 +118,10 @@ export const useRBAC = () => {
     return ROUTE_PERMISSIONS[path]?.allowedRoles || [];
   };
 
+  const isCourt =
+    user?.authorityType === 'COURT' ||
+    (user?.role ? COURT_ROLES.includes(user.role) : false);
+
   return {
     user,
     role: user?.role || null,
@@ -106,7 +132,13 @@ export const useRBAC = () => {
     isIO: user?.role === 'IO',
     isSP: user?.role === 'SP',
     isInspector: user?.role === 'INSPECTOR',
-    isForensic: user?.role === 'FORENSIC',
+    isForensic: user?.role === 'FORENSIC' || user?.authorityType === 'FORENSIC',
     isViewer: user?.role === 'VIEWER',
+    isCourtAdmin: user?.role === 'COURT_ADMIN',
+    isJudicialAuthority: user?.role === 'JUDICIAL_AUTHORITY',
+    isCourtAnalyst: user?.role === 'COURT_ANALYST',
+    isCourt,
+    isLawEnforcement: !isCourt && user?.role !== 'FORENSIC',
+    hasCapability: (cap: string) => user?.capabilities?.includes(cap) ?? false,
   };
 };

@@ -45,6 +45,8 @@ from app.models.ai_candidates import AICandidateRecord
 from app.models.knowledge_graph import KGNode, KGRelationship
 from app.models.ingestion import DataSource, IngestionJob
 from app.models.alert_finding import AlertFinding
+from app.models.organization import Organization
+from app.models.case_access import CaseAccess
 
 __all__ = [
     "Role", "User", "Location", "CrimeCategory", "Officer", "Criminal",
@@ -66,5 +68,7 @@ __all__ = [
     "KGNode", "KGRelationship",
     "DataSource", "IngestionJob",
     "AlertFinding",
+    "Organization",
+    "CaseAccess",
 ]
 

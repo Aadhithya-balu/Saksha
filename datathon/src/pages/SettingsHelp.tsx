@@ -79,6 +79,7 @@ const Toast: React.FC<{ kind: ToastKind; message: string }> = ({ kind, message }
 const ProfileTab: React.FC = () => {
   const { user, updateUser } = useAuthStore();
   const { addLog } = useAuditStore();
+  const { isCourt } = useRBAC();
 
   const [displayName, setDisplayName] = useState(user?.name ?? '');
   const [email, setEmail] = useState('');
@@ -142,17 +143,35 @@ const ProfileTab: React.FC = () => {
 
       {/* Identity card */}
       <div className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]">
-        <div className="w-14 h-14 rounded-full bg-[var(--accent-blue-subtle)] border border-[var(--accent-blue)]/20 flex items-center justify-center text-[var(--accent-blue)] font-bold text-lg font-mono shrink-0">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg font-mono shrink-0 border ${
+          isCourt
+            ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+            : 'bg-[var(--accent-blue-subtle)] border-[var(--accent-blue)]/20 text-[var(--accent-blue)]'
+        }`}>
           {(user?.name ?? 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-[var(--text-primary)] truncate">{user?.name}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <BadgeCheck className="w-3.5 h-3.5 text-[var(--accent-teal)]" />
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+            <BadgeCheck className={`w-3.5 h-3.5 ${isCourt ? 'text-indigo-400' : 'text-[var(--accent-teal)]'}`} />
             <span className="text-[11px] font-mono text-[var(--text-muted)]">{user?.badgeId}</span>
-            <span className="text-[10px] font-mono text-[var(--accent-blue)] bg-[var(--accent-blue-subtle)] border border-[var(--accent-blue)]/20 px-1.5 py-0.5 rounded">
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+              isCourt
+                ? 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30'
+                : 'text-[var(--accent-blue)] bg-[var(--accent-blue-subtle)] border-[var(--accent-blue)]/20'
+            }`}>
               {user?.role}
             </span>
+            {user?.organizationName && (
+              <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 border border-purple-500/30 px-1.5 py-0.5 rounded">
+                {user.organizationName}
+              </span>
+            )}
+            {user?.designation && (
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                {user.designation}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -161,16 +180,28 @@ const ProfileTab: React.FC = () => {
       <div className="p-4 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] space-y-4">
         <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-primary)]">
           <User className="w-4 h-4 text-[var(--accent-blue)]" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-primary)]">Profile Information</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-primary)]">
+            {isCourt ? 'Judicial Profile & Authority Assignment' : 'Profile Information'}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Badge ID" locked>
+          <Field label={isCourt ? 'Judicial Identifier' : 'Badge ID'} locked>
             <Input value={user?.badgeId ?? ''} locked readOnly />
           </Field>
-          <Field label="Role" locked>
+          <Field label="System Role" locked>
             <Input value={user?.role ?? ''} locked readOnly />
           </Field>
+          {user?.organizationName && (
+            <Field label="Registered Authority" locked>
+              <Input value={`${user.organizationName} (${user.authorityType || 'COURT'})`} locked readOnly />
+            </Field>
+          )}
+          {user?.designation && (
+            <Field label="Official Designation" locked>
+              <Input value={user.designation} locked readOnly />
+            </Field>
+          )}
           <Field label="Display Name" hint="Shown in the sidebar and audit logs">
             <Input
               value={displayName}
@@ -188,19 +219,19 @@ const ProfileTab: React.FC = () => {
               maxLength={255}
             />
           </Field>
-          <Field label="District" hint="Your assigned district">
+          <Field label={isCourt ? 'Judicial Jurisdiction' : 'District'} hint={isCourt ? 'Assigned judicial jurisdiction' : 'Your assigned district'}>
             <Input
               value={district}
               onChange={e => setDistrict(e.target.value)}
-              placeholder="e.g. Bengaluru Urban"
+              placeholder={isCourt ? 'e.g. Karnataka High Court / Bengaluru' : 'e.g. Bengaluru Urban'}
               maxLength={100}
             />
           </Field>
-          <Field label="Station" hint="Your assigned police station">
+          <Field label={isCourt ? 'Court Room / Chamber' : 'Station'} hint={isCourt ? 'Assigned chamber / court room' : 'Your assigned police station'}>
             <Input
               value={station}
               onChange={e => setStation(e.target.value)}
-              placeholder="e.g. Cubbon Park PS"
+              placeholder={isCourt ? 'e.g. Court Room 4B' : 'e.g. Cubbon Park PS'}
               maxLength={100}
             />
           </Field>
