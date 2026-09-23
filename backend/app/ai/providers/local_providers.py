@@ -20,7 +20,10 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 import numpy as np
 
 from app.ai.providers.base import (
@@ -121,6 +124,8 @@ class OpenCVVisionProvider(VisionProvider):
 
     @classmethod
     def _face_cascade(cls):
+        if cv2 is None:
+            return None
         if cls._FACE_CASCADE is None:
             cascade_path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
             cls._FACE_CASCADE = cv2.CascadeClassifier(cascade_path)
@@ -140,6 +145,8 @@ class OpenCVVisionProvider(VisionProvider):
         return []
 
     def _detect_faces(self, image_bytes: bytes) -> List[VisionEventResult]:
+        if cv2 is None or self._face_cascade() is None:
+            return []
         arr = np.frombuffer(image_bytes, dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if img is None:
@@ -160,6 +167,8 @@ class OpenCVVisionProvider(VisionProvider):
         ]
 
     def _detect_scenes(self, video_bytes: bytes) -> List[VisionEventResult]:
+        if cv2 is None:
+            return []
         tmp_dir = Path(tempfile.mkdtemp(prefix="saksha-vision-"))
         events: List[VisionEventResult] = []
         try:

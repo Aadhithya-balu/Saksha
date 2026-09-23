@@ -27,6 +27,8 @@ const FACE_OPS_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'FORENSI
 // policymaker (backend read set); only admin may write officers.
 const OFFICER_READ_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'];
 
+const REPORT_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'];
+
 export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   // ---- Read-only insight modules (all roles, VIEWER included) ----
   '/dashboard':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Analytics Dashboard' },
@@ -37,7 +39,7 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   '/anomalies':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Anomaly Detection Engine' },
   '/sociological':   { allowedRoles: INSIGHT_ROLES, moduleName: 'Sociological Intelligence' },
   '/strategic':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Strategic Intelligence' },
-  '/reports':        { allowedRoles: INSIGHT_ROLES, moduleName: 'Reports Center' },
+  '/reports':        { allowedRoles: REPORT_ROLES, moduleName: 'Reports Center' },
   '/offenders':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Offender Registry' },
   '/victims':        { allowedRoles: INSIGHT_ROLES, moduleName: 'Victim Registry' },
   '/notifications':  { allowedRoles: INSIGHT_ROLES, moduleName: 'Intelligence Center' },
