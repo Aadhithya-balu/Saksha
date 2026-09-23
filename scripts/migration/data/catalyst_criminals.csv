@@ -1,0 +1,52 @@
+full_name,aliases,date_of_birth,gender,address,identifying_marks,mo_summary,status,gang_affiliation,neo4j_node_id,image_url,dataset_provenance,source_import_job_id,source_file,source_row_ref,id,created_at,updated_at
+Ramu Swamy,Kodaikanal Ramu,1982-04-12,Male,,Scar near left eyebrow,Night residential lock-break burglaries using scooter reconnaissance,at_large,,,,demo,,,,018a82be-ef30-4d91-95f1-128f8857e132,2026-08-29 12:45:07,2026-08-29 12:45:07
+Shiva Prasad M,Shiva M,1980-07-18,Male,,"Muscular, tribal tattoo",Counterfeit goods manufacturing,arrested,,,,demo,,,,0997c34d-ad5a-498f-8847-55e7a86de24f,2026-08-29 12:45:07,2026-08-29 12:45:07
+Venkatesh Kulkarni,Venky,1980-02-18,Male,,"Mustache, broad forehead",Contract killing intermediary,at_large,,,,demo,,,,0aa539c1-99df-4ac9-b414-a06aabbdf912,2026-08-29 12:45:07,2026-08-29 12:45:07
+Imran Khan Pathan,Imran,1986-12-01,Male,,"Beard, muscular build",Interstate drug mule coordinator,at_large,,,,demo,,,,0dbb13ad-970f-4a79-aba7-71fc48efe02b,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rahul Deshpande,Rahul D,1995-02-14,Male,,"Slim, ponytail",Dark web drug marketplace admin,at_large,,,,demo,,,,148a2f90-d1d0-44d7-a20a-165816eef71c,2026-08-29 12:45:07,2026-08-29 12:45:07
+Karthik Gowda,Gowda,1988-08-03,Male,,Thick moustache,Forgery and property document intimidation,arrested,,,,demo,,,,19a6a814-a49e-4d85-aa21-a2e8b5709d94,2026-08-29 12:45:07,2026-08-29 12:45:07
+Vijay Kumar S,Vijay S,1990-09-16,Male,,"Clean shaven, athletic",Bike theft ring operator,at_large,,,,demo,,,,19de0621-c7d0-402a-a09d-3b1db38aecf4,2026-08-29 12:45:07,2026-08-29 12:45:07
+Tariq Hussain,Tariq,1992-06-02,Male,,"Lean, sharp features",Illegal mineral transport,at_large,,,,demo,,,,1aa9f6f7-0876-46bd-9158-b0632c1ab32e,2026-08-29 12:45:07,2026-08-29 12:45:07
+Kiran Bhat,Kiran,1980-04-16,Male,,"Portly, gold ring",Timber transport forgery,arrested,,,,demo,,,,23d17823-29fc-40a3-b71a-c40a91481987,2026-08-29 12:45:07,2026-08-29 12:45:07
+Prasad Shenoy,Prasad,1979-06-15,Male,,"Deep voice, tall build",Cyber fraud via fake banking portals,under_trial,,,,demo,,,,2523d823-0618-40c2-b622-d6faf7f16347,2026-08-29 12:45:07,2026-08-29 12:45:07
+Deepak Sharma,Deepu,1993-07-25,Male,,"Glasses, left ear piercing",Online investment scam operator,convicted,,,,demo,,,,25ab8b3f-49ca-4dd7-8af6-581e2e31e739,2026-08-29 12:45:07,2026-08-29 12:45:07
+Nasir Shaikh,Nasir,1989-08-14,Male,,"Short, heavy build",Fish export smuggling,at_large,,,,demo,,,,2616b6ed-9bed-4104-b508-4934d0fd4c88,2026-08-29 12:45:07,2026-08-29 12:45:07
+Javed Sheikh,Javed,1991-05-19,Male,,"Tattoo chest, lean build",Illegal mining transport driver,under_trial,,,,demo,,,,2c56a6a3-cd13-4703-b572-f392128db1a2,2026-08-29 12:45:07,2026-08-29 12:45:07
+Hafeez Rehman,Hafeez,1983-12-30,Male,,"Tall, broad build",Smuggled gold transport,at_large,,,,demo,,,,31a38468-2fa2-4b4b-83b5-d3f1011b9d89,2026-08-29 12:45:07,2026-08-29 12:45:07
+Vikram Yadav,Vicky,1990-11-07,Male,,"Spectacles, gold ring",Money mule coordinator for app-based cyber extortion,at_large,,,,demo,,,,410bec90-8114-4c19-905e-a5b77972ef47,2026-08-29 12:45:07,2026-08-29 12:45:07
+Zaheer Ahmed,Zaheer,1982-11-19,Male,,"Beard, lean build",Drug courier network coordinator,at_large,,,,demo,,,,412d51c1-3427-42c0-908e-c804031cf0f6,2026-08-29 12:45:07,2026-08-29 12:45:07
+Farhan Ahmed,Farhan,1991-08-22,Male,,"Sharp features, short hair",Cryptocurrency money laundering,under_trial,,,,demo,,,,4225fe2b-47a4-4e83-8203-571a0c8e1a68,2026-08-29 12:45:07,2026-08-29 12:45:07
+Yusuf Ali Khan,Yusuf,1989-04-07,Male,,"Tattoo forearm, athletic build",Smuggled electronics distribution,acquitted,,,,demo,,,,4b9a1bd0-3232-4345-846f-d504197f8732,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ravi Shankar Bhat,Ravi Bhat,1981-09-08,Male,,"Gold chain, receding hairline",Cash-in-transit robbery planning,arrested,,,,demo,,,,4ea921f4-e436-47ef-b9fc-08d469138a6d,2026-08-29 12:45:07,2026-08-29 12:45:07
+Vinayak Kulkarni,Vinayak K,1984-01-25,Male,,"Tall, spectacles",Cheque forgery operations,on_bail,,,,demo,,,,5161e6b2-e2c1-4b25-aea0-49c2674359ef,2026-08-29 12:45:07,2026-08-29 12:45:07
+Suresh Babu,Suresh Anna,1975-01-30,Male,,Greying temples,Land grab intimidation syndicate,on_bail,,,,demo,,,,548087de-3a62-4bae-a367-ad39b7ac41d0,2026-08-29 12:45:07,2026-08-29 12:45:07
+Mahesh Jain,Mahesh,1976-03-05,Male,,"Portly, thick glasses",Property fraud and forged deeds,arrested,,,,demo,,,,58239812-e3cc-4698-a09e-f1704f75854a,2026-08-29 12:45:07,2026-08-29 12:45:07
+Nagendra Prasad,Nagendra,1977-06-22,Male,,"Bald, strong jaw",Extortion via threat calls,under_trial,,,,demo,,,,60e3f69c-d5de-4ac7-8ef1-2d320fe749da,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ganesh Haldipur,Ganesh,1984-05-09,Male,,"Round face, dimple",Illegal transport route management,on_bail,,,,demo,,,,64b8434d-dd78-4775-9224-b4d1cdc73732,2026-08-29 12:45:07,2026-08-29 12:45:07
+Mohsin Pasha,Pasha,1987-01-19,Male,,Burn mark on forearm,Illegal mineral transport and forged transit slips,at_large,,,,demo,,,,65ffec8e-40a4-4720-99be-dc3cfc926e4d,2026-08-29 12:45:07,2026-08-29 12:45:07
+Zubair Sheikh,Zubair,1981-09-03,Male,,"Beard, glasses",Interstate sand mining syndicate,at_large,,,,demo,,,,714dba62-7666-4852-a5b0-60c7209e4c71,2026-08-29 12:45:07,2026-08-29 12:45:07
+Mohammed Ali,Mohd Ali,1989-01-27,Male,,"Sharp nose, thin build",Gold chain snatching gang leader,at_large,,,,demo,,,,72b203cc-1aef-4aa5-afa5-98830c486d26,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ashok Kamble,Ashok,1994-01-12,Male,,"Earring, tattoo on neck",ATM card skimming operations,convicted,,,,demo,,,,738847ff-a086-4b42-a272-b89e0a0d3f3e,2026-08-29 12:45:07,2026-08-29 12:45:07
+Yogesh Shetty,Yogesh,1991-07-06,Male,,"Athletic, tattoo arm",Smuggled electronics import,under_trial,,,,demo,,,,750ba888-4440-4c9a-b1b2-9caafbd5b106,2026-08-29 12:45:07,2026-08-29 12:45:07
+Satish Mudiraj,Satish,1983-12-08,Male,,"Dark complexion, muscular",Illegal quarry operations,at_large,,,,demo,,,,7b633f2f-e215-46d6-8552-25eb067bc8e3,2026-08-29 12:45:07,2026-08-29 12:45:07
+Lokesh Biradar,Lokesh,1990-08-17,Male,,"Scar on lip, stocky",Illegal liquor distribution,on_bail,,,,demo,,,,7ce121c6-0b93-4393-b78e-e04c743c151b,2026-08-29 12:45:07,2026-08-29 12:45:07
+Bharath Gowda,Bharath,1982-08-26,Male,,"Round face, gold teeth",Timber smuggling coordinator,arrested,,,,demo,,,,89c54b69-d065-42da-9669-f90f08bb0786,2026-08-29 12:45:07,2026-08-29 12:45:07
+Santosh Patil,Santosh P,1985-11-11,Male,,"Short, thick mustache",IPC fraud and cheating,at_large,,,,demo,,,,8a375fae-6940-41ee-bed7-b1907e6fe26e,2026-08-29 12:45:07,2026-08-29 12:45:07
+Khalid Mehmood,Khalid,1986-03-12,Male,,"Beard, heavy build",Narcotics retail distribution,at_large,,,,demo,,,,8a6e7a7a-aa95-4516-a062-d58308c32f11,2026-08-29 12:45:07,2026-08-29 12:45:07
+Anil Kumar J,Anil J,1985-05-23,Male,,"Thick mustache, medium build",IPC assault repeat offender,at_large,,,,demo,,,,8ce737e6-59b1-4270-85ab-620dc0b22d8f,2026-08-29 12:45:07,2026-08-29 12:45:07
+Manjunath Holla,Manju,1983-05-14,Male,,"Stocky, red birthmark neck",Stolen vehicle resale network,at_large,,,,demo,,,,abaf5d81-510e-4938-bdaa-bc63588a1723,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rakesh Tiwari,Rakesh T,1979-03-14,Male,,"Receding hairline, portly",Land encroachment intimidation,at_large,,,,demo,,,,bdb595ca-f4c0-4190-ac69-57695a571d53,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sayed Ibrahim,Sayed,1985-02-22,Male,,Tattoo on right wrist,Port logistics support for synthetic drug consignments,at_large,,,,demo,,,,bdb6d588-71f9-4e5a-9059-9aeb7858ab14,2026-08-29 12:45:07,2026-08-29 12:45:07
+Vasanth Kumar,Vasu,1994-04-11,Male,,"Slim, earring",ATM break-in specialist,convicted,,,,demo,,,,c05c81b2-c782-455e-be3f-8ac22ed75c9c,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sameer Patel,Sameer,1986-10-25,Male,,"Glasses, short hair",Hawala money transfer operator,arrested,,,,demo,,,,c40419c7-a5fd-4a9e-9f29-c4d17faa33f7,2026-08-29 12:45:07,2026-08-29 12:45:07
+Chandrashekar B,Chandru B,1988-02-08,Male,,"Mustache, medium build",Fake document printing ring,at_large,,,,demo,,,,cfe3055a-c9dc-4cbe-8a5d-d0c7455af61d,2026-08-29 12:45:07,2026-08-29 12:45:07
+Naveen Reddy,Navi,1992-03-20,Male,,"Slim build, clean shaven",Phishing SMS campaigns targeting elderly,at_large,,,,demo,,,,d14f9acf-5a19-4643-915c-5f230172f78e,2026-08-29 12:45:07,2026-08-29 12:45:07
+Arun Verma,Arun V,1978-04-30,Male,,"Grey hair, spectacles",Organized gambling den operator,convicted,,,,demo,,,,d319ae7d-fae7-449e-a3bf-44d2212c2193,2026-08-29 12:45:07,2026-08-29 12:45:07
+Girish Nayak,Girish K,1984-11-03,Male,,Wears thick spectacles,Fake passport and visa racket,arrested,,,,demo,,,,e23a92a9-c684-4a2a-8196-0d0a0dcadd22,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rajesh Pai,Raju Pai,1977-10-21,Male,,"Widow's peak, stocky",Money lending extortion operations,at_large,,,,demo,,,,e29cf33d-3671-4939-bd02-dcd9bc375f60,2026-08-29 12:45:07,2026-08-29 12:45:07
+Irfan Hassan,Irfan,1988-06-29,Male,,"Lean, scar on chin",Harbor smuggling logistics,at_large,,,,demo,,,,e412d489-ce18-4280-a918-1d1732688bf0,2026-08-29 12:45:07,2026-08-29 12:45:07
+Pavan Kalyan R,Pavan,1993-10-05,Male,,"Slim, clean shaven",Cyber stalking and harassment,acquitted,,,,demo,,,,e66bdb42-023a-48ca-a5f5-0a7a7abfc4c1,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sunil Khot,Sunil K,1987-09-28,Male,,"Glasses, medium height",Fake call center scam,at_large,,,,demo,,,,ed8f808f-e666-4a73-9062-1f8f757442f1,2026-08-29 12:45:07,2026-08-29 12:45:07
+Manoj Birajdar,Manoj B,1993-01-07,Male,,"Short, muscular",Illegal gambling enforcement,convicted,,,,demo,,,,fab81283-e4da-49e6-80f8-8f5d03273121,2026-08-29 12:45:07,2026-08-29 12:45:07
+Tanveer Alam,Tanu,1987-07-02,Male,,"Tall, scar on forehead",Fake currency distribution,on_bail,,,,demo,,,,fc22e458-db85-47dd-8304-d6a9d88c74b2,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rohit Shetty K,Rohit K,1992-11-15,Male,,"Tall, sporty build",Vehicle theft for parts,arrested,,,,demo,,,,fea975d0-6440-4fd0-991c-b824df0f6fab,2026-08-29 12:45:07,2026-08-29 12:45:07
