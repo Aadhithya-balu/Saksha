@@ -1,0 +1,6344 @@
+{
+  "project": "Datathon-1",
+  "project_id": "49978000000018001",
+  "environment": "Development",
+  "generated_by": "scripts/migration/generate_catalyst_schema.py",
+  "source_of_truth": "SQLAlchemy metadata (backend/app/models/*.py + backend/app/routes/admin.py)",
+  "note": "Catalyst auto-adds ROWID/CREATORID/CREATEDTIME/MODIFIEDTIME; they are omitted here. Tables/columns are created in the Catalyst console (Data Store) using these definitions.",
+  "tables": {
+    "roles": {
+      "table": "roles",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "name",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "description",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_roles_name",
+          [
+            "name"
+          ]
+        ]
+      ]
+    },
+    "crime_categories": {
+      "table": "crime_categories",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "name",
+          "app_type": "VARCHAR(150)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 150,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "section_code",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "severity",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_crime_categories_name",
+          [
+            "name"
+          ]
+        ]
+      ]
+    },
+    "locations": {
+      "table": "locations",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "address",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "district",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "station",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "latitude",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "longitude",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "pincode",
+          "app_type": "VARCHAR(10)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 10,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [
+        [
+          "station",
+          "address"
+        ]
+      ],
+      "indexes": [
+        [
+          "ix_locations_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_locations_district",
+          [
+            "district"
+          ]
+        ],
+        [
+          "ix_locations_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ],
+        [
+          "ix_locations_station",
+          [
+            "station"
+          ]
+        ]
+      ]
+    },
+    "system_settings": {
+      "table": "system_settings",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "id",
+          "app_type": "VARCHAR(36)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "key",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "value",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "description",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": []
+    },
+    "users": {
+      "table": "users",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "username",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "email",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "full_name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "hashed_password",
+          "app_type": "VARCHAR(400)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(400) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "is_active",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "True",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "failed_login_attempts",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "locked_until",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "role_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "roles.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "district",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "station",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_users_email",
+          [
+            "email"
+          ]
+        ],
+        [
+          "ix_users_role_id",
+          [
+            "role_id"
+          ]
+        ],
+        [
+          "ix_users_username",
+          [
+            "username"
+          ]
+        ]
+      ]
+    },
+    "officers": {
+      "table": "officers",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "supabase_user_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "user_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "badge_number",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "rank",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "station",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "district",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "designation",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "phone",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "email",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "active",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "image_url",
+          "app_type": "VARCHAR(1000)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(1000) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [
+        [
+          "email"
+        ],
+        [
+          "user_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "ix_officers_badge_number",
+          [
+            "badge_number"
+          ]
+        ],
+        [
+          "ix_officers_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_officers_district",
+          [
+            "district"
+          ]
+        ],
+        [
+          "ix_officers_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ],
+        [
+          "ix_officers_station",
+          [
+            "station"
+          ]
+        ]
+      ]
+    },
+    "criminals": {
+      "table": "criminals",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "full_name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "aliases",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "date_of_birth",
+          "app_type": "DATE",
+          "catalyst_type": "date",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "gender",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "address",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "identifying_marks",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "mo_summary",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "at_large",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "gang_affiliation",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "neo4j_node_id",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "image_url",
+          "app_type": "VARCHAR(1000)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(1000) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_criminals_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_criminals_full_name",
+          [
+            "full_name"
+          ]
+        ],
+        [
+          "ix_criminals_neo4j_node_id",
+          [
+            "neo4j_node_id"
+          ]
+        ],
+        [
+          "ix_criminals_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ]
+      ]
+    },
+    "victims": {
+      "table": "victims",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "full_name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "contact_number",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "address",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "gender",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "age",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "statement",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "neo4j_node_id",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "image_url",
+          "app_type": "VARCHAR(1000)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(1000) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_victims_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_victims_full_name",
+          [
+            "full_name"
+          ]
+        ],
+        [
+          "ix_victims_neo4j_node_id",
+          [
+            "neo4j_node_id"
+          ]
+        ],
+        [
+          "ix_victims_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ]
+      ]
+    },
+    "crime_cases": {
+      "table": "crime_cases",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "case_number",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "category_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "crime_categories.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "location_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "locations.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "occurred_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "reported_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "description",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "mo_tags",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "open",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "priority",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "medium",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "progress",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "10",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "assigned_officer_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "officers.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_crime_cases_assigned_officer_id",
+          [
+            "assigned_officer_id"
+          ]
+        ],
+        [
+          "ix_crime_cases_case_number",
+          [
+            "case_number"
+          ]
+        ],
+        [
+          "ix_crime_cases_category_id",
+          [
+            "category_id"
+          ]
+        ],
+        [
+          "ix_crime_cases_created_at",
+          [
+            "created_at"
+          ]
+        ],
+        [
+          "ix_crime_cases_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_crime_cases_location_id",
+          [
+            "location_id"
+          ]
+        ],
+        [
+          "ix_crime_cases_occurred_at",
+          [
+            "occurred_at"
+          ]
+        ],
+        [
+          "ix_crime_cases_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ],
+        [
+          "ix_crime_cases_status",
+          [
+            "status"
+          ]
+        ]
+      ]
+    },
+    "firs": {
+      "table": "firs",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "fir_number",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "crime_case_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "crime_cases.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "investigating_officer_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "officers.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "complainant_name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "complainant_contact",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "sections",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "filed_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "registered",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "narrative",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "attachments",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_firs_crime_case_id",
+          [
+            "crime_case_id"
+          ]
+        ],
+        [
+          "ix_firs_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_firs_fir_number",
+          [
+            "fir_number"
+          ]
+        ],
+        [
+          "ix_firs_investigating_officer_id",
+          [
+            "investigating_officer_id"
+          ]
+        ],
+        [
+          "ix_firs_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ],
+        [
+          "ix_firs_status",
+          [
+            "status"
+          ]
+        ]
+      ]
+    },
+    "fir_criminal_links": {
+      "table": "fir_criminal_links",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "fir_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "firs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "criminal_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "criminals.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "role",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [
+        [
+          "fir_id",
+          "criminal_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "ix_fir_criminal_links_criminal_id",
+          [
+            "criminal_id"
+          ]
+        ],
+        [
+          "ix_fir_criminal_links_fir_id",
+          [
+            "fir_id"
+          ]
+        ]
+      ]
+    },
+    "fir_victim_links": {
+      "table": "fir_victim_links",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "fir_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "firs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "victim_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "victims.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [
+        [
+          "fir_id",
+          "victim_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "ix_fir_victim_links_fir_id",
+          [
+            "fir_id"
+          ]
+        ],
+        [
+          "ix_fir_victim_links_victim_id",
+          [
+            "victim_id"
+          ]
+        ]
+      ]
+    },
+    "evidence": {
+      "table": "evidence",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "case_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "crime_cases.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "title",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "description",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "evidence_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "Pending",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_by",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "assigned_to",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "storage_path",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "dataset_provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "live",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_import_job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_file",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_evidence_assigned_to",
+          [
+            "assigned_to"
+          ]
+        ],
+        [
+          "ix_evidence_case_id",
+          [
+            "case_id"
+          ]
+        ],
+        [
+          "ix_evidence_dataset_provenance",
+          [
+            "dataset_provenance"
+          ]
+        ],
+        [
+          "ix_evidence_source_import_job_id",
+          [
+            "source_import_job_id"
+          ]
+        ]
+      ]
+    },
+    "evidence_metadata": {
+      "table": "evidence_metadata",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "filename",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "filepath",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "filesize",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "mime_type",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "uploaded_by",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "storage_url",
+          "app_type": "VARCHAR(1000)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(1000) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "extracted_data",
+          "app_type": "JSON",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "{}",
+          "notes": [
+            "JSON/JSONB stored as text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_evidence_metadata_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ]
+      ]
+    },
+    "evidence_timeline": {
+      "table": "evidence_timeline",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "action",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "performed_by",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "role",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "description",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_evidence_timeline_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ]
+      ]
+    },
+    "evidence_assignments": {
+      "table": "evidence_assignments",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "assigned_by",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "assigned_to",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "Assigned",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "assigned_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "accepted_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "completed_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_evidence_assignments_assigned_by",
+          [
+            "assigned_by"
+          ]
+        ],
+        [
+          "ix_evidence_assignments_assigned_to",
+          [
+            "assigned_to"
+          ]
+        ],
+        [
+          "ix_evidence_assignments_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ]
+      ]
+    },
+    "chain_of_custody": {
+      "table": "chain_of_custody",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "from_user",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "to_user",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "action",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "location",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "remarks",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "timestamp",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_chain_of_custody_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ],
+        [
+          "ix_chain_of_custody_from_user",
+          [
+            "from_user"
+          ]
+        ],
+        [
+          "ix_chain_of_custody_to_user",
+          [
+            "to_user"
+          ]
+        ]
+      ]
+    },
+    "evidence_ai_summary": {
+      "table": "evidence_ai_summary",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "summary",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "model",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_evidence_ai_summary_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ]
+      ]
+    },
+    "reports": {
+      "table": "reports",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "template",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "report_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "cases",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "title",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "requested_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "district",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "date_from",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "date_to",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "format",
+          "app_type": "VARCHAR(10)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "pdf",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "draft",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "file_url",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "version",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "1",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "case_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "crime_cases.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "provenance",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "unknown",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "integrity_hash",
+          "app_type": "VARCHAR(64)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 64,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "generation_method",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "analysis_fingerprint",
+          "app_type": "VARCHAR(200)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 200,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "failure_reason",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_record_count",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "evidence_count",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "generated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "reviewed_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "finalized_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "archived_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "reviewed_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "finalized_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "content_snapshot",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "ai_reported",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "ai_metadata",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_reports_case_id",
+          [
+            "case_id"
+          ]
+        ],
+        [
+          "ix_reports_provenance",
+          [
+            "provenance"
+          ]
+        ],
+        [
+          "ix_reports_report_type",
+          [
+            "report_type"
+          ]
+        ],
+        [
+          "ix_reports_requested_by_id",
+          [
+            "requested_by_id"
+          ]
+        ],
+        [
+          "ix_reports_status",
+          [
+            "status"
+          ]
+        ],
+        [
+          "ix_reports_status_type",
+          [
+            "status",
+            "report_type"
+          ]
+        ]
+      ]
+    },
+    "report_versions": {
+      "table": "report_versions",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "report_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "reports.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "version_number",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "1",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "reason",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "generated",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "integrity_hash",
+          "app_type": "VARCHAR(64)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 64,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "content_snapshot",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "ai_metadata",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_report_versions_report_id",
+          [
+            "report_id"
+          ]
+        ],
+        [
+          "ix_report_versions_report_num",
+          [
+            "report_id",
+            "version_number"
+          ]
+        ]
+      ]
+    },
+    "report_source_links": {
+      "table": "report_source_links",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "report_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "reports.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_id",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_label",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_report_source_link_type_id",
+          [
+            "source_type",
+            "source_id"
+          ]
+        ],
+        [
+          "ix_report_source_links_report_id",
+          [
+            "report_id"
+          ]
+        ]
+      ]
+    },
+    "report_evidence_links": {
+      "table": "report_evidence_links",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "report_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "reports.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "evidence_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "evidence.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "role",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "supporting",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_report_evidence_links_evidence_id",
+          [
+            "evidence_id"
+          ]
+        ],
+        [
+          "ix_report_evidence_links_report_id",
+          [
+            "report_id"
+          ]
+        ]
+      ]
+    },
+    "audit_logs": {
+      "table": "audit_logs",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "action",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "resource_type",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "resource_id",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "details",
+          "app_type": "VARCHAR(1000)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(1000) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "ip_address",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "result",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "success",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "metadata",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "timestamp",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_audit_logs_user_id",
+          [
+            "user_id"
+          ]
+        ]
+      ]
+    },
+    "notifications": {
+      "table": "notifications",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "sender_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "subject",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "notification_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "category",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "system_notification",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "title",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "message",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "severity",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "medium",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "priority",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "medium",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "unread",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "resource_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "resource_id",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "related_case_number",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "related_fir_number",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "is_read",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "is_dismissed",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "is_broadcast",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "parent_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "notifications.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "attachment_url",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "read_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "acknowledged_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "resolved_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_notifications_category",
+          [
+            "category"
+          ]
+        ],
+        [
+          "ix_notifications_created_at",
+          [
+            "created_at"
+          ]
+        ],
+        [
+          "ix_notifications_is_read",
+          [
+            "is_read"
+          ]
+        ],
+        [
+          "ix_notifications_notification_type",
+          [
+            "notification_type"
+          ]
+        ],
+        [
+          "ix_notifications_priority",
+          [
+            "priority"
+          ]
+        ],
+        [
+          "ix_notifications_related_case_number",
+          [
+            "related_case_number"
+          ]
+        ],
+        [
+          "ix_notifications_sender_id",
+          [
+            "sender_id"
+          ]
+        ],
+        [
+          "ix_notifications_status",
+          [
+            "status"
+          ]
+        ],
+        [
+          "ix_notifications_user_id",
+          [
+            "user_id"
+          ]
+        ]
+      ]
+    },
+    "investigation_notes": {
+      "table": "investigation_notes",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "case_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "crime_cases.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "officer_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "officers.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "officer_name",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "officer_badge",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "content",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_investigation_notes_case_id",
+          [
+            "case_id"
+          ]
+        ],
+        [
+          "ix_investigation_notes_officer_id",
+          [
+            "officer_id"
+          ]
+        ]
+      ]
+    },
+    "chat_conversations": {
+      "table": "chat_conversations",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "title",
+          "app_type": "VARCHAR(200)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 200,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "New Chat",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "is_temporary",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "message_count",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "last_message_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_chat_conversations_user_id",
+          [
+            "user_id"
+          ]
+        ],
+        [
+          "ix_chat_conversations_user_updated",
+          [
+            "user_id",
+            "updated_at"
+          ]
+        ]
+      ]
+    },
+    "chat_messages": {
+      "table": "chat_messages",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "conversation_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "chat_conversations.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "role",
+          "app_type": "VARCHAR(16)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 16,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "content",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "classification",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "sources_json",
+          "app_type": "JSON",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "JSON/JSONB stored as text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "citations_json",
+          "app_type": "JSON",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "JSON/JSONB stored as text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "seq",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_chat_messages_conversation_id",
+          [
+            "conversation_id"
+          ]
+        ],
+        [
+          "ux_chat_messages_conv_seq",
+          [
+            "conversation_id",
+            "seq"
+          ]
+        ]
+      ]
+    },
+    "import_jobs": {
+      "table": "import_jobs",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "entity_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_format",
+          "app_type": "VARCHAR(10)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "csv",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "mapping_profile",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "standard",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "source_system",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "manual_upload",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "filename",
+          "app_type": "VARCHAR(500)",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(500) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "uploaded",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "total_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "imported_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "failed_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "valid_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "invalid_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "warning_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "exact_duplicate_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "potential_duplicate_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "conflict_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "new_record_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "matched_record_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_record_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "rejected_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "review_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "error_count",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "promoted_rows",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "0",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "quality_grade",
+          "app_type": "VARCHAR(10)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 10,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "processing_started_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "processing_completed_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "promoted_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "rolled_back_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "validation_report",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "created_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "promoted_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_import_jobs_created_by_id",
+          [
+            "created_by_id"
+          ]
+        ],
+        [
+          "ix_import_jobs_entity_type",
+          [
+            "entity_type"
+          ]
+        ],
+        [
+          "ix_import_jobs_status",
+          [
+            "status"
+          ]
+        ]
+      ]
+    },
+    "import_staging_records": {
+      "table": "import_staging_records",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "job_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "import_jobs.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "row_number",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "source_row_ref",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "raw_data",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "mapped_data",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "validation_status",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "pending",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "validation_errors",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "validation_warnings",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "duplicate_status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "unique",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "duplicate_of",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "reconciliation_status",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "pending",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "reconciliation_details",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "trust_level",
+          "app_type": "VARCHAR(30)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 30,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "rejected",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "promoted",
+          "app_type": "BOOLEAN",
+          "catalyst_type": "boolean",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "False",
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "promoted_record_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "promoted_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_import_staging_records_duplicate_status",
+          [
+            "duplicate_status"
+          ]
+        ],
+        [
+          "ix_import_staging_records_job_id",
+          [
+            "job_id"
+          ]
+        ],
+        [
+          "ix_import_staging_records_promoted_record_id",
+          [
+            "promoted_record_id"
+          ]
+        ],
+        [
+          "ix_import_staging_records_reconciliation_status",
+          [
+            "reconciliation_status"
+          ]
+        ],
+        [
+          "ix_import_staging_records_trust_level",
+          [
+            "trust_level"
+          ]
+        ],
+        [
+          "ix_import_staging_records_validation_status",
+          [
+            "validation_status"
+          ]
+        ],
+        [
+          "ix_staging_job_row",
+          [
+            "job_id",
+            "row_number"
+          ]
+        ],
+        [
+          "ix_staging_reconciliation",
+          [
+            "reconciliation_status"
+          ]
+        ]
+      ]
+    },
+    "interventions": {
+      "table": "interventions",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "district",
+          "app_type": "VARCHAR(100)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 100,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "intervention_type",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "title",
+          "app_type": "VARCHAR(255)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 255,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "description",
+          "app_type": "TEXT",
+          "catalyst_type": "text",
+          "catalyst_max_length": 10000,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [
+            "app String(None) > 255 -> text"
+          ],
+          "indexed_in_app": false
+        },
+        {
+          "name": "started_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "ended_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "status",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": "active",
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_by_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": "users.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_interventions_created_by_id",
+          [
+            "created_by_id"
+          ]
+        ],
+        [
+          "ix_interventions_district",
+          [
+            "district"
+          ]
+        ],
+        [
+          "ix_interventions_started_at",
+          [
+            "started_at"
+          ]
+        ],
+        [
+          "ix_interventions_status",
+          [
+            "status"
+          ]
+        ]
+      ]
+    },
+    "mo_tags": {
+      "table": "mo_tags",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "name",
+          "app_type": "VARCHAR(120)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 120,
+          "mandatory": true,
+          "unique": true,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": "<function uuid4 at 0x000002A88851D6C0>",
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "created_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "updated_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_mo_tags_name",
+          [
+            "name"
+          ]
+        ]
+      ]
+    },
+    "case_mo_tags": {
+      "table": "case_mo_tags",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "case_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": "crime_cases.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "mo_tag_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": "mo_tags.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [
+        [
+          "case_id",
+          "mo_tag_id"
+        ]
+      ],
+      "indexes": []
+    },
+    "criminal_mo_tags": {
+      "table": "criminal_mo_tags",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "criminal_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": "criminals.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        },
+        {
+          "name": "mo_tag_id",
+          "app_type": "UUID",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 36,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": "mo_tags.id",
+          "default": null,
+          "notes": [
+            "UUID stored as varchar(36)"
+          ],
+          "indexed_in_app": true
+        }
+      ],
+      "unique_constraints": [
+        [
+          "criminal_id",
+          "mo_tag_id"
+        ]
+      ],
+      "indexes": []
+    },
+    "revoked_tokens": {
+      "table": "revoked_tokens",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "jti",
+          "app_type": "VARCHAR(64)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 64,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "revoked_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "expires_at",
+          "app_type": "DATETIME",
+          "catalyst_type": "datetime",
+          "catalyst_max_length": 0,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        [
+          "ix_revoked_tokens_jti",
+          [
+            "jti"
+          ]
+        ]
+      ]
+    },
+    "socioeconomic_indicators": {
+      "table": "socioeconomic_indicators",
+      "app_table": true,
+      "rowid_needs_import": false,
+      "columns": [
+        {
+          "name": "district",
+          "app_type": "VARCHAR(50)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 50,
+          "mandatory": true,
+          "unique": false,
+          "primary_key": true,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": true
+        },
+        {
+          "name": "population_lakhs",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "area_sq_km",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "literacy_rate",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "sex_ratio",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "avg_income_lakhs",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "unemployment_rate",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "urbanization_type",
+          "app_type": "VARCHAR(20)",
+          "catalyst_type": "varchar",
+          "catalyst_max_length": 20,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "urbanization_share_pct",
+          "app_type": "FLOAT",
+          "catalyst_type": "double",
+          "catalyst_max_length": 17,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        },
+        {
+          "name": "data_year",
+          "app_type": "INTEGER",
+          "catalyst_type": "int",
+          "catalyst_max_length": 10,
+          "mandatory": false,
+          "unique": false,
+          "primary_key": false,
+          "foreign_key": null,
+          "default": null,
+          "notes": [],
+          "indexed_in_app": false
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": []
+    }
+  }
+}

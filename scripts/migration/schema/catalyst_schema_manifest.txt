@@ -1,0 +1,74 @@
+Catalyst Data Store console checklist — create these tables and columns exactly.
+Format: column:type(max)|PK|U|M   (PK primary key, U unique, M mandatory)
+
+[roles] name:varchar(50)|U,M ; description:varchar(255) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[crime_categories] name:varchar(150)|U,M ; section_code:varchar(50) ; severity:varchar(20) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[locations] address:text(10000) ; district:varchar(100)|M ; station:varchar(100) ; latitude:double(17)|M ; longitude:double(17)|M ; pincode:varchar(10) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[system_settings] id:varchar(36)|PK,M ; key:varchar(100)|M ; value:text(10000) ; description:text(10000) ; created_at:datetime ; updated_at:datetime
+
+[users] username:varchar(100)|U,M ; email:varchar(255)|U,M ; full_name:varchar(255)|M ; hashed_password:text(10000)|M ; is_active:boolean|M ; failed_login_attempts:int(10)|M ; locked_until:datetime ; role_id:varchar(36)|M ; district:varchar(100) ; station:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[officers] supabase_user_id:varchar(36) ; user_id:varchar(36)|U ; badge_number:varchar(50)|U,M ; name:varchar(255)|M ; rank:varchar(100) ; station:varchar(100)|M ; district:varchar(100) ; designation:varchar(100) ; phone:varchar(20) ; email:varchar(255)|U ; status:varchar(50)|M ; image_url:text(10000) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[criminals] full_name:varchar(255)|M ; aliases:text(10000) ; date_of_birth:date ; gender:varchar(20) ; address:text(10000) ; identifying_marks:text(10000) ; mo_summary:text(10000) ; status:varchar(30)|M ; gang_affiliation:varchar(255) ; neo4j_node_id:varchar(100) ; image_url:text(10000) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[victims] full_name:varchar(255)|M ; contact_number:varchar(20) ; address:text(10000) ; gender:varchar(20) ; age:int(10) ; statement:text(10000) ; neo4j_node_id:varchar(100) ; image_url:text(10000) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[crime_cases] case_number:varchar(50)|U,M ; category_id:varchar(36)|M ; location_id:varchar(36)|M ; occurred_at:datetime|M ; reported_at:datetime|M ; description:text(10000) ; mo_tags:text(10000) ; status:varchar(30)|M ; priority:varchar(30) ; progress:int(10) ; assigned_officer_id:varchar(36) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[firs] fir_number:varchar(50)|U,M ; crime_case_id:varchar(36)|M ; investigating_officer_id:varchar(36) ; complainant_name:varchar(255)|M ; complainant_contact:varchar(20) ; sections:varchar(255) ; filed_at:datetime|M ; status:varchar(30)|M ; narrative:text(10000) ; attachments:text(10000) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[fir_criminal_links] fir_id:varchar(36)|M ; criminal_id:varchar(36)|M ; role:varchar(50) ; id:varchar(36)|PK,M
+
+[fir_victim_links] fir_id:varchar(36)|M ; victim_id:varchar(36)|M ; id:varchar(36)|PK,M
+
+[evidence] case_id:varchar(36)|M ; title:varchar(255)|M ; description:text(10000) ; evidence_type:varchar(50)|M ; status:varchar(50)|M ; created_by:varchar(255) ; assigned_to:varchar(36) ; storage_path:text(10000) ; dataset_provenance:varchar(20)|M ; source_import_job_id:varchar(36) ; source_file:text(10000) ; source_row_ref:varchar(100) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[evidence_metadata] evidence_id:varchar(36)|U,M ; filename:varchar(255)|M ; filepath:text(10000)|M ; filesize:int(10)|M ; mime_type:varchar(100)|M ; uploaded_by:varchar(255) ; storage_url:text(10000) ; extracted_data:text(10000) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[evidence_timeline] evidence_id:varchar(36)|M ; action:varchar(100)|M ; performed_by:varchar(255)|M ; role:varchar(100)|M ; description:text(10000) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[evidence_assignments] evidence_id:varchar(36)|M ; assigned_by:varchar(36)|M ; assigned_to:varchar(36)|M ; status:varchar(50)|M ; assigned_at:datetime|M ; accepted_at:datetime ; completed_at:datetime ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[chain_of_custody] evidence_id:varchar(36)|M ; from_user:varchar(36) ; to_user:varchar(36) ; action:varchar(100)|M ; location:varchar(255) ; remarks:text(10000) ; timestamp:datetime|M ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[evidence_ai_summary] evidence_id:varchar(36)|M ; summary:text(10000)|M ; model:varchar(100)|M ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[reports] template:varchar(100)|M ; report_type:varchar(50)|M ; title:varchar(255) ; requested_by_id:varchar(36)|M ; district:varchar(100) ; date_from:datetime ; date_to:datetime ; format:varchar(10)|M ; status:varchar(30)|M ; file_url:text(10000) ; version:int(10)|M ; case_id:varchar(36) ; provenance:varchar(20)|M ; integrity_hash:varchar(64) ; generation_method:varchar(50) ; analysis_fingerprint:varchar(200) ; failure_reason:text(10000) ; source_record_count:int(10)|M ; evidence_count:int(10)|M ; generated_at:datetime ; reviewed_at:datetime ; finalized_at:datetime ; archived_at:datetime ; reviewed_by_id:varchar(36) ; finalized_by_id:varchar(36) ; content_snapshot:text(10000) ; ai_reported:boolean|M ; ai_metadata:text(10000) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[report_versions] report_id:varchar(36)|M ; version_number:int(10)|M ; created_by_id:varchar(36) ; created_at:datetime|M ; reason:text(10000) ; status:varchar(30)|M ; integrity_hash:varchar(64) ; content_snapshot:text(10000) ; ai_metadata:text(10000) ; id:varchar(36)|PK,M
+
+[report_source_links] report_id:varchar(36)|M ; source_type:varchar(50)|M ; source_id:varchar(100)|M ; source_label:varchar(255) ; created_at:datetime|M ; id:varchar(36)|PK,M
+
+[report_evidence_links] report_id:varchar(36)|M ; evidence_id:varchar(36)|M ; role:varchar(30)|M ; created_at:datetime|M ; id:varchar(36)|PK,M
+
+[audit_logs] user_id:varchar(36)|M ; action:varchar(50)|M ; resource_type:varchar(100)|M ; resource_id:varchar(100) ; details:text(10000) ; ip_address:varchar(50) ; result:varchar(20)|M ; metadata:text(10000) ; timestamp:datetime|M ; id:varchar(36)|PK,M
+
+[notifications] user_id:varchar(36) ; sender_id:varchar(36) ; subject:text(10000)|M ; notification_type:varchar(50)|M ; category:varchar(50)|M ; title:varchar(255)|M ; message:text(10000)|M ; severity:varchar(20)|M ; priority:varchar(20)|M ; status:varchar(20)|M ; resource_type:varchar(50) ; resource_id:varchar(100) ; related_case_number:varchar(50) ; related_fir_number:varchar(50) ; is_read:boolean|M ; is_dismissed:boolean|M ; is_broadcast:boolean|M ; parent_id:varchar(36) ; attachment_url:text(10000) ; created_at:datetime|M ; read_at:datetime ; acknowledged_at:datetime ; resolved_at:datetime ; id:varchar(36)|PK,M
+
+[investigation_notes] case_id:varchar(36)|M ; officer_id:varchar(36) ; officer_name:varchar(255)|M ; officer_badge:varchar(50)|M ; content:text(10000)|M ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[chat_conversations] user_id:varchar(36)|M ; title:varchar(200)|M ; is_temporary:boolean|M ; message_count:int(10)|M ; last_message_at:datetime ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[chat_messages] conversation_id:varchar(36)|M ; role:varchar(16)|M ; content:text(10000)|M ; classification:varchar(50) ; sources_json:text(10000) ; citations_json:text(10000) ; seq:int(10)|M ; created_at:datetime|M ; id:varchar(36)|PK,M
+
+[import_jobs] entity_type:varchar(50)|M ; source_format:varchar(10)|M ; mapping_profile:varchar(50)|M ; source_system:varchar(100)|M ; filename:text(10000) ; status:varchar(30)|M ; total_rows:int(10)|M ; imported_rows:int(10)|M ; failed_rows:int(10)|M ; valid_rows:int(10)|M ; invalid_rows:int(10)|M ; warning_rows:int(10)|M ; exact_duplicate_rows:int(10)|M ; potential_duplicate_rows:int(10)|M ; conflict_rows:int(10)|M ; new_record_rows:int(10)|M ; matched_record_rows:int(10)|M ; updated_record_rows:int(10)|M ; rejected_rows:int(10)|M ; review_rows:int(10)|M ; error_count:int(10)|M ; promoted_rows:int(10)|M ; quality_grade:varchar(10) ; processing_started_at:datetime ; processing_completed_at:datetime ; promoted_at:datetime ; rolled_back_at:datetime ; validation_report:text(10000) ; created_by_id:varchar(36) ; promoted_by_id:varchar(36) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[import_staging_records] job_id:varchar(36)|M ; row_number:int(10)|M ; source_row_ref:varchar(100) ; raw_data:text(10000) ; mapped_data:text(10000) ; validation_status:varchar(20)|M ; validation_errors:text(10000) ; validation_warnings:text(10000) ; duplicate_status:varchar(30)|M ; duplicate_of:text(10000) ; reconciliation_status:varchar(30)|M ; reconciliation_details:text(10000) ; trust_level:varchar(30)|M ; promoted:boolean|M ; promoted_record_id:varchar(36) ; promoted_at:datetime ; id:varchar(36)|PK,M
+
+[interventions] district:varchar(100)|M ; intervention_type:varchar(50)|M ; title:varchar(255)|M ; description:text(10000) ; started_at:datetime|M ; ended_at:datetime ; status:varchar(20)|M ; created_by_id:varchar(36) ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[mo_tags] name:varchar(120)|U,M ; id:varchar(36)|PK,M ; created_at:datetime|M ; updated_at:datetime|M
+
+[case_mo_tags] case_id:varchar(36)|PK,M ; mo_tag_id:varchar(36)|PK,M
+
+[criminal_mo_tags] criminal_id:varchar(36)|PK,M ; mo_tag_id:varchar(36)|PK,M
+
+[revoked_tokens] jti:varchar(64)|PK,M ; revoked_at:datetime|M ; expires_at:datetime|M
+
+[socioeconomic_indicators] district:varchar(50)|PK,M ; population_lakhs:double(17) ; area_sq_km:double(17) ; literacy_rate:double(17) ; sex_ratio:double(17) ; avg_income_lakhs:double(17) ; unemployment_rate:double(17) ; urbanization_type:varchar(20) ; urbanization_share_pct:double(17) ; data_year:int(10)
+
+_Catalyst auto-adds ROWID/CREATORID/CREATEDTIME/MODIFIEDTIME — do not create them._

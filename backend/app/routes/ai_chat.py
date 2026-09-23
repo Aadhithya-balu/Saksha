@@ -179,17 +179,17 @@ async def chat(
                     result = final_result if isinstance(final_result, dict) else {"answer": acc}
                     persist_db = SessionLocal()
                     try:
-                        conversation = persist_db.merge(conversation)
+                        conv = persist_db.merge(conversation)
                         if not str(result.get("answer") or "").strip():
                             if auto_created:
-                                history_service.discard_if_empty(persist_db, current_user, conversation)
+                                history_service.discard_if_empty(persist_db, current_user, conv)
                             return
-                        if _persist_exchange(persist_db, current_user, conversation, payload.message, result):
+                        if _persist_exchange(persist_db, current_user, conv, payload.message, result):
                             yield _ndjson({
                                 "type": "meta",
                                 "content": {
-                                    "conversation_id": str(conversation.id),
-                                    "title": conversation.title,
+                                    "conversation_id": str(conv.id),
+                                    "title": conv.title,
                                     "temporary": False,
                                 },
                             })
@@ -204,28 +204,35 @@ async def chat(
                 except Exception:
                     db.rollback()
                 raise
+            finally:
+                # This handler owns the manual SessionLocal() (not the FastAPI
+                # get_db dependency) — always return the slot to the pool.
+                db.close()
 
         return StreamingResponse(event_stream(), media_type="application/x-ndjson")
 
     try:
         result = orch.process_message_sync(payload.message, user_sid, db, history=llm_history, current_user=current_user)
+        saved_conversation = conversation
+        if conversation is not None:
+            if not _persist_exchange(db, current_user, conversation, payload.message, result):
+                if auto_created:
+                    history_service.discard_if_empty(db, current_user, conversation)
+                saved_conversation = None
+        response = _build_response(result)
+        if saved_conversation is not None:
+            response.conversation_id = saved_conversation.id
+            response.conversation_title = saved_conversation.title
+        return response
     except Exception:
         # Generation failed — make sure no orphan empty conversation remains.
         db.rollback()
         if conversation is not None and auto_created:
             history_service.discard_if_empty(db, current_user, conversation)
         raise
-    saved_conversation = conversation
-    if conversation is not None:
-        if not _persist_exchange(db, current_user, conversation, payload.message, result):
-            if auto_created:
-                history_service.discard_if_empty(db, current_user, conversation)
-            saved_conversation = None
-    response = _build_response(result)
-    if saved_conversation is not None:
-        response.conversation_id = saved_conversation.id
-        response.conversation_title = saved_conversation.title
-    return response
+    finally:
+        # This handler owns the manual SessionLocal() — always return it to the pool.
+        db.close()
 
 
 @router.post("/query", response_model=ChatResponse)

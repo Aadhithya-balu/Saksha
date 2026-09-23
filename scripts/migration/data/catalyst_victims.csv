@@ -1,0 +1,39 @@
+full_name,contact_number,address,gender,age,statement,neo4j_node_id,image_url,dataset_provenance,source_import_job_id,source_file,source_row_ref,id,created_at,updated_at
+Vasanth Kumar,+91 98800 00035,Chitradurga,Male,50,Illegal quarry operations on private land.,,,demo,,,,05039e98-26a6-4e31-8c93-74d302307056,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rajesh Kharvi,+91 98800 00041,Uttara Kannada,Male,48,Boat and fishing equipment stolen.,,,demo,,,,08ca354f-e089-44da-abb7-e5deaa1fca98,2026-08-29 12:45:07,2026-08-29 12:45:07
+Anupama Sharma,+91 98800 00030,Bengaluru Urban,Female,26,"Cyber stalking via social media, threats received.",,,demo,,,,09b80912-af42-4651-9faf-d4c3d017f2b6,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sunita Devi,+91 98800 00006,Bengaluru Urban,Female,38,Lost savings in online investment scam.,,,demo,,,,0c836e5c-7ea9-40f1-9e70-9eaf62562c55,2026-08-29 12:45:07,2026-08-29 12:45:07
+Fathima Begum,+91 98800 00008,Dakshina Kannada,Female,42,Gold chain snatched at traffic signal.,,,demo,,,,12e32ada-0298-471b-a010-8127ccffaf4b,2026-08-29 12:45:07,2026-08-29 12:45:07
+Gopal Krishna,+91 98800 00022,Dharwad,Male,45,Property dispute turned violent.,,,demo,,,,1b5c42cc-aca4-4b46-ba7c-2b472d3d1bd5,2026-08-29 12:45:07,2026-08-29 12:45:07
+Padmavathi,+91 98800 00039,Davanagere,Female,37,Gold chain snatched at bus stand.,,,demo,,,,1f7a3b58-c7c6-41d0-9442-c56eeacdf3a3,2026-08-29 12:45:07,2026-08-29 12:45:07
+Bharat Hegde,+91 98800 00017,Belagavi,Male,43,"ATM card cloned, account drained.",,,demo,,,,206c3048-f589-46a5-b2d8-5522e28415a1,2026-08-29 12:45:07,2026-08-29 12:45:07
+Arun Kumar,+91 98800 00038,Shimoga,Male,42,Timber smuggling reported near forest boundary.,,,demo,,,,23891838-fcd7-4300-8127-8d4b34262ecd,2026-08-29 12:45:07,2026-08-29 12:45:07
+Mahantesh Patil,+91 98800 00027,Bagalkote,Male,52,Agricultural land documents forged.,,,demo,,,,2b4ddc7e-c416-438e-a805-28188577ca44,2026-08-29 12:45:07,2026-08-29 12:45:07
+Vijaya Kumari,+91 98800 00031,Bengaluru Rural,Female,55,Retirement savings stolen via fake investment app.,,,demo,,,,3190ac67-9703-4807-b477-4810eaa5d4d8,2026-08-29 12:45:07,2026-08-29 12:45:07
+Dr. Vinay Murthy,+91 98800 00002,Mysuru,Male,46,Reported night burglary and missing jewellery.,,,demo,,,,33436f22-e5d2-487d-b0c2-edbc1ccbe300,2026-08-29 12:45:07,2026-08-29 12:45:07
+Chitra K,+91 98800 00018,Mysuru,Female,39,Fake police impersonator demanded bribe.,,,demo,,,,346bc5a0-67f5-4dd1-b062-15b140759815,2026-08-29 12:45:07,2026-08-29 12:45:07
+Irfan Ahmed,+91 98800 00024,Dakshina Kannada,Male,30,Assaulted during road rage incident.,,,demo,,,,3a6b92ff-afe3-499a-91aa-089dee72eac8,2026-08-29 12:45:07,2026-08-29 12:45:07
+Jyothi Lingegowda,+91 98800 00025,Mysuru,Female,36,"Cyber fraud victim, lost retirement savings.",,,demo,,,,3cc0720d-7324-43cf-82e9-d96aa7cacadb,2026-08-29 12:45:07,2026-08-29 12:45:07
+K. S. Narayanan,+91 98800 00001,Bengaluru Urban,Male,52,Reported biometric face ID bypass and loan extortion.,,,demo,,,,554b5d15-eeef-4935-bf17-26333e391223,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ismail Nadaf,+91 98800 00029,Kalaburagi,Male,47,Illegal mining near farmland reported.,,,demo,,,,5dbd1a53-0e3d-4b13-bba3-85a4398ed1d2,2026-08-29 12:45:07,2026-08-29 12:45:07
+Eshwarappa,+91 98800 00020,Tumkuru,Male,58,Farmland encroached by mining operators.,,,demo,,,,6192eb6c-a30f-4b72-b1a5-6ec958915413,2026-08-29 12:45:07,2026-08-29 12:45:07
+Dinesh Rao,+91 98800 00019,Bengaluru Urban,Male,34,Phishing email led to bank account compromise.,,,demo,,,,61d2b89a-81f5-4fd0-be20-b23006ad4919,2026-08-29 12:45:07,2026-08-29 12:45:07
+Asha Rao,+91 98800 00003,Dakshina Kannada,Female,33,Witnessed cargo handoff near harbor gate.,,,demo,,,,6577219e-8e53-4912-8b99-3bed2833cd13,2026-08-29 12:45:07,2026-08-29 12:45:07
+Nagaraj Shetty,+91 98800 00011,Tumkuru,Male,60,Property encroachment with threat of violence.,,,demo,,,,677544c5-7623-4cf1-b2fc-42db5f52208f,2026-08-29 12:45:07,2026-08-29 12:45:07
+Chandrakala Devi,+91 98800 00032,Kolar,Female,49,Gold chain snatched near temple.,,,demo,,,,7918370f-7ad0-4018-ad14-534a559a1656,2026-08-29 12:45:07,2026-08-29 12:45:07
+Shashikala Devi,+91 98800 00034,Mandya,Female,41,"Domestic violence case, multiple complaints filed.",,,demo,,,,7cfdf164-8402-4fd1-ab14-ca9aea21cda3,2026-08-29 12:45:07,2026-08-29 12:45:07
+Hema Malini,+91 98800 00023,Hassan,Female,52,Jewellery stolen during house burglary.,,,demo,,,,82b8583c-e706-4384-a830-17269e6dc53a,2026-08-29 12:45:07,2026-08-29 12:45:07
+Kaveri Poojary,+91 98800 00037,Kodagu,Female,29,"Coffee estate theft, equipment missing.",,,demo,,,,87e20a9d-9e1c-45df-b770-968f6715ebc6,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ayesha Parveen,+91 98800 00016,Dakshina Kannada,Female,31,Hawala transfer scam victim.,,,demo,,,,8a0366d3-a110-4a9c-9631-b5b2b7d5cdd5,2026-08-29 12:45:07,2026-08-29 12:45:07
+Manjula Devi,+91 98800 00036,Chamarajanagar,Female,33,Assaulted during land boundary dispute.,,,demo,,,,8b42ce78-cbfa-494d-b26d-7cfc6ffc408a,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sunanda Poojary,+91 98800 00040,Udupi,Female,45,"Fish export business fraud, money lost.",,,demo,,,,97a7974f-89a4-4a4e-a4ca-3cac14ccb31f,2026-08-29 12:45:07,2026-08-29 12:45:07
+Girijeshwar Rao,+91 98800 00015,Ballari,Male,50,Illegal mining on ancestral land reported.,,,demo,,,,ab728180-990a-474c-8e3c-9501f7997b46,2026-08-29 12:45:07,2026-08-29 12:45:07
+Suma B,+91 98800 00014,Hassan,Female,28,Stalked and harassed online via social media.,,,demo,,,,af23b4d5-07a0-4aac-b57c-eca3cda2c456,2026-08-29 12:45:07,2026-08-29 12:45:07
+Shobha Patil,+91 98800 00010,Belagavi,Female,35,Received threatening calls for loan recovery.,,,demo,,,,b4adad3f-9fa7-405a-a4e2-62e77f35260d,2026-08-29 12:45:07,2026-08-29 12:45:07
+Sarojini Bhat,+91 98800 00026,Gadag,Female,38,Gold ornaments stolen during house break-in.,,,demo,,,,c32f0011-6791-49ab-b5ae-04a6d64ec891,2026-08-29 12:45:07,2026-08-29 12:45:07
+Ramesh Gowda,+91 98800 00033,Hassan,Male,44,"Property forged by relatives, dispute ongoing.",,,demo,,,,d5990300-a299-47e3-ab45-c26bd4d55d86,2026-08-29 12:45:07,2026-08-29 12:45:07
+Kavita Banakar,+91 98800 00028,Haveri,Female,29,Stalked and threatened over property dispute.,,,demo,,,,e3d00902-fabb-4f0b-9239-4c5f55530497,2026-08-29 12:45:07,2026-08-29 12:45:07
+Mohan Krishna,+91 98800 00007,Mysuru,Male,55,Vehicle stolen from parking lot near market.,,,demo,,,,e4611983-9306-4c92-b52e-e09fd219282e,2026-08-29 12:45:07,2026-08-29 12:45:07
+Rajendra Prasad,+91 98800 00009,Ballari,Male,48,Land documents forged by fraudsters.,,,demo,,,,e4965bc7-ec17-4c98-bcf3-bbcecab2f3ed,2026-08-29 12:45:07,2026-08-29 12:45:07
+Pradeep Naik,+91 98800 00013,Dharwad,Male,37,"Shop broken into, cash and electronics stolen.",,,demo,,,,e71f5bf5-b5ba-46df-b4be-777cdca5c02c,2026-08-29 12:45:07,2026-08-29 12:45:07
+Prakash Jain,+91 98800 00004,Belagavi,Male,41,Reported forged excise transport documents.,,,demo,,,,ff479cfb-2194-4854-a9b5-9ebe4d08dea3,2026-08-29 12:45:07,2026-08-29 12:45:07

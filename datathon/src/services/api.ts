@@ -4241,8 +4241,8 @@ export async function retryAIJob(jobId: string): Promise<AIProcessingJob> {
   return apiRequest<AIProcessingJob>(`/ai/jobs/${jobId}/retry`, { method: 'POST' });
 }
 
-export async function getPendingAIMatches(): Promise<AIMatchRecord[]> {
-  return apiRequest<AIMatchRecord[]>('/ai/matches');
+export async function getPendingAIMatches(statusFilter: string = 'PENDING'): Promise<AIMatchRecord[]> {
+  return apiRequest<AIMatchRecord[]>(`/ai/matches${buildQueryString({ status_filter: statusFilter })}`);
 }
 
 export async function verifyAIMatch(matchId: string, decision: 'CONFIRM' | 'REJECT'): Promise<AIMatchRecord> {

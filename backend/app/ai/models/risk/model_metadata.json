@@ -2,7 +2,7 @@
     "model_name": "SAKSHA District Risk & Forecast",
     "risk_algorithm": "RandomForest",
     "forecast_algorithm": "XGBoost",
-    "version": "20260911_064303",
+    "version": "20260923_123001",
     "risk_features": [
         "crime_count",
         "night_crime_ratio",
@@ -38,49 +38,49 @@
         "growth_rate",
         "momentum"
     ],
-    "training_rows": 309,
-    "training_period": "2024-01-19 to 2026-09-06",
+    "training_rows": 2697,
+    "training_period": "2020-01-01 to 2025-12-31",
     "validation_period": "Chronological Holdout (20%)",
     "validation_status": "VALIDATED",
     "risk_metrics": {
-        "rmse": 1.9927925783035412,
-        "mae": 0.9553053854923157,
-        "r2": -0.10940249767329968
+        "rmse": 2.7977862283253585,
+        "mae": 2.209459057974182,
+        "r2": -0.06186727439637951
     },
     "forecast_metrics": {
-        "rmse": 2.004497530565251,
-        "mae": 1.017232701203852,
-        "r2": -0.12247324022980988
+        "rmse": 2.9866557428729776,
+        "mae": 2.372651155789693,
+        "r2": -0.21007283996455883
     },
     "risk_baseline_comparison": {
         "model_metrics": {
-            "rmse": 1.9927925783035412,
-            "mae": 0.9553053854923157,
-            "r2": -0.10940249767329968
+            "rmse": 2.7977862283253585,
+            "mae": 2.209459057974182,
+            "r2": -0.06186727439637951
         },
         "baseline_metrics": {
-            "rmse": 2.0260747010690787,
-            "mae": 0.9834138696617474,
-            "r2": -0.14676875733546013
+            "rmse": 2.715237657262262,
+            "mae": 2.1591150260134957,
+            "r2": -0.00013097202338308023
         },
-        "rmse_improvement_pct": 1.64,
-        "mae_improvement_pct": 2.86,
-        "outperforms_baseline": true
+        "rmse_improvement_pct": -3.04,
+        "mae_improvement_pct": -2.33,
+        "outperforms_baseline": false
     },
     "forecast_baseline_comparison": {
         "model_metrics": {
-            "rmse": 2.004497530565251,
-            "mae": 1.017232701203852,
-            "r2": -0.12247324022980988
+            "rmse": 2.9866557428729776,
+            "mae": 2.372651155789693,
+            "r2": -0.21007283996455883
         },
         "baseline_metrics": {
-            "rmse": 1.791557260975724,
-            "mae": 0.9516129032258065,
-            "r2": 0.10334302325581368
+            "rmse": 3.954837637721774,
+            "mae": 3.1925925925925926,
+            "r2": -1.1217709430465255
         },
-        "rmse_improvement_pct": -11.89,
-        "mae_improvement_pct": -6.9,
-        "outperforms_baseline": false
+        "rmse_improvement_pct": 24.48,
+        "mae_improvement_pct": 25.68,
+        "outperforms_baseline": true
     },
-    "trained_on": "2026-09-11T06:43:03.046199+00:00"
+    "trained_on": "2026-09-23T12:30:01.289641+00:00"
 }

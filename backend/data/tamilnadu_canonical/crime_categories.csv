@@ -1,0 +1,24 @@
+id,name,section_code,severity
+761f1a80-34f0-5b83-bdb4-f4fdb8fb96be,Homicide / SEVERE-4,Murder,NON-BAILABLE
+f4b616d2-b304-526b-aa7b-ec3c1f793c79,Theft / SEVERE-3,Robbery,NON-BAILABLE
+6f1a260e-9e74-522a-9b54-618e5b8bc3f7,Property Crime / SEVERE-2,Theft,BAILABLE
+c7708232-fa63-52e3-a2eb-22247f0994f0,Property Crime / SEVERE-3,Burglary,NON-BAILABLE
+680ff990-18de-5a22-929e-c42f1f792191,Economic Offence / SEVERE-2,Cheating,BAILABLE
+40ffc641-ab7d-574e-a5cf-8d4d7b6fef6a,Economic Offence / SEVERE-3,Criminal Breach of Trust,BAILABLE
+c489f8a3-cf09-50b7-b829-31acf5caac83,General / SEVERE-2,Criminal Intimidation,BAILABLE
+8c54c879-dc5c-52ed-a1a2-7e1fe3d6c929,Violent / SEVERE-2,Assault,BAILABLE
+66b5d927-1599-5f80-af6a-acfab4cc9999,Violent / SEVERE-3,Voluntarily Causing Hurt,NON-BAILABLE
+d1ff6261-7d85-530a-ad1a-e128f29a246d,Women/Child / SEVERE-5,Rape,NON-BAILABLE
+d72ad8a6-daee-5933-b919-2695688be2df,Women/Child / SEVERE-4,Kidnapping & Abduction,NON-BAILABLE
+bf95579d-ed34-599b-9078-dd66f7b845d9,Women/Child / SEVERE-3,Domestic Violence,NON-BAILABLE
+0a703e64-9c84-52fd-8250-b4f055cbf550,Economic / SEVERE-3,Economic Offence,NON-BAILABLE
+4c064a3d-3659-5313-97a3-839964facc4b,Cyber / SEVERE-3,Cybercrime,BAILABLE
+e7ab58f1-eb9e-54d4-b6f5-a868b082d606,Narcotics / SEVERE-3,Narcotics Possession,NON-BAILABLE
+6d0a1a6b-2c3b-5f4b-9ef8-f7110cb5ea42,Narcotics / SEVERE-5,Narcotics Trafficking,NON-BAILABLE
+5200a01e-962e-5152-aa13-ca02120c89b0,Traffic / SEVERE-1,Dangerous Driving,BAILABLE
+e91e489e-1599-564e-b40b-3b4cae6607b0,Traffic / SEVERE-2,Drunken Driving,BAILABLE
+ae832049-751c-5cd2-83b7-c7e1f682b0fa,Property / SEVERE-1,Criminal Trespass,BAILABLE
+7bfb7da9-145a-54c8-a3c9-1ea24d942642,Economic / SEVERE-2,Criminal Misappropriation,BAILABLE
+52a7cb16-d60c-5420-9152-830f548d3b25,Economic / SEVERE-4,Extortion,NON-BAILABLE
+498fadb0-0116-5ce0-89e3-6575adab6b74,Violent / SEVERE-4,Riots,NON-BAILABLE
+43bb6a73-f6be-56a3-9399-20c4ee7d2751,Violent / SEVERE-5,Arson,NON-BAILABLE

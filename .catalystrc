@@ -1,0 +1,37 @@
+{
+  "defaults": {
+    "project": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "49978000000018001",
+      "name": "Datathon-1",
+      "domain": {
+        "id": "50043051229",
+        "name": "datathon-1-60073604706.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60073604706",
+          "name": "Development",
+          "type": 3,
+          "env_status": "Active",
+          "project_details": {
+            "project_name": "Datathon-1",
+            "id": "49978000000018001",
+            "project_type": "Live"
+          },
+          "is_default": false,
+          "action_required": false
+        }
+      ]
+    }
+  ]
+}
