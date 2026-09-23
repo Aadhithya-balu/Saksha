@@ -62,8 +62,8 @@ const PRIMARY_BY_ROLE: Record<UserRole, string[]> = {
   INSPECTOR: ['dashboard', 'crime_cases', 'investigation', 'fir', 'hotspot', 'notifications'],
   SCRB: ['dashboard', 'command_center', 'network', 'anomaly', 'predictive', 'reports'],
   IO: ['dashboard', 'crime_cases', 'investigation', 'evidence', 'ai_chat', 'notifications'],
-  FORENSIC: ['dashboard', 'evidence', 'crime_cases', 'face_recognition', 'ai_chat', 'reports'],
-  VIEWER: ['dashboard', 'command_center', 'reports', 'notifications', 'docs', 'ai_chat'],
+  FORENSIC: ['dashboard', 'evidence', 'crime_cases', 'face_recognition', 'ai_chat'],
+  VIEWER: ['dashboard', 'command_center', 'hotspot', 'notifications', 'docs', 'ai_chat'],
 };
 
 const ROLE_ACCENT: Record<string, string> = {

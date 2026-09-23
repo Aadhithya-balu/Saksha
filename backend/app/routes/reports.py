@@ -18,7 +18,7 @@ from fpdf import FPDF
 from docx import Document
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Query as SQLAlchemyQuery
@@ -26,14 +26,18 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ROLE_ADMIN, ROLE_CRIME_ANALYST, ROLE_INSPECTOR, ROLE_INVESTIGATOR, ROLE_POLICYMAKER, require_roles
+from app.auth.scope import enforce_district_scope
 from app.core.exceptions import ConflictException, NotFoundException
 from app.database.postgres import get_db
 from app.models.audit_log import AuditLog
 from app.models.crime import CrimeCase
 from app.models.criminal import Criminal
 from app.models.evidence import Evidence
+from app.models.fir import FIR, FIRCriminalLink, FIRVictimLink
+from app.models.intervention import Intervention
 from app.models.location import Location
 from app.models.officer import Officer
+from app.models.victim import Victim
 from app.models.report import (
     GEN_METHOD_DATABASE_EXPORT,
     REPORT_STATUS_GENERATED,
@@ -60,7 +64,18 @@ router = APIRouter(prefix="/reports", tags=["Reports"], dependencies=[Depends(re
     ROLE_POLICYMAKER,
 ))])
 
-REPORT_TYPES = {"cases", "officers", "criminals", "evidence"}
+REPORT_TYPES = {
+    "cases",
+    "officers",
+    "criminals",
+    "evidence",
+    "hotspots",
+    "interventions",
+    "network",
+    "victimology",
+    "strategic",
+    "dossier",
+}
 EXPORT_FORMATS = {"pdf", "csv", "docx", "txt", "xlsx"}
 SORTABLE_COLUMNS: dict[str, dict[str, Any]] = {
     "cases": {
@@ -90,6 +105,42 @@ SORTABLE_COLUMNS: dict[str, dict[str, Any]] = {
         "evidence_type": Evidence.evidence_type,
         "status": Evidence.status,
         "created_at": Evidence.created_at,
+    },
+    "hotspots": {
+        "case_number": CrimeCase.case_number,
+        "occurred_at": CrimeCase.occurred_at,
+        "created_at": CrimeCase.created_at,
+    },
+    "interventions": {
+        "title": Intervention.title,
+        "district": Intervention.district,
+        "started_at": Intervention.started_at,
+        "status": Intervention.status,
+        "created_at": Intervention.created_at,
+    },
+    "network": {
+        "full_name": Criminal.full_name,
+        "gang_affiliation": Criminal.gang_affiliation,
+        "status": Criminal.status,
+        "created_at": Criminal.created_at,
+    },
+    "victimology": {
+        "full_name": Victim.full_name,
+        "age": Victim.age,
+        "gender": Victim.gender,
+        "created_at": Victim.created_at,
+    },
+    "strategic": {
+        "case_number": CrimeCase.case_number,
+        "priority": CrimeCase.priority,
+        "status": CrimeCase.status,
+        "occurred_at": CrimeCase.occurred_at,
+        "created_at": CrimeCase.created_at,
+    },
+    "dossier": {
+        "case_number": CrimeCase.case_number,
+        "occurred_at": CrimeCase.occurred_at,
+        "created_at": CrimeCase.created_at,
     },
 }
 
@@ -138,6 +189,14 @@ def _serialize_datetime(value: Any) -> str:
     return _clean_text(value)
 
 
+def _validate_date_range(date_from: datetime | None, date_to: datetime | None):
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from must be before or equal to date_to",
+        )
+
+
 def _apply_date_range(query: SQLAlchemyQuery, column: Any, date_from: datetime | None, date_to: datetime | None):
     if date_from:
         query = query.filter(column >= date_from)
@@ -147,9 +206,12 @@ def _apply_date_range(query: SQLAlchemyQuery, column: Any, date_from: datetime |
 
 
 def _apply_sort(query: SQLAlchemyQuery, report_type: str, sort_by: str, sort_order: str):
-    column = SORTABLE_COLUMNS[report_type].get(sort_by)
+    sort_dict = SORTABLE_COLUMNS.get(report_type, {})
+    column = sort_dict.get(sort_by)
     if column is None:
-        column = SORTABLE_COLUMNS[report_type]["created_at"]
+        column = sort_dict.get("created_at")
+    if column is None:
+        return query
     direction = asc if sort_order == "asc" else desc
     return query.order_by(direction(column))
 
@@ -233,7 +295,7 @@ def _report_query(
             "identifying_marks": item.identifying_marks or "",
             "mo_summary": item.mo_summary or "",
         }
-    else:
+    elif report_type == "evidence":
         query = db.query(Evidence).options(joinedload(Evidence.crime_case), joinedload(Evidence.assignee))
         if search:
             query = query.filter(or_(Evidence.title.ilike(f"%{search}%"), Evidence.description.ilike(f"%{search}%"), Evidence.evidence_type.ilike(f"%{search}%")))
@@ -243,16 +305,205 @@ def _report_query(
         headers = ["title", "case_number", "evidence_type", "status", "assigned_to", "created_by", "storage_path", "created_at", "description"]
         def mapper(item):
             return {
-            "title": item.title,
-            "case_number": item.crime_case.case_number if item.crime_case else "",
-            "evidence_type": item.evidence_type,
-            "status": item.status,
-            "assigned_to": item.assignee.full_name if item.assignee else "",
-            "created_by": item.created_by or "",
-            "storage_path": item.storage_path or "",
-            "created_at": _serialize_datetime(item.created_at),
-            "description": item.description or "",
-        }
+                "title": item.title,
+                "case_number": item.crime_case.case_number if item.crime_case else "",
+                "evidence_type": item.evidence_type,
+                "status": item.status,
+                "assigned_to": item.assignee.full_name if item.assignee else "",
+                "created_by": item.created_by or "",
+                "storage_path": item.storage_path or "",
+                "created_at": _serialize_datetime(item.created_at),
+                "description": item.description or "",
+            }
+    elif report_type == "hotspots":
+        query = db.query(CrimeCase).join(Location, CrimeCase.location_id == Location.id).options(
+            joinedload(CrimeCase.location),
+            joinedload(CrimeCase.category)
+        )
+        if search:
+            query = query.filter(or_(
+                CrimeCase.case_number.ilike(f"%{search}%"),
+                Location.district.ilike(f"%{search}%"),
+                Location.station.ilike(f"%{search}%"),
+            ))
+        if status:
+            query = query.filter(CrimeCase.status == status)
+        if district:
+            query = query.filter(Location.district == district)
+        query = _apply_date_range(query, CrimeCase.occurred_at, date_from, date_to)
+        headers = ["case_number", "district", "station", "latitude", "longitude", "category", "priority", "status", "occurred_at"]
+        def mapper(item):
+            return {
+                "case_number": item.case_number,
+                "district": item.location.district if item.location else "",
+                "station": item.location.station if item.location else "",
+                "latitude": str(item.location.latitude) if item.location else "",
+                "longitude": str(item.location.longitude) if item.location else "",
+                "category": item.category.name if item.category else "",
+                "priority": item.priority or "medium",
+                "status": item.status,
+                "occurred_at": _serialize_datetime(item.occurred_at),
+            }
+    elif report_type == "interventions":
+        query = db.query(Intervention)
+        if search:
+            query = query.filter(or_(
+                Intervention.title.ilike(f"%{search}%"),
+                Intervention.description.ilike(f"%{search}%"),
+                Intervention.intervention_type.ilike(f"%{search}%"),
+            ))
+        if status:
+            query = query.filter(Intervention.status == status)
+        if district:
+            query = query.filter(Intervention.district == district)
+        query = _apply_date_range(query, Intervention.started_at, date_from, date_to)
+        headers = ["title", "district", "intervention_type", "status", "workflow_stage", "started_at", "ended_at", "estimated_coverage", "pattern_persisted", "description"]
+        def mapper(item):
+            return {
+                "title": item.title,
+                "district": item.district or "",
+                "intervention_type": item.intervention_type or "",
+                "status": item.status,
+                "workflow_stage": item.workflow_stage or "",
+                "started_at": _serialize_datetime(item.started_at),
+                "ended_at": _serialize_datetime(item.ended_at),
+                "estimated_coverage": f"{item.estimated_coverage}%" if item.estimated_coverage is not None else "",
+                "pattern_persisted": item.pattern_persisted or "",
+                "description": item.description or "",
+            }
+    elif report_type == "network":
+        query = db.query(Criminal)
+        if search:
+            query = query.filter(or_(
+                Criminal.full_name.ilike(f"%{search}%"),
+                Criminal.aliases.ilike(f"%{search}%"),
+                Criminal.gang_affiliation.ilike(f"%{search}%"),
+            ))
+        if status:
+            query = query.filter(Criminal.status == status)
+        if district:
+            subq = db.query(FIRCriminalLink.criminal_id).join(
+                FIR, FIR.id == FIRCriminalLink.fir_id
+            ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+                Location, Location.id == CrimeCase.location_id
+            ).filter(Location.district == district)
+            query = query.filter(Criminal.id.in_(subq))
+        query = _apply_date_range(query, Criminal.created_at, date_from, date_to)
+        headers = ["full_name", "gang_affiliation", "status", "aliases", "gender", "address", "mo_summary", "identifying_marks"]
+        def mapper(item):
+            return {
+                "full_name": item.full_name,
+                "gang_affiliation": item.gang_affiliation or "Independent / Unaffiliated",
+                "status": item.status,
+                "aliases": item.aliases or "",
+                "gender": item.gender or "",
+                "address": item.address or "",
+                "mo_summary": item.mo_summary or "",
+                "identifying_marks": item.identifying_marks or "",
+            }
+    elif report_type == "victimology":
+        query = db.query(Victim)
+        if search:
+            query = query.filter(or_(
+                Victim.full_name.ilike(f"%{search}%"),
+                Victim.address.ilike(f"%{search}%"),
+                Victim.contact_number.ilike(f"%{search}%"),
+            ))
+        if district:
+            subq = db.query(FIRVictimLink.victim_id).join(
+                FIR, FIR.id == FIRVictimLink.fir_id
+            ).join(CrimeCase, CrimeCase.id == FIR.crime_case_id).join(
+                Location, Location.id == CrimeCase.location_id
+            ).filter(Location.district == district)
+            query = query.filter(Victim.id.in_(subq))
+        query = _apply_date_range(query, Victim.created_at, date_from, date_to)
+        headers = ["full_name", "gender", "age", "contact_number", "address", "statement", "created_at"]
+        def mapper(item):
+            return {
+                "full_name": item.full_name,
+                "gender": item.gender or "",
+                "age": str(item.age) if item.age is not None else "",
+                "contact_number": item.contact_number or "",
+                "address": item.address or "",
+                "statement": item.statement or "",
+                "created_at": _serialize_datetime(item.created_at),
+            }
+    elif report_type == "strategic":
+        query = db.query(CrimeCase).options(
+            joinedload(CrimeCase.assigned_officer),
+            joinedload(CrimeCase.category),
+            joinedload(CrimeCase.location)
+        )
+        if search:
+            query = query.filter(or_(
+                CrimeCase.case_number.ilike(f"%{search}%"),
+                CrimeCase.description.ilike(f"%{search}%")
+            ))
+        if status:
+            query = query.filter(CrimeCase.status == status)
+        if district:
+            query = query.join(Location, CrimeCase.location_id == Location.id, isouter=True).filter(Location.district == district)
+        query = _apply_date_range(query, CrimeCase.occurred_at, date_from, date_to)
+        headers = ["case_number", "district", "category", "priority", "status", "progress", "occurred_at", "assigned_officer", "description"]
+        def mapper(item):
+            return {
+                "case_number": item.case_number,
+                "district": item.location.district if item.location else "",
+                "category": item.category.name if item.category else "",
+                "priority": item.priority or "medium",
+                "status": item.status,
+                "progress": f"{item.progress or 0}%",
+                "occurred_at": _serialize_datetime(item.occurred_at),
+                "assigned_officer": item.assigned_officer.name if item.assigned_officer else "Unassigned",
+                "description": item.description or "",
+            }
+    elif report_type == "dossier":
+        query = db.query(CrimeCase).options(
+            joinedload(CrimeCase.assigned_officer),
+            joinedload(CrimeCase.category),
+            joinedload(CrimeCase.location)
+        )
+        if search:
+            query = query.filter(or_(
+                CrimeCase.case_number.ilike(f"%{search}%"),
+                CrimeCase.description.ilike(f"%{search}%")
+            ))
+        if status:
+            query = query.filter(CrimeCase.status == status)
+        if district:
+            query = query.join(Location, CrimeCase.location_id == Location.id, isouter=True).filter(Location.district == district)
+        query = _apply_date_range(query, CrimeCase.occurred_at, date_from, date_to)
+        headers = ["case_number", "category", "district", "station", "status", "priority", "progress", "occurred_at", "reported_at", "assigned_officer", "mo_tags", "description"]
+        def mapper(item):
+            return {
+                "case_number": item.case_number,
+                "category": item.category.name if item.category else "",
+                "district": item.location.district if item.location else "",
+                "station": item.location.station if item.location else "",
+                "status": item.status,
+                "priority": item.priority or "medium",
+                "progress": f"{item.progress or 0}%",
+                "occurred_at": _serialize_datetime(item.occurred_at),
+                "reported_at": _serialize_datetime(item.reported_at),
+                "assigned_officer": item.assigned_officer.name if item.assigned_officer else "Unassigned",
+                "mo_tags": item.mo_tags or "",
+                "description": item.description or "",
+            }
+    else:
+        query = db.query(Evidence).options(joinedload(Evidence.crime_case), joinedload(Evidence.assignee))
+        headers = ["title", "case_number", "evidence_type", "status", "assigned_to", "created_by", "storage_path", "created_at", "description"]
+        def mapper(item):
+            return {
+                "title": item.title,
+                "case_number": item.crime_case.case_number if item.crime_case else "",
+                "evidence_type": item.evidence_type,
+                "status": item.status,
+                "assigned_to": item.assignee.full_name if item.assignee else "",
+                "created_by": item.created_by or "",
+                "storage_path": item.storage_path or "",
+                "created_at": _serialize_datetime(item.created_at),
+                "description": item.description or "",
+            }
     return _apply_sort(query, report_type, sort_by, sort_order), headers, mapper
 
 
@@ -379,40 +630,48 @@ def _generate_pdf(title: str, filters: dict, headers: list[str], rows: list[dict
     import os as _os
     import unicodedata
 
-    # Typography replacements for PDF encoding safety
     UNICODE_REPLACEMENTS = {
-        "\u2014": " - ",   # em-dash
-        "\u2013": " - ",   # en-dash
-        "\u2022": " * ",   # bullet
-        "\u2018": "'",     # left single quote
-        "\u2019": "'",     # right single quote
-        "\u201c": '"',     # left double quote
-        "\u201d": '"',     # right double quote
-        "\u2026": "...",   # ellipsis
-        "\u00a0": " ",     # non-breaking space
-        "\u2194": " <-> ", # left right arrow
-        "\u2192": " -> ",  # right arrow
-        "\u2190": " <- ",  # left arrow
+        "\u2014": " - ",
+        "\u2013": " - ",
+        "\u2022": " * ",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2026": "...",
+        "\u00a0": " ",
+        "\u2194": " <-> ",
+        "\u2192": " -> ",
+        "\u2190": " <- ",
         "\u2264": "<=",
         "\u2265": ">=",
         "\u2260": "!=",
     }
 
-    def safe_text(text):
+    def safe_text(text: Any) -> str:
         """Safely encode text for PDF by replacing typographic Unicode symbols and non-printables."""
         if text is None:
             return ""
         s = str(text)
         for u_char, r_char in UNICODE_REPLACEMENTS.items():
             s = s.replace(u_char, r_char)
-        # Normalize and strip unprintable characters
         s = unicodedata.normalize("NFKD", s)
-        # Encode transliterated latin-1
-        try:
-            s = s.encode("latin-1", "replace").decode("latin-1")
-        except Exception:
-            s = s.encode("ascii", "replace").decode("ascii")
+        s = s.encode("ascii", "ignore").decode("ascii")
         return "".join(c for c in s if c.isprintable() or c in ("\n", "\t")).strip()
+
+    def format_cell_value(val: Any) -> str:
+        if val is None:
+            return "-"
+        s = str(val).strip()
+        if not s:
+            return "-"
+        # Format ISO datetimes: 2026-09-06T19:13:45+05:30 -> 2026-09-06 19:13
+        if "T" in s and len(s) >= 16:
+            parts = s.split("T")
+            if len(parts) == 2 and len(parts[0]) == 10 and parts[0].count("-") == 2:
+                time_part = parts[1][:5]
+                return f"{parts[0]} {time_part}"
+        return s
 
     is_dossier = len(headers) == 2 and headers[0] == "Property" and headers[1] == "Value"
     orientation = "P" if is_dossier else "L"
@@ -422,6 +681,8 @@ def _generate_pdf(title: str, filters: dict, headers: list[str], rows: list[dict
     font_bold = "C:\\Windows\\Fonts\\arialbd.ttf" if _os.path.isfile("C:\\Windows\\Fonts\\arialbd.ttf") else None
     font_italic = "C:\\Windows\\Fonts\\ariali.ttf" if _os.path.isfile("C:\\Windows\\Fonts\\ariali.ttf") else None
     _font = "Arial" if font_regular else "helvetica"
+
+    watermark_label = safe_text(str(filters.get("Watermark", filters.get("Classification", "CONFIDENTIAL"))).upper())
 
     class ReportPDF(FPDF):
         def __init__(self, orientation="P"):
@@ -442,41 +703,85 @@ def _generate_pdf(title: str, filters: dict, headers: list[str], rows: list[dict
             self.cell(0, 6, safe_text(title), align="C", new_x="LMARGIN", new_y="NEXT")
             self.set_draw_color(203, 213, 225)
             self.line(10, self.get_y() + 2, self.w - 10, self.get_y() + 2)
-            self.ln(5)
+            self.ln(4)
 
         def footer(self):
-            self.set_y(-15)
-            self.set_font(_font, "I", 8)
+            # Draw diagonal translucent watermark
+            if watermark_label:
+                with self.rotation(32, x=self.w / 2, y=self.h / 2):
+                    self.set_text_color(235, 239, 246)
+                    self.set_font(_font, "B", 36)
+                    wm_w = self.get_string_width(watermark_label)
+                    self.text(x=(self.w - wm_w) / 2, y=self.h / 2, text=watermark_label)
+
+            self.set_y(-14)
+            self.set_font(_font, "I", 7.5)
             self.set_text_color(100, 116, 139)
-            self.cell(0, 10, f"SAKSHA Platform  |  Page {self.page_no()} of {{nb}}  |  CONFIDENTIAL LAW-ENFORCEMENT REPORT", align="C")
+            self.cell(0, 8, f"SAKSHA Platform  |  Page {self.page_no()} of {{nb}}  |  {watermark_label} - LAW ENFORCEMENT RECORD", align="C")
 
     pdf = ReportPDF(orientation=orientation)
     pdf.alias_nb_pages()
-    pdf.set_auto_page_break(auto=True, margin=18)
+    pdf.set_auto_page_break(auto=True, margin=16)
     pdf.add_page()
 
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    filter_str = ", ".join(f"{k}={v}" for k, v in filters.items()) if filters else "None"
 
-    # Metadata Box
-    pdf.set_fill_color(248, 250, 252)
-    pdf.set_draw_color(226, 232, 240)
+    # Structured Metadata Box (3 columns, strict bounds, never overflowing)
     meta_y = pdf.get_y()
     meta_w = pdf.w - 20
-    pdf.rect(10, meta_y, meta_w, 20, "DF")
-    pdf.set_xy(14, meta_y + 2)
-    
-    pdf.set_font(_font, "B", 8.5)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 5, "INTELLIGENCE REPORT METADATA & CONTROL", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_x(14)
-    pdf.set_font(_font, "", 8)
+    meta_h = 24
+    pdf.set_fill_color(248, 250, 252)
+    pdf.set_draw_color(203, 213, 225)
+    pdf.rect(10, meta_y, meta_w, meta_h, "DF")
+
+    # Sub-header ribbon inside box
+    pdf.set_fill_color(241, 245, 249)
+    pdf.rect(10, meta_y, meta_w, 5.5, "DF")
+    pdf.set_xy(13, meta_y + 1)
+    pdf.set_font(_font, "B", 7.5)
+    pdf.set_text_color(30, 41, 59)
+    pdf.cell(0, 4, "INTELLIGENCE REPORT CONTROL & PROVENANCE METADATA")
+
+    # 3-column structured metadata text
+    col1_x = 13
+    col2_x = 10 + (meta_w * 0.35)
+    col3_x = 10 + (meta_w * 0.70)
+    row1_y = meta_y + 7.5
+    row2_y = meta_y + 12.5
+    row3_y = meta_y + 17.5
+
+    pdf.set_font(_font, "", 7)
     pdf.set_text_color(71, 85, 105)
-    pdf.cell(90, 4.5, f"Generated At: {generated}")
-    pdf.cell(0, 4.5, safe_text(f"Classification / Watermark: {filter_str}"), new_x="LMARGIN", new_y="NEXT")
-    pdf.set_x(14)
-    pdf.cell(0, 4.5, f"Total Data Attributes: {len(rows)}", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_y(meta_y + 23)
+
+    # Column 1
+    pdf.set_xy(col1_x, row1_y)
+    rep_id = str(filters.get("Report ID", "-"))[:18]
+    pdf.cell(meta_w * 0.33, 4, f"Report ID: {rep_id}..")
+    pdf.set_xy(col1_x, row2_y)
+    pdf.cell(meta_w * 0.33, 4, f"Report Type: {str(filters.get('Report Type', '-')).title()}")
+    pdf.set_xy(col1_x, row3_y)
+    pdf.cell(meta_w * 0.33, 4, f"Records / Rows: {len(rows)}")
+
+    # Column 2
+    pdf.set_xy(col2_x, row1_y)
+    pdf.cell(meta_w * 0.33, 4, f"Generated: {generated}")
+    pdf.set_xy(col2_x, row2_y)
+    cls_val = str(filters.get("Classification", filters.get("Watermark", "CONFIDENTIAL")))[:25]
+    pdf.cell(meta_w * 0.33, 4, f"Classification: {cls_val}")
+    pdf.set_xy(col2_x, row3_y)
+    prov_val = str(filters.get("Provenance", "LIVE"))
+    pdf.cell(meta_w * 0.33, 4, f"Provenance: {prov_val}")
+
+    # Column 3
+    pdf.set_xy(col3_x, row1_y)
+    ver_val = str(filters.get("Version", "v1"))
+    stat_val = str(filters.get("Status", "GENERATED")).upper()
+    pdf.cell(meta_w * 0.28, 4, f"Status: {stat_val} ({ver_val})")
+    pdf.set_xy(col3_x, row2_y)
+    hash_val = str(filters.get("Integrity Hash", "-"))[:16]
+    pdf.cell(meta_w * 0.28, 4, f"Integrity Hash: {hash_val}..")
+
+    pdf.set_y(meta_y + meta_h + 3)
 
     if headers and rows:
         if is_dossier:
@@ -500,7 +805,7 @@ def _generate_pdf(title: str, filters: dict, headers: list[str], rows: list[dict
                 lines = pdf.multi_cell(val_w - 4, 4.5, val_text, dry_run=True, output="LINES")
                 row_h = max(7, len(lines) * 4.5 + 3)
 
-                if pdf.get_y() + row_h > pdf.h - 20:
+                if pdf.get_y() + row_h > pdf.h - 18:
                     pdf.add_page()
                     pdf.set_fill_color(30, 41, 59)
                     pdf.set_draw_color(51, 65, 85)
@@ -532,34 +837,94 @@ def _generate_pdf(title: str, filters: dict, headers: list[str], rows: list[dict
                 pdf.set_xy(curr_x, curr_y + row_h)
 
         else:
-            # Multi-column Tabular Report Layout
-            col_w = max(22, (meta_w) / len(headers))
-            pdf.set_fill_color(30, 41, 59)
-            pdf.set_draw_color(51, 65, 85)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(_font, "B", 8)
-            for h in headers:
-                pdf.cell(col_w, 7, safe_text(h.replace("_", " ").title())[:20], border=1, fill=True)
-            pdf.ln()
+            # Multi-column Tabular Report Layout with Proportional Columns and Text Fitting
+            COLUMN_WEIGHT_DEFAULTS = {
+                # Case & Core Attributes
+                "case_number": 26, "title": 32, "category": 28, "district": 22, "station": 26,
+                "status": 16, "priority": 14, "progress": 12, "occurred_at": 22, "reported_at": 22,
+                "assigned_officer": 25, "mo_tags": 22, "description": 36,
+                # Officer Attributes
+                "badge_number": 24, "name": 30, "rank": 20, "designation": 24, "phone": 22, "email": 35,
+                # Criminal & Person Attributes
+                "full_name": 30, "aliases": 24, "gender": 14, "date_of_birth": 20, "address": 35,
+                "identifying_marks": 30, "mo_summary": 35,
+                # Evidence Attributes
+                "evidence_type": 22, "assigned_to": 26, "created_by": 24, "storage_path": 30,
+                # Hotspot & Geo
+                "latitude": 18, "longitude": 18,
+                # Intervention Attributes
+                "intervention_type": 24, "workflow_stage": 20, "started_at": 22, "ended_at": 22,
+                "estimated_coverage": 18, "pattern_persisted": 16,
+            }
 
-            pdf.set_text_color(30, 41, 59)
-            pdf.set_font(_font, "", 7.5)
-            for row in rows:
-                if pdf.get_y() + 7 > pdf.h - 20:
+            total_meta_w = meta_w
+            weights = [COLUMN_WEIGHT_DEFAULTS.get(h, 22) for h in headers]
+            total_w = sum(weights)
+            col_widths = [max(12.0, (w / total_w) * total_meta_w) for w in weights]
+            scale = total_meta_w / sum(col_widths)
+            col_widths = [round(w * scale, 1) for w in col_widths]
+            diff = round(total_meta_w - sum(col_widths), 1)
+            col_widths[-1] = round(col_widths[-1] + diff, 1)
+
+            # Choose font sizes based on column density
+            hdr_font_size = 7.0 if len(headers) >= 10 else (8.0 if len(headers) >= 6 else 8.5)
+            row_font_size = 6.5 if len(headers) >= 10 else (7.5 if len(headers) >= 6 else 8.0)
+            row_height = 6.0 if len(headers) >= 10 else 6.5
+
+            def fit_text_to_col(txt: str, max_w: float, font_size: float, is_bold: bool = False) -> str:
+                if not txt:
+                    return ""
+                pdf.set_font(_font, "B" if is_bold else "", font_size)
+                avail = max_w - 2.0  # 1mm left/right padding
+                if avail <= 0:
+                    return ""
+                if pdf.get_string_width(txt) <= avail:
+                    return txt
+                ell = ".."
+                ell_w = pdf.get_string_width(ell)
+                if ell_w >= avail:
+                    return ""
+                t = txt
+                while t and (pdf.get_string_width(t) + ell_w) > avail:
+                    t = t[:-1]
+                return (t.strip() + ell) if t else ""
+
+            def draw_header_row():
+                pdf.set_fill_color(30, 41, 59)
+                pdf.set_draw_color(51, 65, 85)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font(_font, "B", hdr_font_size)
+                for idx, h in enumerate(headers):
+                    col_w = col_widths[idx]
+                    hdr_title = safe_text(h.replace("_", " ").title())
+                    fitted = fit_text_to_col(hdr_title, col_w, hdr_font_size, is_bold=True)
+                    pdf.cell(col_w, 7, fitted, border=1, fill=True, align="L")
+                pdf.ln()
+
+            draw_header_row()
+
+            for row_idx, row in enumerate(rows):
+                if pdf.get_y() + row_height > pdf.h - 18:
                     pdf.add_page()
-                    pdf.set_fill_color(30, 41, 59)
-                    pdf.set_draw_color(51, 65, 85)
-                    pdf.set_text_color(255, 255, 255)
-                    pdf.set_font(_font, "B", 8)
-                    for h in headers:
-                        pdf.cell(col_w, 7, safe_text(h.replace("_", " ").title())[:20], border=1, fill=True)
-                    pdf.ln()
-                    pdf.set_text_color(30, 41, 59)
-                    pdf.set_font(_font, "", 7.5)
+                    draw_header_row()
 
-                for h in headers:
-                    val = safe_text(row.get(h, ""))[:40]
-                    pdf.cell(col_w, 6, val, border=1)
+                # Alternating row background
+                if row_idx % 2 == 0:
+                    pdf.set_fill_color(248, 250, 252)
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+
+                pdf.set_draw_color(226, 232, 240)
+                pdf.set_text_color(30, 41, 59)
+                pdf.set_font(_font, "", row_font_size)
+
+                for idx, h in enumerate(headers):
+                    col_w = col_widths[idx]
+                    raw_val = row.get(h, "")
+                    formatted_val = format_cell_value(raw_val)
+                    clean_val = safe_text(formatted_val)
+                    fitted_val = fit_text_to_col(clean_val, col_w, row_font_size, is_bold=False)
+                    pdf.cell(col_w, row_height, fitted_val, border=1, fill=True, align="L")
                 pdf.ln()
 
     else:
@@ -617,6 +982,10 @@ def _generate_docx(title: str, filters: dict, headers: list[str], rows: list[dic
 
 
 def _create_report_record(db: Session, current_user: User, report_type: str, export_format: str, filters: dict[str, Any]) -> Report:
+    query, headers, mapper = _report_query(db, report_type, filters.get("search"), filters.get("status"), filters.get("district"), filters.get("date_from"), filters.get("date_to"), "created_at", "desc")
+    rows = [mapper(item) for item in query.limit(5000).all()]
+    snapshot = {"headers": headers, "rows": rows}
+
     report = Report(
         template=f"{report_type}_report",
         report_type=report_type,
@@ -627,10 +996,11 @@ def _create_report_record(db: Session, current_user: User, report_type: str, exp
         date_to=filters.get("date_to") or None,
         format=export_format,
         status=REPORT_STATUS_GENERATED,
-        provenance=report_service.legacy_report_provenance(db, report_type, [], None),
+        provenance=report_service.legacy_report_provenance(db, report_type, rows, None),
         generation_method=GEN_METHOD_DATABASE_EXPORT,
-        source_record_count=0,
-        evidence_count=0,
+        source_record_count=len(rows),
+        evidence_count=len(rows) if report_type == "evidence" else 0,
+        content_snapshot=json.dumps(snapshot, default=report_service._json_default),
         file_url=f"/api/v2/reports/{report_type}/export/{export_format}",
     )
     db.add(report)
@@ -645,6 +1015,7 @@ def list_reports(
     status: str | None = None,
     report_type: str | None = None,
     case_id: uuid.UUID | None = None,
+    district: str | None = None,
     search: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
@@ -655,9 +1026,13 @@ def list_reports(
 
     Non-admin users only ever see reports they created; admins see everything.
     """
+    _validate_date_range(date_from, date_to)
+    effective_district = enforce_district_scope(current_user, district, db)
     query = db.query(Report)
     if current_user.role.name != ROLE_ADMIN:
         query = query.filter(Report.requested_by_id == current_user.id)
+    if effective_district:
+        query = query.filter(Report.district == effective_district)
     if status:
         query = query.filter(Report.status == status)
     if report_type:
@@ -734,16 +1109,17 @@ def _render_snapshot_response(
     """
     headers = list(snapshot.get("headers") or [])
     rows = _snapshot_rows_as_dicts(headers, list(snapshot.get("rows") or []))
-    title = report.title or f"{report.report_type.title()} Report"
+    rep_type = report.report_type or (report.template.replace("_report", "") if report.template else "cases")
+    title = report.title or f"{rep_type.title()} Report"
     filters = {
         "Report ID": str(report.id),
-        "Report Type": report.report_type,
+        "Report Type": rep_type,
         "Version": f"v{report.version}",
-        "Provenance": report.provenance,
+        "Provenance": report.provenance or "MIXED",
         "Status": report.status,
         "Integrity Hash": report.integrity_hash or "pending",
     }
-    filename = f"saksha_{report.report_type}_report_v{report.version}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    filename = f"saksha_{rep_type}_report_v{report.version}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
     if export_format == "csv":
         return _csv_response(filename, headers, rows)
@@ -944,7 +1320,20 @@ def download_lifecycle_report(
     report_service.require_report_access(current_user, report)
     snapshot = report_service._load_snapshot(report)
     if not snapshot.get("headers") and not snapshot.get("rows"):
-        raise ConflictException("Report has no generated content to download")
+        report_type = report.report_type or (report.template.replace("_report", "") if report.template else "cases")
+        if report_type not in REPORT_TYPES:
+            report_type = "cases"
+        try:
+            query, headers, mapper = _report_query(
+                db, report_type, None, None, report.district, report.date_from, report.date_to, "created_at", "desc"
+            )
+            rows = [mapper(item) for item in query.limit(5000).all()]
+            snapshot = {"headers": headers, "rows": rows}
+            report.content_snapshot = json.dumps(snapshot, default=report_service._json_default)
+            report.source_record_count = len(rows)
+            db.commit()
+        except Exception:
+            raise ConflictException("Report has no generated content to download")
     audit_service.log_action(
         db, current_user, "REPORT_DOWNLOAD", "Report", str(report.id),
         details=f"format={export_format}; version=v{report.version}",
@@ -982,6 +1371,42 @@ def report_audit_history(
     }
 
 
+@router.delete("/{report_id:uuid}", response_model=dict)
+def delete_report(
+    report_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a report record and its associated history/links (§4/§13).
+
+    Authorized for administrators or the user who requested the report.
+    Cascade deletes version history, evidence links, and source links.
+    """
+    report = _load_report_or_404(db, report_id)
+    report_service.require_report_access(current_user, report)
+    report_id_str = str(report.id)
+    report_title = report.title or f"{report.report_type.title()} Report"
+    report_type = report.report_type
+
+    audit_service.log_action(
+        db,
+        current_user,
+        "REPORT_DELETE",
+        "Report",
+        report_id_str,
+        details=f"title={report_title}; type={report_type}",
+        ip_address=_client_ip(request),
+    )
+    db.delete(report)
+    db.commit()
+    return {
+        "success": True,
+        "message": "Report deleted successfully",
+        "id": report_id_str,
+    }
+
+
 @router.get("/{report_type}")
 def preview_report(
     report_type: str,
@@ -999,13 +1424,15 @@ def preview_report(
 ):
     if report_type not in REPORT_TYPES:
         return Response(status_code=404, content="Unknown report type")
-    query, headers, mapper = _report_query(db, report_type, search, status, district, date_from, date_to, sort_by, sort_order)
+    _validate_date_range(date_from, date_to)
+    effective_district = enforce_district_scope(current_user, district, db)
+    query, headers, mapper = _report_query(db, report_type, search, status, effective_district, date_from, date_to, sort_by, sort_order)
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return {
         "report_type": report_type,
         "headers": headers,
-        "filters": _filters_dict(search=search, status=status, district=district, date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order),
+        "filters": _filters_dict(search=search, status=status, district=effective_district, date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order),
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -1028,8 +1455,10 @@ def generate_report(
 ):
     if report_type not in REPORT_TYPES:
         return Response(status_code=404, content="Unknown report type")
-    filters = _filters_dict(search=search, status=status, district=district, date_from=date_from, date_to=date_to)
-    report = _create_report_record(db, current_user, report_type, export_format, {"district": district, "date_from": date_from, "date_to": date_to})
+    _validate_date_range(date_from, date_to)
+    effective_district = enforce_district_scope(current_user, district, db)
+    filters = _filters_dict(search=search, status=status, district=effective_district, date_from=date_from, date_to=date_to)
+    report = _create_report_record(db, current_user, report_type, export_format, {"district": effective_district, "date_from": date_from, "date_to": date_to})
     audit_service.log_action(
         db, current_user, "REPORT_GENERATE", "Report", str(report.id),
         details=str(filters), ip_address=request.client.host if request.client else None,
@@ -1048,6 +1477,7 @@ def export_report(
     search: str | None = None,
     status: str | None = None,
     district: str | None = None,
+    classification: str | None = Query("CONFIDENTIAL"),
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     sort_by: str = "created_at",
@@ -1057,10 +1487,16 @@ def export_report(
 ):
     if report_type not in REPORT_TYPES or export_format not in EXPORT_FORMATS:
         return Response(status_code=404, content="Unknown export")
-    query, headers, mapper = _report_query(db, report_type, search, status, district, date_from, date_to, sort_by, sort_order)
+    _validate_date_range(date_from, date_to)
+    effective_district = enforce_district_scope(current_user, district, db)
+    query, headers, mapper = _report_query(db, report_type, search, status, effective_district, date_from, date_to, sort_by, sort_order)
     rows = [mapper(item) for item in query.limit(5000).all()]
-    filters = _filters_dict(search=search, status=status, district=district, date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order)
-    report = _create_report_record(db, current_user, report_type, export_format, {"district": district, "date_from": date_from, "date_to": date_to})
+    filters = _filters_dict(search=search, status=status, district=effective_district, date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order)
+    if classification:
+        filters["Classification"] = classification
+        badge = getattr(current_user, "badge_number", None) or current_user.username
+        filters["Watermark"] = f"{classification} - {badge}"
+    report = _create_report_record(db, current_user, report_type, export_format, {"district": effective_district, "date_from": date_from, "date_to": date_to})
     report.source_record_count = len(rows)
     if report_type == "evidence":
         report.evidence_count = len(rows)
