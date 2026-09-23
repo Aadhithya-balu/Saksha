@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_INVESTIGATOR, ROLE_INSPECTOR, ROLE_FORENSIC, ROLE_CRIME_ANALYST, require_roles
-from app.auth.scope import enforce_district_scope, enforce_record_district
+from app.auth.scope import enforce_district_scope, enforce_record_district, is_court_user, check_case_access
+from app.core.exceptions import ForbiddenException
 from app.database.postgres import get_db
 from app.models.crime import CrimeCase
 from app.models.location import Location
@@ -133,12 +134,13 @@ def _get_evidence_record(db: Session, evidence_id: uuid.UUID) -> Evidence:
 
 def _enforce_evidence_district(db: Session, current_user: User, evidence: Evidence) -> None:
     """Fail closed for district-bound roles outside the evidence's case district.
-
-    Every evidence item belongs to a case which has a jurisdictional district;
-    a district-bound user must never read or mutate evidence attached to a case
-    outside their own district (issue #275: evidence access must respect
-    jurisdiction server-side, not via frontend hiding).
+    For court authorities, verify active case access grant.
     """
+    if is_court_user(current_user):
+        if not evidence.case_id or not check_case_access(current_user, evidence.case_id, db):
+            raise ForbiddenException("Court access to this evidence item's case has not been granted.")
+        return
+
     case = evidence.crime_case
     enforce_record_district(
         current_user,
@@ -175,14 +177,28 @@ def list_evidence(
     if assigned_to:
         query = query.filter(Evidence.assigned_to == assigned_to)
 
-    # District-bound roles only see evidence attached to a case in their district.
-    effective_district = enforce_district_scope(current_user, None, db)
-    if effective_district:
-        query = (
-            query.join(CrimeCase, CrimeCase.id == Evidence.case_id)
-            .join(Location, Location.id == CrimeCase.location_id)
-            .filter(Location.district == effective_district)
-        )
+    if is_court_user(current_user):
+        from app.models.case_access import CaseAccess
+        granted_case_ids = [
+            row[0] for row in db.query(CaseAccess.case_id).filter(
+                CaseAccess.organization_id == current_user.organization_id,
+                CaseAccess.status == "active",
+            ).all()
+        ] if getattr(current_user, "organization_id", None) else []
+        if case_id:
+            if case_id not in granted_case_ids:
+                return PaginatedResponse(results=[], total=0, page=page, page_size=page_size)
+        else:
+            query = query.filter(Evidence.case_id.in_(granted_case_ids))
+    else:
+        # District-bound roles only see evidence attached to a case in their district.
+        effective_district = enforce_district_scope(current_user, None, db)
+        if effective_district:
+            query = (
+                query.join(CrimeCase, CrimeCase.id == Evidence.case_id)
+                .join(Location, Location.id == CrimeCase.location_id)
+                .filter(Location.district == effective_district)
+            )
 
     total = query.count()
     items = query.order_by(Evidence.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
@@ -200,12 +216,7 @@ def get_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_
     if evidence is None:
         raise HTTPException(status_code=404, detail="Evidence not found")
 
-    case = db.query(CrimeCase).filter(CrimeCase.id == evidence.case_id).first()
-    enforce_record_district(
-        current_user,
-        case.location.district if (case and case.location) else None,
-        db,
-    )
+    _enforce_evidence_district(db, current_user, evidence)
 
     # Track View Event
     add_timeline_event(db, evidence_id, "Evidence Viewed", current_user)
@@ -216,6 +227,17 @@ def get_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_
     custody = db.query(ChainOfCustody).filter(ChainOfCustody.evidence_id == evidence_id).order_by(ChainOfCustody.timestamp.asc()).all()
     ai_summaries = db.query(EvidenceAISummary).filter(EvidenceAISummary.evidence_id == evidence_id).order_by(EvidenceAISummary.created_at.desc()).all()
     
+    storage_path = evidence.storage_path
+    if is_court_user(current_user) and storage_path:
+        storage_path = os.path.basename(storage_path)
+
+    metadata_out = None
+    if metadata:
+        metadata_dict = EvidenceMetadataOut.model_validate(metadata).model_dump()
+        if is_court_user(current_user) and metadata_dict.get("filepath"):
+            metadata_dict["filepath"] = os.path.basename(metadata_dict["filepath"])
+        metadata_out = EvidenceMetadataOut.model_validate(metadata_dict)
+
     return EvidenceDetailOut(
         id=evidence.id,
         case_id=evidence.case_id,
@@ -225,10 +247,10 @@ def get_evidence(evidence_id: uuid.UUID, db: Session = Depends(get_db), current_
         status=evidence.status,
         created_by=evidence.created_by,
         assigned_to=evidence.assigned_to,
-        storage_path=evidence.storage_path,
+        storage_path=storage_path,
         created_at=evidence.created_at,
         updated_at=evidence.updated_at,
-        metadata=EvidenceMetadataOut.model_validate(metadata) if metadata else None,
+        metadata=metadata_out,
         timeline=[EvidenceTimelineOut.model_validate(t) for t in timeline],
         assignments=[EvidenceAssignmentOut.model_validate(a) for a in assignments],
         chain_of_custody=[ChainOfCustodyOut.model_validate(c) for c in custody],

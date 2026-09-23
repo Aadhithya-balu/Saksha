@@ -10,7 +10,27 @@ import {
   setStoredTokens,
 } from '../services/api';
 
-export type UserRole = 'SCRB' | 'IO' | 'SP' | 'INSPECTOR' | 'FORENSIC' | 'VIEWER' | 'ADMIN';
+export type UserRole =
+  | 'SCRB'
+  | 'IO'
+  | 'SP'
+  | 'INSPECTOR'
+  | 'FORENSIC'
+  | 'VIEWER'
+  | 'ADMIN'
+  | 'COURT_ADMIN'
+  | 'JUDICIAL_AUTHORITY'
+  | 'COURT_ANALYST';
+
+export type AuthorityType =
+  | 'LAW_ENFORCEMENT'
+  | 'COURT'
+  | 'PROSECUTION'
+  | 'FORENSIC'
+  | 'ANALYSIS'
+  | 'SUPERVISORY'
+  | 'ADMINISTRATION'
+  | 'OTHER';
 
 export type AuthErrorTone = 'error' | 'warning';
 
@@ -56,6 +76,13 @@ export interface UserSession {
   role: UserRole;
   district?: string | null;
   station?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  authorityType?: AuthorityType | null;
+  designation?: string | null;
+  jurisdiction?: string | null;
+  scopeLevel?: string | null;
+  capabilities?: string[];
 }
 
 interface AuthState {
@@ -89,6 +116,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           role: mapBackendRoleToUiRole(currentUser.role),
           district: currentUser.district,
           station: currentUser.station,
+          organizationId: currentUser.organization_id,
+          organizationName: currentUser.organization_name,
+          authorityType: (currentUser.authority_type as AuthorityType) || null,
+          designation: currentUser.designation,
+          jurisdiction: currentUser.jurisdiction,
+          scopeLevel: currentUser.scope_level,
         },
         isAuthenticated: true,
         loginError: null,
@@ -147,6 +180,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           role: mapBackendRoleToUiRole(currentUser.role),
           district: currentUser.district,
           station: currentUser.station,
+          organizationId: currentUser.organization_id,
+          organizationName: currentUser.organization_name,
+          authorityType: (currentUser.authority_type as AuthorityType) || null,
+          designation: currentUser.designation,
+          jurisdiction: currentUser.jurisdiction,
+          scopeLevel: currentUser.scope_level,
         },
         isAuthenticated: true,
         loginError: null,

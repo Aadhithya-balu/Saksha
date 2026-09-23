@@ -71,6 +71,9 @@ const sections: DocSection[] = [
             <tbody>
               {[
                 { u: 'admin', p: '564738', role: 'admin', name: 'Admin User', v: 'coral' as const },
+                { u: 'court_admin', p: '123456', role: 'court_admin', name: 'Registrar General', v: 'purple' as const },
+                { u: 'magistrate', p: '123456', role: 'judicial_authority', name: 'Hon. Justice K. Rao', v: 'purple' as const },
+                { u: 'court_analyst', p: '123456', role: 'court_analyst', name: 'Court Law Clerk', v: 'blue' as const },
                 { u: 'SCRB-7740', p: '123456', role: 'crime_analyst', name: 'Priya Sharma', v: 'blue' as const },
                 { u: 'IO-3921', p: '456789', role: 'investigator', name: 'Inspector Ravi Kumar', v: 'teal' as const },
                 { u: 'SP-0088', p: '987654', role: 'inspector', name: 'Superintendent Arun Mehta', v: 'purple' as const },
@@ -161,6 +164,45 @@ const sections: DocSection[] = [
           If the graph database is unreachable, the platform gracefully falls back to SQL-based analytics so the
           command flow is never interrupted.
         </p>
+      </div>
+    ),
+  },
+  {
+    id: 'multi-authority',
+    title: 'Multi-Authority & Judicial Architecture',
+    icon: <Shield className="w-4 h-4" />,
+    category: 'Platform Overview',
+    content: (
+      <div className="space-y-4">
+        <p className="text-sm text-[var(--text-secondary)]">
+          SAKSHA incorporates multi-agency and judicial federation (Issue #286), enabling seamless,
+          isolated, and role-governed collaboration across law enforcement, the judiciary, prosecution, and forensic labs.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            {
+              title: 'Authority Types & Scoping',
+              desc: 'Explicit classification into LAW_ENFORCEMENT, COURT, PROSECUTION, FORENSIC, ANALYSIS, and SUPERVISORY with district and jurisdiction bounds.',
+            },
+            {
+              title: 'Cross-Authority Case Sharing',
+              desc: 'Cases are shared across agency boundaries strictly via audit-logged CaseAccess records with granular permission scopes (READ, ADMISSIBILITY_REVIEW, COMMENT).',
+            },
+            {
+              title: 'Strict Judicial Neutrality',
+              desc: 'When serving judicial roles (court_admin, judicial_authority, court_analyst), the AI assistant enforces non-accusatory language, framing data as evidence and allegations without prejudging guilt.',
+            },
+            {
+              title: 'Chain of Custody & Admissibility',
+              desc: 'Immutable custody logs and verified document analysis provide clean audit trails without exposing raw filesystem paths or compromising evidence integrity.',
+            },
+          ].map((item, i) => (
+            <div key={i} className="p-3 rounded-lg bg-[var(--bg-tertiary)]/50 border border-[var(--border-secondary)]">
+              <div className="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-1">{item.title}</div>
+              <div className="text-xs text-[var(--text-secondary)] leading-relaxed">{item.desc}</div>
+            </div>
+          ))}
+        </div>
       </div>
     ),
   },

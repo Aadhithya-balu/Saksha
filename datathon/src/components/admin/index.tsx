@@ -11,6 +11,12 @@ export interface AdminUser {
   station: string | null;
   role_id: string;
   role: string;
+  organization_id?: string | null;
+  organization_name?: string | null;
+  designation?: string | null;
+  jurisdiction?: string | null;
+  scope_level?: string | null;
+  authority_type?: string | null;
   created_at: string;
 }
 
@@ -44,14 +50,29 @@ export const UserTable: React.FC<{
   <div className="overflow-auto rounded-lg border border-border-color bg-[var(--bg-tertiary)]/25 custom-scrollbar">
     <table className="w-full text-left text-[10px]">
       <thead className="bg-[var(--bg-primary)] text-[var(--text-muted)] uppercase tracking-wider">
-        <tr><th className="p-3">User</th><th className="p-3">Role</th><th className="p-3">Station</th><th className="p-3">Status</th><th className="p-3 text-right">Actions</th></tr>
+        <tr><th className="p-3">User</th><th className="p-3">Role</th><th className="p-3">Authority / Assignment</th><th className="p-3">Status</th><th className="p-3 text-right">Actions</th></tr>
       </thead>
       <tbody className="divide-y divide-[var(--border-primary)] text-[var(--text-secondary)]">
         {users.map((user) => (
           <tr key={user.id}>
-            <td className="p-3"><p className="font-bold text-[var(--text-primary)]">{user.full_name}</p><p>{user.username} / {user.email}</p></td>
-            <td className="p-3 uppercase">{user.role}</td>
-            <td className="p-3">{user.station ?? '-'}{user.district ? `, ${user.district}` : ''}</td>
+            <td className="p-3">
+              <p className="font-bold text-[var(--text-primary)]">{user.full_name}</p>
+              <p>{user.username} / {user.email}</p>
+            </td>
+            <td className="p-3 uppercase">
+              <span className="font-mono">{user.role}</span>
+              {user.designation && <span className="block text-[9px] text-indigo-300 font-sans">{user.designation}</span>}
+            </td>
+            <td className="p-3">
+              {user.organization_name ? (
+                <div>
+                  <span className="font-semibold text-indigo-300">{user.organization_name}</span>
+                  {user.authority_type && <span className="text-[9px] font-mono text-[var(--text-muted)] block uppercase">[{user.authority_type}]</span>}
+                </div>
+              ) : (
+                <span>{user.station ?? '-'}{user.district ? `, ${user.district}` : ''}</span>
+              )}
+            </td>
             <td className="p-3"><span className={user.is_active ? 'text-[#0E9E78]' : 'text-amber-400'}>{user.is_active ? 'Active' : 'Inactive'}</span></td>
             <td className="p-3">
               <div className="flex justify-end gap-2">
@@ -70,10 +91,11 @@ export const UserTable: React.FC<{
 
 export const UserForm: React.FC<{
   roles: AdminRole[];
+  organizations?: Array<{ id: string; name: string; authority_type: string }>;
   value: Partial<AdminUser> & { password?: string };
   onChange: (value: Partial<AdminUser> & { password?: string }) => void;
   onSubmit: () => void;
-}> = ({ roles, value, onChange, onSubmit }) => (
+}> = ({ roles, organizations = [], value, onChange, onSubmit }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 rounded-lg border border-border-color bg-[var(--bg-tertiary)]/35 p-3">
     <input placeholder="Full name" value={value.full_name ?? ''} onChange={(e) => onChange({ ...value, full_name: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]" />
     <input placeholder="Username" value={value.username ?? ''} onChange={(e) => onChange({ ...value, username: e.target.value })} disabled={!!value.id} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)] disabled:opacity-50" />
@@ -82,8 +104,13 @@ export const UserForm: React.FC<{
     <select value={value.role_id ?? ''} onChange={(e) => onChange({ ...value, role_id: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]">
       <option value="">Select role</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
     </select>
+    <select value={value.organization_id ?? ''} onChange={(e) => onChange({ ...value, organization_id: e.target.value || null })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]">
+      <option value="">No Organization (Direct / Police)</option>
+      {organizations.map((org) => <option key={org.id} value={org.id}>{org.name} ({org.authority_type})</option>)}
+    </select>
+    <input placeholder="Designation (e.g. Judicial Magistrate, Analyst)" value={value.designation ?? ''} onChange={(e) => onChange({ ...value, designation: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]" />
     <input placeholder="District" value={value.district ?? ''} onChange={(e) => onChange({ ...value, district: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]" />
-    <input placeholder="Station" value={value.station ?? ''} onChange={(e) => onChange({ ...value, station: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]" />
+    <input placeholder="Station / Court Room" value={value.station ?? ''} onChange={(e) => onChange({ ...value, station: e.target.value })} className="rounded bg-[var(--bg-primary)] border border-border-color px-3 py-2 text-xs text-[var(--text-primary)]" />
     <button onClick={onSubmit} className="inline-flex items-center justify-center gap-2 rounded bg-[#1E6FD9]/20 border border-[#1E6FD9]/40 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)]"><Save className="h-3.5 w-3.5" /> {value.id ? 'Save User' : 'Create User'}</button>
   </div>
 );

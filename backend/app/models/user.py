@@ -30,6 +30,14 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     district: Mapped[str | None] = mapped_column(String(100), nullable=True)
     station: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    designation: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    jurisdiction: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    scope_level: Mapped[str] = mapped_column(String(30), default="DISTRICT", nullable=False, server_default="DISTRICT")
+
+    organization: Mapped["Organization | None"] = relationship(back_populates="users")
     officer_profile: Mapped["Officer | None"] = relationship(back_populates="user", uselist=False)
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
     notifications: Mapped[list["Notification"]] = relationship(

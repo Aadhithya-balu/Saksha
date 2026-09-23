@@ -62,8 +62,11 @@ const PRIMARY_BY_ROLE: Record<UserRole, string[]> = {
   INSPECTOR: ['dashboard', 'crime_cases', 'investigation', 'fir', 'hotspot', 'notifications'],
   SCRB: ['dashboard', 'command_center', 'network', 'anomaly', 'predictive', 'reports'],
   IO: ['dashboard', 'crime_cases', 'investigation', 'evidence', 'ai_chat', 'notifications'],
-  FORENSIC: ['dashboard', 'evidence', 'crime_cases', 'face_recognition', 'ai_chat'],
-  VIEWER: ['dashboard', 'command_center', 'hotspot', 'notifications', 'docs', 'ai_chat'],
+  FORENSIC: ['dashboard', 'evidence', 'crime_cases', 'face_recognition', 'ai_chat', 'reports'],
+  VIEWER: ['dashboard', 'command_center', 'reports', 'notifications', 'docs', 'ai_chat'],
+  COURT_ADMIN: ['dashboard', 'admin', 'crime_cases', 'reports', 'ai_chat'],
+  JUDICIAL_AUTHORITY: ['dashboard', 'crime_cases', 'investigation', 'evidence', 'reports', 'ai_chat'],
+  COURT_ANALYST: ['dashboard', 'crime_cases', 'investigation', 'evidence', 'reports', 'ai_chat'],
 };
 
 const ROLE_ACCENT: Record<string, string> = {
@@ -74,6 +77,9 @@ const ROLE_ACCENT: Record<string, string> = {
   IO: 'teal',
   FORENSIC: 'purple',
   VIEWER: 'muted',
+  COURT_ADMIN: 'amber',
+  JUDICIAL_AUTHORITY: 'indigo',
+  COURT_ANALYST: 'indigo',
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({

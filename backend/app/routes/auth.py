@@ -130,6 +130,8 @@ def logout(
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
+    org_name = current_user.organization.name if current_user.organization else None
+    authority = current_user.organization.authority_type if current_user.organization else None
     return UserOut(
         id=current_user.id,
         username=current_user.username,
@@ -137,6 +139,12 @@ def get_me(current_user: User = Depends(get_current_user)):
         full_name=current_user.full_name,
         district=current_user.district,
         station=current_user.station,
+        organization_id=current_user.organization_id,
+        organization_name=org_name,
+        authority_type=authority,
+        designation=current_user.designation,
+        jurisdiction=current_user.jurisdiction,
+        scope_level=current_user.scope_level or "DISTRICT",
         is_active=current_user.is_active,
         role=current_user.role.name,
         created_at=current_user.created_at,

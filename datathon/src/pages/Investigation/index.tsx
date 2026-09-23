@@ -9,6 +9,7 @@ import type {
 } from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import { useUserScope } from '../../hooks/useUserScope';
+import { useRBAC } from '../../hooks/useRBAC';
 import { CaseHeader } from '../../components/investigation/workspace/CaseHeader';
 import { CaseOverviewTab } from '../../components/investigation/workspace/CaseOverviewTab';
 import { CaseTimelineTab } from '../../components/investigation/workspace/CaseTimelineTab';
@@ -71,6 +72,7 @@ const needsAttention = (item: CrimeCaseDetailRecord) =>
 
 const InvestigationPage: React.FC = () => {
   const { district: scopeDistrict, canSelectDistrict, personaDescriptor } = useUserScope();
+  const { isCourt } = useRBAC();
   const [viewState, setViewState] = useState<ViewState>('list');
   const [cases, setCases] = useState<CrimeCaseDetailRecord[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -470,6 +472,21 @@ const InvestigationPage: React.FC = () => {
       >
         <ArrowLeft className="w-4 h-4" /> All cases
       </button>
+
+      {/* Judicial Neutrality & Provenance Notice */}
+      {isCourt && (
+        <div className="p-3.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 flex items-start gap-3">
+          <Shield className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <span className="font-semibold text-indigo-300 block uppercase tracking-wider text-[11px]">
+              Judicial Case Review Mode — Neutral Provenance Inspection
+            </span>
+            <p className="text-[var(--text-secondary)] mt-0.5 leading-relaxed">
+              This case workspace is operating under judicial authority clearance. AI summaries, pattern recognitions, and timeline milestones are analytical aids and carry no determination of guilt, innocence, or legal liability. Evidence records reflect chain-of-custody verification. Operational modifications are locked.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Primary Case Cockpit Header */}
       <CaseHeader

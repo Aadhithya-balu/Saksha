@@ -1,4 +1,4 @@
-"""Administrative APIs for users, RBAC roles, audit logs, and persisted settings."""
+"""Administrative APIs for users, RBAC roles, audit logs, organizations, and persisted settings."""
 from __future__ import annotations
 
 import csv
@@ -16,26 +16,38 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.auth.dependencies import get_current_user
-from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, require_roles
+from app.auth.rbac import (
+    ALL_CAPABILITIES,
+    ALL_ROLES,
+    COURT_ROLES,
+    ROLE_ADMIN,
+    ROLE_COURT_ADMIN,
+    get_user_authority,
+    require_roles,
+)
 from app.core.exceptions import ConflictException, ForbiddenException, NotFoundException
 from app.core.security import hash_password
 from app.database.postgres import Base, engine, get_db
 from app.models.audit_log import AuditLog
+from app.models.case_access import CaseAccess
+from app.models.crime import CrimeCase
+from app.models.organization import Organization
 from app.models.role import Role
 from app.models.user import User
-from app.services import audit_service
+from app.services import audit_service, organization_service
 
-router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_roles(ROLE_ADMIN))])
+router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_COURT_ADMIN))])
 
 PERMISSIONS = {
     "dashboard:view",
-    "cases:view", "cases:create", "cases:update", "cases:delete",
+    "cases:view", "cases:create", "cases:update", "cases:delete", "cases:share",
     "firs:view", "firs:create", "firs:update", "firs:delete",
     "criminals:view", "criminals:create", "criminals:update", "criminals:delete",
     "evidence:view", "evidence:create", "evidence:update", "evidence:delete", "evidence:export",
     "reports:view", "reports:generate", "reports:export",
     "admin:users", "admin:roles", "admin:audit", "admin:settings",
-    "ai:view", "network:view",
+    "organizations:view", "organizations:manage",
+    "ai:view", "network:view", "court:view",
 }
 
 DEFAULT_ROLE_PERMISSIONS = {
@@ -46,6 +58,9 @@ DEFAULT_ROLE_PERMISSIONS = {
     "forensic": ["dashboard:view", "cases:view", "evidence:view", "evidence:create", "evidence:update", "evidence:export", "reports:view"],
     "policymaker": ["dashboard:view", "cases:view", "reports:view", "reports:export", "ai:view"],
     "viewer": ["dashboard:view", "cases:view", "criminals:view", "reports:view"],
+    "court_admin": ["dashboard:view", "cases:view", "evidence:view", "reports:view", "reports:generate", "reports:export", "admin:users", "admin:audit", "organizations:view"],
+    "judicial_authority": ["dashboard:view", "cases:view", "firs:view", "evidence:view", "reports:view", "reports:generate", "reports:export", "court:view", "ai:view"],
+    "court_analyst": ["dashboard:view", "cases:view", "firs:view", "evidence:view", "reports:view", "reports:generate", "court:view", "ai:view"],
 }
 
 
@@ -76,8 +91,14 @@ class AdminUserOut(BaseModel):
     email: str
     full_name: str
     is_active: bool
-    district: str | None
-    station: str | None
+    district: str | None = None
+    station: str | None = None
+    organization_id: uuid.UUID | None = None
+    organization_name: str | None = None
+    authority_type: str | None = None
+    designation: str | None = None
+    jurisdiction: str | None = None
+    scope_level: str = "DISTRICT"
     role_id: uuid.UUID
     role: str
     created_at: datetime
@@ -92,6 +113,10 @@ class UserCreatePayload(BaseModel):
     role: str | None = None
     district: str | None = Field(default=None, max_length=100)
     station: str | None = Field(default=None, max_length=100)
+    organization_id: uuid.UUID | None = None
+    designation: str | None = Field(default=None, max_length=100)
+    jurisdiction: str | None = Field(default=None, max_length=100)
+    scope_level: str | None = Field(default="DISTRICT", max_length=30)
     is_active: bool = True
 
 
@@ -102,6 +127,10 @@ class UserUpdatePayload(BaseModel):
     role: str | None = None
     district: str | None = Field(default=None, max_length=100)
     station: str | None = Field(default=None, max_length=100)
+    organization_id: uuid.UUID | None = None
+    designation: str | None = Field(default=None, max_length=100)
+    jurisdiction: str | None = Field(default=None, max_length=100)
+    scope_level: str | None = Field(default=None, max_length=30)
     is_active: bool | None = None
 
 
@@ -126,6 +155,61 @@ class SettingsPayload(BaseModel):
     backup: dict[str, Any] = Field(default_factory=dict)
 
 
+class OrganizationOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    code: str
+    authority_type: str
+    jurisdiction: str | None = None
+    parent_organization_id: uuid.UUID | None = None
+    status: str
+    org_metadata: dict[str, Any] | None = None
+    created_at: datetime | None = None
+
+
+class OrganizationCreatePayload(BaseModel):
+    name: str = Field(min_length=2, max_length=255)
+    code: str = Field(min_length=2, max_length=50)
+    authority_type: str = Field(min_length=2, max_length=50)
+    jurisdiction: str | None = Field(default=None, max_length=100)
+    parent_organization_id: uuid.UUID | None = None
+    org_metadata: dict[str, Any] | None = None
+
+
+class OrganizationUpdatePayload(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    code: str | None = Field(default=None, min_length=2, max_length=50)
+    authority_type: str | None = Field(default=None, min_length=2, max_length=50)
+    jurisdiction: str | None = Field(default=None, max_length=100)
+    parent_organization_id: uuid.UUID | None = None
+    status: str | None = Field(default=None, max_length=20)
+    org_metadata: dict[str, Any] | None = None
+
+
+class CaseAccessOut(BaseModel):
+    id: uuid.UUID
+    case_id: uuid.UUID
+    case_number: str | None = None
+    organization_id: uuid.UUID
+    organization_name: str | None = None
+    authority_type: str | None = None
+    access_level: str
+    scope: str
+    status: str
+    granted_by: uuid.UUID | None = None
+    granted_at: datetime | None = None
+    expires_at: datetime | None = None
+    notes: str | None = None
+
+
+class CaseAccessGrantPayload(BaseModel):
+    organization_id: uuid.UUID
+    access_level: str = "READ"
+    scope: str = "CASE"
+    expires_at: datetime | None = None
+    notes: str | None = None
+
+
 def _ensure_admin_tables() -> None:
     if not getattr(_ensure_admin_tables, "_done", False):
         Base.metadata.create_all(bind=engine, tables=[SystemSetting.__table__, RolePermission.__table__])
@@ -137,6 +221,8 @@ def _client_ip(request: Request) -> str | None:
 
 
 def _user_out(user: User) -> AdminUserOut:
+    org_name = user.organization.name if user.organization else None
+    authority = user.organization.authority_type if user.organization else None
     return AdminUserOut(
         id=user.id,
         username=user.username,
@@ -145,6 +231,12 @@ def _user_out(user: User) -> AdminUserOut:
         is_active=user.is_active,
         district=user.district,
         station=user.station,
+        organization_id=user.organization_id,
+        organization_name=org_name,
+        authority_type=authority,
+        designation=user.designation,
+        jurisdiction=user.jurisdiction,
+        scope_level=user.scope_level or "DISTRICT",
         role_id=user.role_id,
         role=user.role.name if user.role else "",
         created_at=user.created_at,
@@ -206,6 +298,7 @@ def list_users(
     search: str | None = None,
     role: str | None = None,
     is_active: bool | None = None,
+    organization_id: uuid.UUID | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     sort_by: str = "created_at",
@@ -215,6 +308,13 @@ def list_users(
 ):
     columns = {"username": User.username, "email": User.email, "full_name": User.full_name, "created_at": User.created_at}
     query = db.query(User).join(Role)
+
+    # Scoped admin: court admin only sees users within their own organization
+    if current_user.role.name == ROLE_COURT_ADMIN and current_user.organization_id:
+        query = query.filter(User.organization_id == current_user.organization_id)
+    elif organization_id:
+        query = query.filter(User.organization_id == organization_id)
+
     if search:
         query = query.filter(or_(User.username.ilike(f"%{search}%"), User.email.ilike(f"%{search}%"), User.full_name.ilike(f"%{search}%")))
     if role:
@@ -230,8 +330,14 @@ def list_users(
 @router.post("/users", status_code=201)
 def create_user(payload: UserCreatePayload, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from app.services.auth_service import validate_password_strength
-    validate_password_strength(payload.password)  # admin-created accounts follow the same policy
+    validate_password_strength(payload.password)
     role = _resolve_role(db, payload.role_id, payload.role)
+
+    # Scoped admin restriction: court_admin can only create users in their own org
+    org_id = payload.organization_id
+    if current_user.role.name == ROLE_COURT_ADMIN:
+        org_id = current_user.organization_id
+
     user = User(
         username=payload.username.strip(),
         email=payload.email.lower(),
@@ -240,6 +346,10 @@ def create_user(payload: UserCreatePayload, request: Request, db: Session = Depe
         role_id=role.id,
         district=payload.district,
         station=payload.station,
+        organization_id=org_id,
+        designation=payload.designation,
+        jurisdiction=payload.jurisdiction,
+        scope_level=payload.scope_level or "DISTRICT",
         is_active=payload.is_active,
     )
     try:
@@ -259,10 +369,16 @@ def update_user(user_id: uuid.UUID, payload: UserUpdatePayload, request: Request
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise NotFoundException("User not found")
+
+    # Scoped admin restriction
+    if current_user.role.name == ROLE_COURT_ADMIN:
+        if user.organization_id != current_user.organization_id:
+            raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     updates = payload.model_dump(exclude_unset=True)
     if "role" in updates or "role_id" in updates:
         user.role_id = _resolve_role(db, updates.get("role_id"), updates.get("role")).id
-    for field in ("email", "full_name", "district", "station", "is_active"):
+    for field in ("email", "full_name", "district", "station", "organization_id", "designation", "jurisdiction", "scope_level", "is_active"):
         if field in updates:
             setattr(user, field, updates[field].lower() if field == "email" and updates[field] else updates[field])
     try:
@@ -284,6 +400,9 @@ def delete_user(user_id: uuid.UUID, request: Request, db: Session = Depends(get_
         raise NotFoundException("User not found")
     if user.id == current_user.id:
         raise ForbiddenException("You cannot deactivate your own account")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.is_active = False
     audit_service.log_action(db, current_user, "USER_DELETE", "User", str(user.id), details="soft_delete", ip_address=_client_ip(request))
     db.commit()
@@ -295,6 +414,9 @@ def activate_user(user_id: uuid.UUID, request: Request, db: Session = Depends(ge
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise NotFoundException("User not found")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.is_active = True
     audit_service.log_action(db, current_user, "USER_ACTIVATE", "User", str(user.id), ip_address=_client_ip(request))
     db.commit()
@@ -308,6 +430,9 @@ def deactivate_user(user_id: uuid.UUID, request: Request, db: Session = Depends(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise NotFoundException("User not found")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.is_active = False
     audit_service.log_action(db, current_user, "USER_DEACTIVATE", "User", str(user.id), ip_address=_client_ip(request))
     db.commit()
@@ -321,9 +446,10 @@ def reset_password(user_id: uuid.UUID, payload: PasswordResetPayload, request: R
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise NotFoundException("User not found")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.hashed_password = hash_password(payload.password)
-    # Invalidate any outstanding sessions: lockout state resets and the
-    # account holder must re-authenticate with the new password.
     user.failed_login_attempts = 0
     user.locked_until = None
     audit_service.log_action(db, current_user, "USER_PASSWORD_RESET", "User", str(user.id), ip_address=_client_ip(request))
@@ -337,7 +463,7 @@ def list_roles(db: Session = Depends(get_db), current_user: User = Depends(get_c
     return {"results": [{"id": str(role.id), "name": role.name, "description": role.description, "permissions": _get_permissions(db, role.id, role.name), "user_count": len(role.users)} for role in roles]}
 
 
-@router.post("/roles", status_code=201)
+@router.post("/roles", status_code=201, dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def create_role(payload: RolePayload, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     role = Role(name=payload.name.strip(), description=payload.description)
     try:
@@ -352,7 +478,7 @@ def create_role(payload: RolePayload, request: Request, db: Session = Depends(ge
         raise ConflictException("Role already exists")
 
 
-@router.put("/roles/{role_id}")
+@router.put("/roles/{role_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def update_role(role_id: uuid.UUID, payload: RolePayload, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     role = db.query(Role).filter(Role.id == role_id).first()
     if not role:
@@ -367,7 +493,7 @@ def update_role(role_id: uuid.UUID, payload: RolePayload, request: Request, db: 
     return {"id": str(role.id), "name": role.name, "description": role.description, "permissions": _get_permissions(db, role.id, role.name)}
 
 
-@router.delete("/roles/{role_id}")
+@router.delete("/roles/{role_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def delete_role(role_id: uuid.UUID, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     role = db.query(Role).filter(Role.id == role_id).first()
     if not role:
@@ -386,6 +512,9 @@ def assign_role(user_id: uuid.UUID, role_id: uuid.UUID, request: Request, db: Se
     role = db.query(Role).filter(Role.id == role_id).first()
     if not user or not role:
         raise NotFoundException("User or role not found")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.role_id = role.id
     audit_service.log_action(db, current_user, "ROLE_ASSIGN", "User", str(user.id), details=role.name, ip_address=_client_ip(request))
     db.commit()
@@ -398,16 +527,245 @@ def remove_role(user_id: uuid.UUID, request: Request, db: Session = Depends(get_
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not viewer:
         raise NotFoundException("User or fallback role not found")
+    if current_user.role.name == ROLE_COURT_ADMIN and user.organization_id != current_user.organization_id:
+        raise ForbiddenException("Court Admin can only manage users within their own organization")
+
     user.role_id = viewer.id
     audit_service.log_action(db, current_user, "ROLE_REMOVE", "User", str(user.id), details="viewer", ip_address=_client_ip(request))
     db.commit()
     return {"message": "Role removed"}
 
 
+# ---- Organization Management Endpoints (Issue #286) ----
+
+@router.get("/authorities")
+@router.get("/authority-types")
+def list_authorities(current_user: User = Depends(get_current_user)):
+    return [a["type"] if isinstance(a, dict) else a for a in organization_service.list_authorities()]
+
+
+@router.get("/capabilities")
+def list_capabilities(current_user: User = Depends(get_current_user)):
+    return organization_service.list_capabilities()
+
+
+@router.get("/organizations")
+def list_organizations(
+    status: str | None = None,
+    authority_type: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    orgs = organization_service.list_organizations(db, status=status, authority_type=authority_type)
+    return {
+        "results": [
+            OrganizationOut(
+                id=o.id,
+                name=o.name,
+                code=o.code,
+                authority_type=o.authority_type,
+                jurisdiction=o.jurisdiction,
+                parent_organization_id=o.parent_organization_id,
+                status=o.status,
+                org_metadata=o.org_metadata,
+                created_at=o.created_at,
+            ).model_dump(mode="json")
+            for o in orgs
+        ]
+    }
+
+
+@router.post("/organizations", status_code=201, dependencies=[Depends(require_roles(ROLE_ADMIN))])
+def create_organization(
+    payload: OrganizationCreatePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    org = organization_service.create_organization(
+        db,
+        name=payload.name,
+        code=payload.code,
+        authority_type=payload.authority_type,
+        jurisdiction=payload.jurisdiction,
+        parent_organization_id=payload.parent_organization_id,
+        org_metadata=payload.org_metadata,
+    )
+    audit_service.log_action(db, current_user, "ORGANIZATION_CREATE", "Organization", str(org.id), ip_address=_client_ip(request))
+    return OrganizationOut(
+        id=org.id,
+        name=org.name,
+        code=org.code,
+        authority_type=org.authority_type,
+        jurisdiction=org.jurisdiction,
+        parent_organization_id=org.parent_organization_id,
+        status=org.status,
+        org_metadata=org.org_metadata,
+        created_at=org.created_at,
+    )
+
+
+@router.put("/organizations/{org_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
+def update_organization(
+    org_id: uuid.UUID,
+    payload: OrganizationUpdatePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    org = organization_service.update_organization(
+        db, org_id, payload.model_dump(exclude_unset=True)
+    )
+    audit_service.log_action(db, current_user, "ORGANIZATION_UPDATE", "Organization", str(org.id), ip_address=_client_ip(request))
+    return OrganizationOut(
+        id=org.id,
+        name=org.name,
+        code=org.code,
+        authority_type=org.authority_type,
+        jurisdiction=org.jurisdiction,
+        parent_organization_id=org.parent_organization_id,
+        status=org.status,
+        org_metadata=org.org_metadata,
+        created_at=org.created_at,
+    )
+
+
+@router.delete("/organizations/{org_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
+def delete_organization(
+    org_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    org = organization_service.get_organization(db, org_id)
+    if not org:
+        raise NotFoundException("Organization not found")
+    org.status = "inactive"
+    audit_service.log_action(db, current_user, "ORGANIZATION_DEACTIVATE", "Organization", str(org.id), ip_address=_client_ip(request))
+    db.commit()
+    return {"message": "Organization deactivated"}
+
+
+# ---- Case Access / Cross-Authority Grants (Issue #286) ----
+
+@router.get("/case-access")
+def list_all_case_accesses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    org_id = current_user.organization_id if current_user.role.name == ROLE_COURT_ADMIN else None
+    grants = organization_service.list_case_accesses(db, org_id=org_id)
+    return {
+        "results": [
+            CaseAccessOut(
+                id=g.id,
+                case_id=g.case_id,
+                case_number=g.case.case_number if g.case else None,
+                organization_id=g.organization_id,
+                organization_name=g.organization.name if g.organization else None,
+                authority_type=g.organization.authority_type if g.organization else None,
+                access_level=g.access_level,
+                scope=g.scope,
+                status=g.status,
+                granted_by=g.granted_by,
+                granted_at=g.granted_at,
+                expires_at=g.expires_at,
+                notes=g.notes,
+            ).model_dump(mode="json")
+            for g in grants
+        ]
+    }
+
+
+@router.get("/cases/{case_id}/access")
+def get_case_access(
+    case_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    grants = organization_service.list_case_accesses(db, case_id=case_id)
+    return {
+        "results": [
+            CaseAccessOut(
+                id=g.id,
+                case_id=g.case_id,
+                case_number=g.case.case_number if g.case else None,
+                organization_id=g.organization_id,
+                organization_name=g.organization.name if g.organization else None,
+                authority_type=g.organization.authority_type if g.organization else None,
+                access_level=g.access_level,
+                scope=g.scope,
+                status=g.status,
+                granted_by=g.granted_by,
+                granted_at=g.granted_at,
+                expires_at=g.expires_at,
+                notes=g.notes,
+            ).model_dump(mode="json")
+            for g in grants
+        ]
+    }
+
+
+@router.post("/cases/{case_id}/access", status_code=201, dependencies=[Depends(require_roles(ROLE_ADMIN))])
+def grant_case_access_endpoint(
+    case_id: uuid.UUID,
+    payload: CaseAccessGrantPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    case = db.query(CrimeCase).filter(CrimeCase.id == case_id).first()
+    if not case:
+        raise NotFoundException("Case not found")
+
+    grant = organization_service.grant_case_access(
+        db,
+        case_id=case_id,
+        organization_id=payload.organization_id,
+        access_level=payload.access_level,
+        scope=payload.scope,
+        granted_by=current_user.id,
+        expires_at=payload.expires_at,
+        notes=payload.notes,
+    )
+    audit_service.log_action(db, current_user, "CASE_ACCESS_GRANT", "CaseAccess", str(grant.id), details=f"case:{case_id}|org:{payload.organization_id}", ip_address=_client_ip(request))
+    return CaseAccessOut(
+        id=grant.id,
+        case_id=grant.case_id,
+        case_number=case.case_number,
+        organization_id=grant.organization_id,
+        organization_name=grant.organization.name if grant.organization else None,
+        authority_type=grant.organization.authority_type if grant.organization else None,
+        access_level=grant.access_level,
+        scope=grant.scope,
+        status=grant.status,
+        granted_by=grant.granted_by,
+        granted_at=grant.granted_at,
+        expires_at=grant.expires_at,
+        notes=grant.notes,
+    )
+
+
+@router.delete("/cases/{case_id}/access/{access_id}", dependencies=[Depends(require_roles(ROLE_ADMIN))])
+def revoke_case_access_endpoint(
+    case_id: uuid.UUID,
+    access_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    organization_service.revoke_case_access(db, access_id)
+    audit_service.log_action(db, current_user, "CASE_ACCESS_REVOKE", "CaseAccess", str(access_id), ip_address=_client_ip(request))
+    return {"message": "Case access revoked"}
+
+
+# ---- Audit Logs ----
+
 @router.get("/audit-logs")
 def list_audit_logs(
     search: str | None = None,
     user_id: uuid.UUID | None = None,
+    organization_id: uuid.UUID | None = None,
     action: str | None = None,
     resource_type: str | None = None,
     date_from: datetime | None = None,
@@ -418,6 +776,13 @@ def list_audit_logs(
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(AuditLog).join(User)
+
+    # Scoped admin restriction: court admin only sees audit logs for their org
+    if current_user.role.name == ROLE_COURT_ADMIN and current_user.organization_id:
+        query = query.filter(AuditLog.organization_id == current_user.organization_id)
+    elif organization_id:
+        query = query.filter(AuditLog.organization_id == organization_id)
+
     if search:
         query = query.filter(or_(AuditLog.action.ilike(f"%{search}%"), AuditLog.resource_type.ilike(f"%{search}%"), AuditLog.details.ilike(f"%{search}%"), User.full_name.ilike(f"%{search}%")))
     if user_id:
@@ -441,6 +806,8 @@ def list_audit_logs(
             "timestamp": item.timestamp.isoformat() if item.timestamp else None,
             "user": item.user.full_name if item.user else "",
             "role": item.user.role.name if item.user and item.user.role else "",
+            "organization": item.organization.name if item.organization else (item.user.organization.name if item.user and item.user.organization else None),
+            "authority_type": item.authority_type or (item.user.organization.authority_type if item.user and item.user.organization else None),
             "action": item.action,
             "module": item.resource_type,
             "record_id": item.resource_id,
@@ -454,17 +821,34 @@ def list_audit_logs(
 
 @router.get("/audit-logs/export")
 def export_audit_logs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    rows = db.query(AuditLog).join(User).order_by(desc(AuditLog.timestamp)).limit(5000).all()
+    query = db.query(AuditLog).join(User)
+    if current_user.role.name == ROLE_COURT_ADMIN and current_user.organization_id:
+        query = query.filter(AuditLog.organization_id == current_user.organization_id)
+    rows = query.order_by(desc(AuditLog.timestamp)).limit(5000).all()
     buffer = io.StringIO()
     buffer.write("\ufeff")
     writer = csv.writer(buffer)
-    writer.writerow(["timestamp", "user", "role", "action", "module", "record_id", "status", "ip", "details"])
+    writer.writerow(["timestamp", "user", "role", "organization", "authority", "action", "module", "record_id", "status", "ip", "details"])
     for item in rows:
-        writer.writerow([item.timestamp, item.user.full_name if item.user else "", item.user.role.name if item.user and item.user.role else "", item.action, item.resource_type, item.resource_id, "success", item.ip_address, item.details])
+        org_name = item.organization.name if item.organization else ""
+        auth_type = item.authority_type or ""
+        writer.writerow([
+            item.timestamp,
+            item.user.full_name if item.user else "",
+            item.user.role.name if item.user and item.user.role else "",
+            org_name,
+            auth_type,
+            item.action,
+            item.resource_type,
+            item.resource_id,
+            "success",
+            item.ip_address,
+            item.details,
+        ])
     return Response(content=buffer.getvalue().encode("utf-8"), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": 'attachment; filename="saksha_audit_logs.csv"'})
 
 
-@router.get("/settings")
+@router.get("/settings", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _ensure_admin_tables()
     import json as _json
@@ -477,7 +861,7 @@ def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get
     return SettingsPayload().model_dump()
 
 
-@router.put("/settings")
+@router.put("/settings", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def save_settings(payload: SettingsPayload, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _ensure_admin_tables()
     import json as _json
@@ -495,7 +879,7 @@ def save_settings(payload: SettingsPayload, request: Request, db: Session = Depe
 
 
 # Issue #164: Admin data quality / provenance report
-@router.get("/data-quality")
+@router.get("/data-quality", dependencies=[Depends(require_roles(ROLE_ADMIN))])
 def data_quality_report(
     request: Request,
     provenance_filter: str | None = Query(None, description="Filter by provenance: live, migrated, demo, unknown"),
@@ -504,7 +888,7 @@ def data_quality_report(
     current_user: User = Depends(get_current_user),
 ):
     """Admin-level data quality report showing dataset provenance across all core tables."""
-    from app.services.data_quality_service import get_admin_data_quality_report, get_provenance_by_entity
+    from app.services.data_quality_service import get_admin_data_quality_report
 
     report = get_admin_data_quality_report(db)
 

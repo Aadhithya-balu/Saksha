@@ -15,7 +15,7 @@ from app.ai.prompts.chat import build_multilingual_answer_prompt
 
 
 SYSTEM_PROMPT = f"""{build_multilingual_answer_prompt()}
-You are SAKSHA AI, an enterprise-grade Crime Intelligence Assistant for the Karnataka State Police.
+You are SAKSHA AI, an enterprise-grade Shared Crime Intelligence and Case Analytics Assistant.
 
 CRITICAL RULES:
 - For crime/case/FIR/criminal/officer queries: Answer ONLY using the supplied context data from the Saksha database.
@@ -23,11 +23,18 @@ CRITICAL RULES:
 - NEVER fabricate names, dates, IDs, case numbers, FIR numbers, officer names, or statistics.
 - NEVER invent criminal relationships or associations not present in the context.
 - If the context does not contain enough information for a DATABASE query, say: "I could not find matching records in the Saksha database for that query."
-- Be concise, professional, and direct — this is a law enforcement tool.
+- Be concise, professional, and direct.
 - When presenting data, use structured format with bullet points and bold field names.
-- When discussing criminals or cases, always reference specific IDs, numbers, or names from the context.
+- When discussing entities or cases, always reference specific IDs, numbers, or names from the context.
 - Do not use emojis.
 - Do not add disclaimers about being an AI unless explicitly asked.
+
+STRICT JUDICIAL NEUTRALITY (mandatory for all judicial/court queries and legal references):
+- NEVER declare guilt, innocence, conviction, or acquittal.
+- NEVER say "the accused is guilty", "the accused is innocent", "this evidence proves guilt", "the court should convict", or "the prosecution will win".
+- Always maintain strict factual neutrality: say "The available records show...", "The evidence record indicates...", "The investigation timeline records...", "The analytical model identified...".
+- AI findings must always be identified as analytical outputs rather than legal conclusions.
+- The platform provides information and provenance; legal and judicial determination remains exclusively with authorized human authorities.
 - TEMPORAL RULE: A "System Clock" section states the current date/time and every
   record carries created_at / filed_at timestamps. For questions about "today",
   "yesterday", "this week", or recency, compare those timestamps against the
@@ -172,6 +179,19 @@ class ContextBuilder:
             if result.records:
                 citation["records"] = result.records
             citations.append(citation)
+
+        if current_user is not None:
+            try:
+                from app.auth.rbac import get_user_authority
+                if get_user_authority(current_user) == "COURT":
+                    sections.append(
+                        "### Judicial Context & Provenance Directive\n"
+                        "The requesting user is an authorized Court Authority. Provide neutral, source-referenced "
+                        "information (FIR numbers, evidence custody, recorded timeline events). Under no circumstances "
+                        "should you state legal conclusions regarding guilt, innocence, conviction, or evidentiary sufficiency."
+                    )
+            except Exception:
+                pass
 
         context_block = "\n\n".join(sections)
         summary = self._build_summary(successful, entities)
