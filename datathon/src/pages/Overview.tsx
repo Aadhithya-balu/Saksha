@@ -154,20 +154,23 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
   // Fetch filter dropdown options once on mount
   useEffect(() => {
     const loadDropdownOptions = async () => {
-      try {
-        const [locationsRes, categoriesRes, officersRes] = await Promise.all([
-          getLocationsList(),
-          getCrimeCategories(),
-          listOfficers(1, 100),
-        ]);
-
-        const uniqueDistricts = Array.from(new Set(locationsRes.map((loc) => loc.district))).sort();
+      const [locationsRes, categoriesRes, officersRes] = await Promise.allSettled([
+        getLocationsList(),
+        getCrimeCategories(),
+        listOfficers(1, 100),
+      ]);
+      if (locationsRes.status === 'fulfilled') {
+        const uniqueDistricts = Array.from(new Set(
+          locationsRes.value.map((loc) => loc.district).filter(Boolean),
+        )).sort();
         setDistricts(uniqueDistricts);
-        setCategoriesList(categoriesRes);
-        setOfficers(officersRes.results);
-      } catch (err) {
-        console.error('Failed to load filter options', err);
-      }
+      } else console.error('Failed to load dashboard districts', locationsRes.reason);
+      if (categoriesRes.status === 'fulfilled') {
+        setCategoriesList(categoriesRes.value);
+      } else console.error('Failed to load dashboard crime categories', categoriesRes.reason);
+      if (officersRes.status === 'fulfilled') {
+        setOfficers(officersRes.value.results);
+      } else console.error('Failed to load dashboard officers', officersRes.reason);
     };
     void loadDropdownOptions();
   }, []);

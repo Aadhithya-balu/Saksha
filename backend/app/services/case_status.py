@@ -36,7 +36,9 @@ _LEGACY_TO_CANONICAL: dict[str, str] = {
     "investigating": STATUS_UNDER_INVESTIGATION,
     "evidence collected": STATUS_UNDER_INVESTIGATION,
     "charge sheet filed": STATUS_CHARGESHEETED,
+    "charge_sheeted": STATUS_CHARGESHEETED,
     "closed": STATUS_CLOSED,
+    "compounded": STATUS_CLOSED,
     # Already-canonical values map to themselves
     STATUS_ACTIVE: STATUS_ACTIVE,
     STATUS_UNDER_INVESTIGATION: STATUS_UNDER_INVESTIGATION,

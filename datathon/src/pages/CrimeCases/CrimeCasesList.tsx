@@ -153,12 +153,12 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   useEffect(() => {
     getCrimeCategories()
       .then(setCategories)
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load crime filter options', err));
     getLocationsList()
       .then((locations) =>
-        setDistricts(Array.from(new Set(locations.map((loc) => loc.district))).sort()),
+        setDistricts(Array.from(new Set(locations.map((loc) => loc.district).filter(Boolean))).sort()),
       )
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load crime filter options', err));
   }, []);
 
   // Background polling: silently refresh cases and insights every 30s
