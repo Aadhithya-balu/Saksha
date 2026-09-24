@@ -1161,7 +1161,7 @@ def get_report_detail(
     current_user: User = Depends(get_current_user),
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     audit_service.log_action(
         db, current_user, "REPORT_VIEW", "Report", str(report.id),
         ip_address=_client_ip(request),
@@ -1180,7 +1180,7 @@ def validate_report_references(
 ):
     """Validate that referenced source/evidence records exist (§9)."""
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     result = report_service.validate_references(
         db, [s.model_dump() for s in payload.sources], payload.evidence_ids
     )
@@ -1202,7 +1202,7 @@ def generate_lifecycle_report(
     current_user: User = Depends(get_current_user),
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     try:
         report = report_service.generate_report(
             db, current_user, report, payload.model_dump(), ip_address=_client_ip(request)
@@ -1223,7 +1223,7 @@ def list_report_versions(
     current_user: User = Depends(get_current_user),
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     return report_service.serialize_report_details(db, report).get("versions", [])
 
 
@@ -1238,7 +1238,7 @@ def create_report_version(
     """Explicit versioning (§10/§11): never silently overwrite a previous
     version; every change is an auditable new version with a reason."""
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     if report.status == report_service.REPORT_STATUS_ARCHIVED:
         raise ConflictException("Archived reports cannot be versioned")
     report_service.create_version(
@@ -1259,7 +1259,7 @@ def review_lifecycle_report(
     payload: ReportReviewRequest | None = None,
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     notes = payload.notes if payload else None
     report = report_service.start_review(
         db, current_user, report, notes=notes, ip_address=_client_ip(request)
@@ -1278,7 +1278,7 @@ def finalize_lifecycle_report(
     payload: ReportReviewRequest | None = None,
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     notes = payload.notes if payload else None
     report = report_service.finalize_report(
         db, current_user, report, notes=notes, ip_address=_client_ip(request)
@@ -1296,7 +1296,7 @@ def archive_lifecycle_report(
     current_user: User = Depends(get_current_user),
 ):
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     report = report_service.archive_report(db, current_user, report, ip_address=_client_ip(request))
     db.commit()
     db.refresh(report)
@@ -1317,7 +1317,7 @@ def download_lifecycle_report(
     cannot silently change when the source DB changes (§27/§28).
     """
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     snapshot = report_service._load_snapshot(report)
     if not snapshot.get("headers") and not snapshot.get("rows"):
         report_type = report.report_type or (report.template.replace("_report", "") if report.template else "cases")
@@ -1384,7 +1384,7 @@ def delete_report(
     Cascade deletes version history, evidence links, and source links.
     """
     report = _load_report_or_404(db, report_id)
-    report_service.require_report_access(current_user, report)
+    report_service.require_report_access(current_user, report, db=db)
     report_id_str = str(report.id)
     report_title = report.title or f"{report.report_type.title()} Report"
     report_type = report.report_type
@@ -1405,6 +1405,37 @@ def delete_report(
         "message": "Report deleted successfully",
         "id": report_id_str,
     }
+
+
+def _preview_summary(db: Session, query: SQLAlchemyQuery, report_type: str) -> dict[str, Any] | None:
+    """Full-scope aggregate counts for the preview's executive summary.
+
+    Computed server-side over the ENTIRE filtered dataset (not the paged
+    window) so status/priority cards stay consistent with the reported total
+    and never exaggerate the records on the current page.
+    """
+    status_cols: dict[str, Any] = {
+        "cases": CrimeCase.status,
+        "evidence": Evidence.status,
+        "officers": Officer.status,
+        "criminals": Criminal.status,
+        "interventions": Intervention.status,
+    }
+    priority_cols: dict[str, Any] = {"cases": CrimeCase.priority}
+    summary: dict[str, dict[str, int]] = {}
+
+    def _counts(col: Any) -> dict[str, int]:
+        # Reuse the base query so its joins and filters stay intact (a fresh
+        # column-only query would miss the Location join and cartesian-cross
+        # with it). Ordering is dropped to satisfy GROUP BY.
+        rows = query.order_by(None).with_entities(col, func.count()).group_by(col).all()
+        return {str(k or "unknown").lower(): int(v) for k, v in rows}
+
+    if report_type in status_cols:
+        summary["status"] = _counts(status_cols[report_type])
+    if report_type in priority_cols:
+        summary["priority"] = _counts(priority_cols[report_type])
+    return summary or None
 
 
 @router.get("/{report_type}")
@@ -1436,6 +1467,7 @@ def preview_report(
         "total": total,
         "page": page,
         "page_size": page_size,
+        "summary": _preview_summary(db, query, report_type),
         "results": [mapper(item) for item in items],
     }
 

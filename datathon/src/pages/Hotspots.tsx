@@ -201,7 +201,7 @@ export const Hotspots: React.FC = () => {
             ...c,
             crime_type: c.crime_type || c.category || 'Incident Offense',
             location: c.location || c.station || '',
-            priority: c.priority || 'medium',
+            priority: c.priority ?? null,
             status: c.status || 'Active',
             time: c.time || c.occurred_at || c.created_at,
           });

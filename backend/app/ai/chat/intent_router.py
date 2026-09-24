@@ -18,6 +18,7 @@ class Intent(Enum):
     CRIME_STATISTICS = "crime_statistics"
     HOTSPOT_ANALYSIS = "hotspot_analysis"
     CRIMINAL_NETWORK = "criminal_network"
+    EVIDENCE_LOOKUP = "evidence_lookup"
     SIMILAR_CASES = "similar_cases"
     PREDICTIONS = "predictions"
     NOTIFICATIONS = "notifications"
@@ -41,6 +42,26 @@ _PLATFORM_GENERAL_LEAD = re.compile(
     r"^(?:what\s+is|about|tell\s+me\s+about|describe|explain|introduction|purpose|goal|overview)\b",
     re.I,
 )
+
+_CASE_ID_RE = re.compile(r"CR-\d{4}-[A-Z]{2,4}-\d+", re.I)
+_FIR_ID_RE = re.compile(
+    r"FIR[-\s]*:?\s*("
+    r"\d{1,4}/[A-Z]{1,20}/\d{4}"
+    r"|[A-Z]{1,16}-?\d{1,6}[A-Z0-9-]*/\d{4}"
+    r"|\d{1,4}/\d{4}"
+    r")",
+    re.I,
+)
+
+
+def _has_concrete_reference(message: str) -> bool:
+    """True when the message names a concrete record (case/FIR number).
+
+    A user who cites a specific case or FIR is querying data — never asking
+    about the platform itself — so those messages must not be collapsed into
+    the platform-general intent (which would skip all backend retrieval).
+    """
+    return bool(_CASE_ID_RE.search(message)) or bool(_FIR_ID_RE.search(message))
 
 
 def _is_platform_question(message: str) -> bool:
@@ -164,6 +185,20 @@ _INTENT_RULES: dict[Intent, dict] = {
             re.compile(r"\bmodus\s+operandi\b", re.I),
         ],
     },
+    Intent.EVIDENCE_LOOKUP: {
+        "keywords": [
+            ("evidence", 5), ("evidences", 5), ("exhibit", 4), ("exhibits", 4),
+            ("seized", 4), ("seized items", 5), ("forensic", 3),
+            ("impounded", 4), ("recovered", 3), ("material exhibits", 5),
+            ("linked evidence", 5), ("related evidence", 4), ("attached evidence", 4),
+        ],
+        "patterns": [
+            re.compile(r"what\s+evidence\b", re.I),
+            re.compile(r"(evidence|exhibits?)\s+(linked|related|attached|connected|tied)\b", re.I),
+            re.compile(r"\b(any|all|list|show|what)\b.*\bevidence\b", re.I),
+            re.compile(r"\bevidence\b.*\b(case|fir)\b", re.I),
+        ],
+    },
     Intent.PREDICTIONS: {
         "keywords": [
             ("predict", 4), ("forecast", 4), ("risk score", 4),
@@ -218,7 +253,7 @@ class IntentRouter:
     """Classifies user queries into Saksha domain intents."""
 
     def detect(self, message: str) -> IntentResult:
-        if _is_platform_question(message):
+        if _is_platform_question(message) and not _has_concrete_reference(message):
             return IntentResult(
                 intents=[Intent.PLATFORM_GENERAL],
                 confidence=1.0,
@@ -228,15 +263,8 @@ class IntentRouter:
         lower = message.lower()
         scores: dict[Intent, float] = {}
 
-        has_case_id = bool(re.search(r"CR-\d{4}-[A-Z]{2,4}-\d+", message, re.I))
-        has_fir_number = bool(re.search(
-            r"FIR[-\s]*:?\s*("
-            r"\d{1,4}/[A-Z]{1,20}/\d{4}"
-            r"|[A-Z]{1,16}-?\d{1,6}[A-Z0-9-]*/\d{4}"
-            r"|\d{1,4}/\d{4}"
-            r")",
-            message, re.I,
-        ))
+        has_case_id = bool(_CASE_ID_RE.search(message))
+        has_fir_number = bool(_FIR_ID_RE.search(message))
 
         for intent, rules in _INTENT_RULES.items():
             score = 0.0

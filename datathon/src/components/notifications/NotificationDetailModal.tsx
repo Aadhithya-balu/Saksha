@@ -4,6 +4,7 @@ import {
   FileText, CheckCircle, Archive, Radio, Trash2,
 } from 'lucide-react';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useRBAC } from '../../hooks/useRBAC';
 import type { NotificationRecord } from '../../services/api';
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -47,6 +48,7 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
   notification, open, onClose,
 }) => {
   const { markRead, acknowledge, dismiss, removeNotification } = useNotificationStore();
+  const { isNotificationWriter } = useRBAC();
 
   if (!open || !notification) return null;
   const n = notification;
@@ -172,18 +174,20 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
             <Archive className="w-3 h-3" />
             Archive
           </button>
-          <button
-            onClick={() => {
-              if (window.confirm('Permanently delete this notification?')) {
-                removeNotification(n.id);
-                onClose();
-              }
-            }}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-tertiary)]/50 text-[#C94A2A] rounded-lg text-[9px] font-mono font-bold border border-[#C94A2A]/20 hover:bg-[#C94A2A]/15 transition-colors cursor-pointer"
-          >
-            <Trash2 className="w-3 h-3" />
-            Delete
-          </button>
+          {isNotificationWriter && (
+            <button
+              onClick={() => {
+                if (window.confirm('Permanently delete this notification?')) {
+                  removeNotification(n.id);
+                  onClose();
+                }
+              }}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-tertiary)]/50 text-[#C94A2A] rounded-lg text-[9px] font-mono font-bold border border-[#C94A2A]/20 hover:bg-[#C94A2A]/15 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3 h-3" />
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </div>

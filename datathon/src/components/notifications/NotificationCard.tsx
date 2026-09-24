@@ -4,6 +4,7 @@ import {
   Radio, Eye, Trash2,
 } from 'lucide-react';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useRBAC } from '../../hooks/useRBAC';
 import type { NotificationRecord } from '../../services/api';
 
 interface NotificationCardProps {
@@ -44,6 +45,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export const NotificationCard: React.FC<NotificationCardProps> = ({ notification, onSelect }) => {
   const { markRead, acknowledge, dismiss, removeNotification } = useNotificationStore();
+  const { isNotificationWriter } = useRBAC();
   const n = notification;
   const priorityColor = PRIORITY_COLORS[n.priority] || PRIORITY_COLORS.medium;
 
@@ -193,13 +195,15 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({ notification
         >
           <Archive className="w-3 h-3" />
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); removeNotification(n.id); }}
-          className="p-1.5 hover:bg-[#C94A2A]/15 rounded-md text-[var(--text-muted)] hover:text-[#C94A2A] cursor-pointer transition-colors"
-          title="Delete permanently"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+        {isNotificationWriter && (
+          <button
+            onClick={(e) => { e.stopPropagation(); removeNotification(n.id); }}
+            className="p-1.5 hover:bg-[#C94A2A]/15 rounded-md text-[var(--text-muted)] hover:text-[#C94A2A] cursor-pointer transition-colors"
+            title="Delete permanently"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
       </div>
     </div>
   );

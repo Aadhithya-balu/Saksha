@@ -27,6 +27,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { useAuthStore } from '../../store/authStore';
 
 interface CrimeCaseDetailsProps {
   caseId: string;
@@ -40,6 +41,8 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
   onEdit
 }) => {
   const t = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const canWrite = user?.role === 'ADMIN' || user?.role === 'IO' || user?.role === 'SCRB';
   const [caseData, setCaseData] = useState<CrimeCaseDetailRecord | null>(null);
   const [officers, setOfficers] = useState<OfficerWithUserRecord[]>([]);
   const [unlinkedFirs, setUnlinkedFirs] = useState<any[]>([]);
@@ -220,20 +223,22 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('open-ai-assistant', {
-                detail: { query: `Tell me about case ${caseData.case_number}. What is the status, priority, and key details?` }
+              window.dispatchEvent(new CustomEvent('navigate-tab', {
+                detail: { tab: 'ai_chat', targetId: caseData.id }
               }));
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E6FD9]/15 border border-[#1E6FD9]/30 hover:bg-[#1E6FD9]/25 hover:border-[#1E6FD9]/50 rounded font-mono text-[10px] uppercase text-[#1E6FD9] transition-all cursor-pointer"
           >
             <Sparkles className="w-3 h-3" /> Ask AI
           </button>
+          {canWrite && (
           <button
             onClick={onEdit}
             className="px-4 py-1.5 border border-border-color hover:border-[#1E6FD9]/40 hover:bg-[#1E6FD9]/10 rounded font-mono text-xs uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
           >
             Modify Dossier
           </button>
+          )}
         </div>
       </div>
 
@@ -255,14 +260,15 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
               <span className="text-[8px] text-[var(--text-muted)] uppercase">Clearance Status</span>
               <select
                 value={caseData.status}
+                disabled={!canWrite}
                 onChange={(e) => handleUpdateStatus(e.target.value)}
-                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
+                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <option value="open">OPEN</option>
-                <option value="assigned">ASSIGNED</option>
-                <option value="investigating">INVESTIGATING</option>
-                <option value="evidence collected">EVIDENCE COLLECTED</option>
-                <option value="charge sheet filed">CHARGE SHEET FILED</option>
+                <option value="active">ACTIVE</option>
+                <option value="under_investigation">UNDER INVESTIGATION</option>
+                <option value="arrested">ARRESTED</option>
+                <option value="chargesheeted">CHARGESHEETED</option>
+                <option value="convicted">CONVICTED</option>
                 <option value="closed">CLOSED</option>
               </select>
             </div>
@@ -272,8 +278,9 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
               <span className="text-[8px] text-[var(--text-muted)] uppercase">Threat Priority</span>
               <select
                 value={caseData.priority}
+                disabled={!canWrite}
                 onChange={(e) => handleUpdatePriority(e.target.value)}
-                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
+                className="px-3 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-xs font-mono font-bold text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="low">LOW</option>
                 <option value="medium">MEDIUM</option>
@@ -314,15 +321,20 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
           <div className="p-5 bg-secondary-bg border border-border-color rounded-card">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xs uppercase tracking-wider font-bold text-[var(--text-primary)]">Investigation Progress Bar</h3>
-              <span className="text-xs font-bold text-[#0E9E78]">{caseData.progress}% COMPLETE</span>
+              {caseData.progress == null ? (
+                <span className="text-xs font-bold text-[var(--text-muted)]">PROGRESS NOT RECORDED</span>
+              ) : (
+                <span className="text-xs font-bold text-[#0E9E78]">{caseData.progress}% COMPLETE</span>
+              )}
             </div>
             <div className="h-2.5 bg-[var(--bg-secondary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
               <div
                 className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
-                style={{ width: `${caseData.progress}%` }}
+                style={{ width: `${caseData.progress ?? 0}%`, opacity: caseData.progress == null ? '0.35' : 1 }}
               />
             </div>
             {/* Direct controller adjustments */}
+            {canWrite && caseData.progress != null && (
             <div className="flex justify-between mt-3 text-[10px] text-[var(--text-muted)]">
               <span>[INITIATED]</span>
               <button onClick={() => handleUpdateProgress(25)} className="hover:text-[var(--text-primary)]">25%</button>
@@ -331,6 +343,7 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
               <button onClick={() => handleUpdateProgress(100)} className="hover:text-[var(--text-primary)]">100%</button>
               <span>[RESOLVED]</span>
             </div>
+            )}
           </div>
 
           {/* Officer Assignment Panel */}
@@ -354,8 +367,9 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
                 <span className="text-[8px] text-[var(--text-muted)] uppercase">Change Assignee</span>
                 <select
                   value={caseData.assigned_officer_id || ''}
+                  disabled={!canWrite}
                   onChange={(e) => handleAssignOfficer(e.target.value)}
-                  className="px-2 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-[11px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none"
+                  className="px-2 py-1.5 bg-[var(--bg-tertiary)] border border-border-color rounded text-[11px] font-mono text-[var(--text-primary)] cursor-pointer focus:border-[#1E6FD9]/60 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="">[UNASSIGNED]</option>
                   {officers.map((off) => (
@@ -399,6 +413,7 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
             )}
 
             {/* Form to link a new FIR */}
+            {canWrite && (
             <div className="flex flex-col sm:flex-row items-end gap-3 pt-3 border-t border-border-color/40">
               <div className="flex-grow w-full">
                 <span className="text-[8px] text-[var(--text-muted)] uppercase mb-1 block">Link Additional FIR</span>
@@ -423,6 +438,7 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
                 Link FIR
               </button>
             </div>
+            )}
           </div>
 
           {/* AI Recommendations */}
@@ -482,18 +498,21 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
                     <p className="text-[10.5px] text-[var(--text-secondary)] leading-relaxed break-words pr-4">
                       {note.content}
                     </p>
+                    {canWrite && (
                     <button
                       onClick={() => handleDeleteNote(note.id)}
                       className="absolute right-2.5 bottom-2.5 opacity-0 group-hover/note:opacity-100 p-1 hover:bg-[#C94A2A]/10 border border-border-color/40 rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-all cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
+                  )}
                   </div>
                 ))}
               </div>
             )}
 
             {/* Submit Note Form */}
+            {canWrite && (
             <form onSubmit={handleAddNote} className="space-y-3 pt-3 border-t border-border-color/40">
               <textarea
                 placeholder="TYPE CASE MEMORANDUM NOTE DETAILS HERE..."
@@ -510,6 +529,7 @@ const CrimeCaseDetails: React.FC<CrimeCaseDetailsProps> = ({
                 <Plus className="w-4 h-4" /> Save Investigation Note
               </button>
             </form>
+            )}
           </div>
 
           {/* Chronological Timeline */}

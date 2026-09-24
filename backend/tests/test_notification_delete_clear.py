@@ -253,3 +253,50 @@ def test_clear_broadcasts_endpoint(client, db_session):
     assert sum(1 for n in details.results if n.subject == "Read me directly") == 1
 
     client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_non_broadcast_role_cannot_create_broadcast(client, db_session):
+    """Only admin/SCRB/IO/INSPECTOR may broadcast (issue #282 RBAC gate)."""
+    user = _active_user(db_session, "USER-VIEW-BC")
+    user.role_id = _role(db_session, name="viewer").id
+    db_session.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        resp = client.post(
+            NOTIF,
+            json={
+                "subject": "Viewer broadcasts",
+                "title": "Viewer broadcasts",
+                "message": "must be refused",
+                "notification_type": "alert",
+                "category": "emergency_broadcast",
+                "priority": "critical",
+                "severity": "critical",
+                "is_broadcast": True,
+            },
+        )
+        assert resp.status_code == 403, resp.text
+    finally:
+        client.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_non_broadcast_role_cannot_delete_or_clear(client, db_session):
+    """readers/forensics may not hard-delete or clear broadcasts (issue #282)."""
+    user = _active_user(db_session, "USER-VIEW-DEL")
+    user.role_id = _role(db_session, name="viewer").id
+    db_session.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: user
+
+    writer = _active_user(db_session, "USER-WRITER-DEL")
+    db_session.commit()
+    client.app.dependency_overrides[get_current_user] = lambda: writer
+    created = client.post(
+        NOTIF,
+        json={"recipient_id": writer.username, "subject": "Guard", "title": "Guard", "message": "keep"},
+    ).json()
+
+    client.app.dependency_overrides[get_current_user] = lambda: user
+    assert client.delete(f"{NOTIF}/{created['id']}/remove").status_code == 403
+    assert client.delete(f"{NOTIF}/clear?scope=broadcasts").status_code == 403
+
+    client.app.dependency_overrides.pop(get_current_user, None)

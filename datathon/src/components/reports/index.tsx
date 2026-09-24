@@ -29,6 +29,10 @@ export interface ReportPreviewData {
   total: number;
   page: number;
   page_size: number;
+  summary?: {
+    status?: Record<string, number>;
+    priority?: Record<string, number>;
+  } | null;
   results: Array<Record<string, string | number | null>>;
 }
 

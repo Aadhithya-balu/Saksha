@@ -6,32 +6,15 @@ import { useThemePalettes, tooltipStyle } from '../../theme';
 
 import type { ForecastResponse } from '../../services/api';
 
-interface ForecastDataPoint {
-  day: string;
-  value: number;
-  type: 'historical' | 'predicted' | 'today';
-}
-
 interface ForecastChartProps {
   data?: ForecastResponse | null;
 }
 
-// Static illustrative series — fallback when backend ML forecast is offline.
-const FORECAST_SERIES: ForecastDataPoint[] = [
-  { day: 'T-10d', value: 145, type: 'historical' },
-  { day: 'T-8d', value: 152, type: 'historical' },
-  { day: 'T-6d', value: 148, type: 'historical' },
-  { day: 'T-4d', value: 160, type: 'historical' },
-  { day: 'T-2d', value: 172, type: 'historical' },
-  { day: 'Today', value: 185, type: 'today' },
-  { day: 'P+2d', value: 191, type: 'predicted' },
-  { day: 'P+4d', value: 198, type: 'predicted' },
-  { day: 'P+6d', value: 215, type: 'predicted' },
-  { day: 'P+8d', value: 202, type: 'predicted' },
-  { day: 'P+10d', value: 210, type: 'predicted' },
-  { day: 'P+12d', value: 226, type: 'predicted' },
-  { day: 'P+14d', value: 238, type: 'predicted' },
-];
+const REASON_LABEL: Record<string, string> = {
+  'insufficient historical data': 'Insufficient historical records for a statistically meaningful forecast.',
+  'forecast computation failed': 'The forecast model could not compute a projection right now.',
+  'trained forecast model not available': 'No trained forecast model is available for this scope.',
+};
 
 export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
   const theme = useAppStore((s) => s.theme);
@@ -41,14 +24,57 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
   const todayColor = c.series[1];
   const predColor = c.series[5];
 
-  const isLive = Boolean(data?.series && data.series.length > 0);
-  const chartData = isLive
-    ? data!.series.map((pt) => ({
-        day: pt.day,
-        value: pt.value,
-        type: pt.type,
-      }))
-    : FORECAST_SERIES;
+  // Honest availability gate (issue #282 §15): a forecast is only shown when
+  // the backend returned one. No static demo fallback is ever rendered.
+  const isLive = Boolean(data?.available && data.series && data.series.length > 0);
+  const reasonLabel = (data?.reason && REASON_LABEL[data.reason]) || data?.reason || null;
+
+  if (!isLive) {
+    return (
+      <div className="sk-panel sk-panel-pad w-full h-[280px] relative overflow-hidden flex flex-col">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Predictive Telemetry
+            </span>
+            <h4 className="sk-panel-title mt-0.5">14-Day Crime Trajectory (Forecast)</h4>
+          </div>
+          <span
+            title="The forecast model needs enough historical records before it produces a projection."
+            className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded border bg-amber-500/15 border-amber-500/40 text-amber-400 font-mono text-[8.5px] font-bold uppercase tracking-wide"
+          >
+            Unavailable
+          </span>
+        </div>
+
+        <div className="flex-1 w-full min-h-[200px] my-auto flex items-center justify-center">
+          <div className="max-w-sm text-center">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Forecast unavailable</p>
+            <p className="text-xs font-mono text-[var(--text-muted)] mt-1.5">
+              {reasonLabel ?? 'No forecast data is available for this scope right now.'}
+            </p>
+            <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+              Estimated when {data?.sample_size ?? 0} historical incident records in scope
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] font-mono text-[var(--text-muted)] pt-2 border-t border-[var(--border-muted)] mt-1">
+          <span className="ml-auto flex items-center gap-1" title="No fabricated values are ever shown.">
+            <HelpCircle className="w-3 h-3" />
+            Real data only
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const chartData = data.series.map((pt) => ({
+    day: pt.day,
+    value: pt.value,
+    type: pt.type,
+  }));
 
   return (
     <div className="sk-panel sk-panel-pad w-full h-[280px] relative overflow-hidden flex flex-col">
@@ -56,29 +82,16 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
         <div>
           <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5" />
-            {isLive ? 'Predictive Telemetry' : 'Illustrative Outlook'}
+            Predictive Telemetry
           </span>
-          <h4 className="sk-panel-title mt-0.5">
-            {isLive ? '14-Day Crime Trajectory (Forecast)' : '14-Day Trend (Demo Projection)'}
-          </h4>
+          <h4 className="sk-panel-title mt-0.5">14-Day Crime Trajectory (Forecast)</h4>
         </div>
-        {isLive ? (
-          <span
-            title="Generated dynamically by SAKSHA ML forecast model."
-            className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded border bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-mono text-[8.5px] font-bold uppercase tracking-wide"
-          >
-            Live ML Forecast
-          </span>
-        ) : (
-          <span
-            title="This chart uses static sample data for illustration only. It is not generated by the validated forecast model and should not be used operationally."
-            aria-label="Demo data: static sample series, not a live forecast"
-            role="status"
-            className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded border bg-amber-500/15 border-amber-500/40 text-amber-400 font-mono text-[8.5px] font-bold uppercase tracking-wide cursor-help"
-          >
-            Demo Data
-          </span>
-        )}
+        <span
+          title={`Generated dynamically by SAKSHA forecast model${data.method_version ? ` (${data.method_version})` : ''}.`}
+          className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded border bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-mono text-[8.5px] font-bold uppercase tracking-wide"
+        >
+          Live Forecast
+        </span>
       </div>
 
       <div className="flex-1 w-full min-h-[200px] my-auto">
@@ -90,11 +103,11 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
                 <stop offset="95%" stopColor={predColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="day" tickLine={false} axisLine={false} dy={6} tick={{ fill: c.axis, fontSize: 10.5 }} interval={1} />
+            <XAxis dataKey="day" tickLine={false} axisLine={false} dy={6} tick={{ fill: c.axis, fontSize: 10.5 }} interval={Math.max(1, Math.round(chartData.length / 7) - 1)} />
             <YAxis tickLine={false} axisLine={false} dx={-4} tick={{ fill: c.axis, fontSize: 10.5 }} />
             <Tooltip
               contentStyle={tooltipStyle(theme)}
-              formatter={(value: number) => [`${value} incidents`, isLive ? 'Predicted incidents' : 'Sample series']}
+              formatter={(value: number) => [`${value} incidents`, 'Incidents']}
             />
             <Area
               type="monotone"
@@ -120,10 +133,9 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
       <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] font-mono text-[var(--text-muted)] pt-2 border-t border-[var(--border-muted)] mt-1">
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: histColor }} /> Historical</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: todayColor }} /> Today</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: predColor }} /> Sample projection</span>
-        <span className="ml-auto flex items-center gap-1" title="Static sample series — no model confidence applies.">
-          <HelpCircle className="w-3 h-3" />
-          Not a live forecast
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: predColor }} /> Projected</span>
+        <span className="ml-auto text-[9px] text-[var(--text-muted)]">
+          Estimated from {data.sample_size} incident records
         </span>
       </div>
     </div>

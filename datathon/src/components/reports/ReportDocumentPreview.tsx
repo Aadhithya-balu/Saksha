@@ -42,19 +42,32 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
 
   // Real metric derivations (no Math.random or fabricated numbers)
   const summaryMetrics = useMemo(() => {
-    if (!data || !data.results.length) return null;
+    if (!data) return null;
 
-    const total = data.total || data.results.length;
+    const total = data.total;
 
-    // Inspect status distribution
-    const statusCounts: Record<string, number> = {};
-    const priorityCounts: Record<string, number> = {};
+    // Full-scope aggregates come from the backend (server-side counts over
+    // the entire filtered dataset). Fall back to the paged window only when
+    // the endpoint does not provide them.
+    const fullStatus = data.summary?.status;
+    const fullPriority = data.summary?.priority;
 
+    const statusCounts: Record<string, number> = fullStatus
+      ? { ...fullStatus }
+      : {};
+    const priorityCounts: Record<string, number> = fullPriority
+      ? { ...fullPriority }
+      : {};
+
+    // Window fallback: only used when the endpoint returns no full-set
+    // summary for this report type, and explicitly labelled as "displayed"
+    // so it can never be mistaken for a full-dataset count.
     data.results.forEach((row) => {
-      const st = String(row.status || 'unknown').toLowerCase();
-      statusCounts[st] = (statusCounts[st] || 0) + 1;
-
-      if (row.priority) {
+      if (!fullStatus) {
+        const st = String(row.status || 'unknown').toLowerCase();
+        statusCounts[st] = (statusCounts[st] || 0) + 1;
+      }
+      if (!fullPriority && row.priority) {
         const pr = String(row.priority).toLowerCase();
         priorityCounts[pr] = (priorityCounts[pr] || 0) + 1;
       }
@@ -64,6 +77,7 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
       total,
       statusCounts,
       priorityCounts,
+      fromFullScope: Boolean(fullStatus) || Boolean(fullPriority),
     };
   }, [data]);
 
@@ -165,10 +179,10 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
           {/* Document Control Box */}
           <div className="rounded-lg border border-border-color bg-[var(--bg-secondary)]/80 p-3 text-[10px] font-mono space-y-1 sm:text-right min-w-[220px]">
             <div className="text-[var(--text-muted)]">
-              CONTROL REF: <span className="text-[var(--text-primary)] font-bold">KSP-RPT-{data.report_type.toUpperCase()}</span>
+              MODE: <span className="text-[var(--text-primary)] font-bold">LIVE PREVIEW</span>
             </div>
             <div className="text-[var(--text-muted)]">
-              GENERATED: <span className="text-[var(--text-primary)]">{generatedTime}</span>
+              PREVIEWED: <span className="text-[var(--text-primary)]">{generatedTime}</span>
             </div>
             <div className="text-[var(--text-muted)]">
               JURISDICTION: <span className="text-[var(--text-primary)] font-semibold">{district || 'STATE-WIDE'}</span>
@@ -195,7 +209,7 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
                 <p className="mt-1 text-xl font-bold text-[var(--text-primary)] font-mono">
                   {summaryMetrics.total}
                 </p>
-                <span className="text-[10px] text-emerald-400">100% verified entries</span>
+                <span className="text-[10px] text-emerald-400">Scoped live-database count</span>
               </div>
 
               <div className="rounded-lg border border-border-color bg-[var(--bg-secondary)]/70 p-3">
@@ -207,7 +221,9 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
                     (summaryMetrics.statusCounts['active'] || 0) +
                     (summaryMetrics.statusCounts['under_investigation'] || 0)}
                 </p>
-                <span className="text-[10px] text-[var(--text-muted)]">Requiring operational focus</span>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  {summaryMetrics.fromFullScope ? 'Full-scope count' : 'Within displayed records'}
+                </span>
               </div>
 
               <div className="rounded-lg border border-border-color bg-[var(--bg-secondary)]/70 p-3">
@@ -218,7 +234,9 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
                   {(summaryMetrics.priorityCounts['high'] || 0) +
                     (summaryMetrics.priorityCounts['critical'] || 0)}
                 </p>
-                <span className="text-[10px] text-[var(--text-muted)]">High threat assessment</span>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  {summaryMetrics.fromFullScope ? 'Full-scope count' : 'Within displayed records'}
+                </span>
               </div>
 
               <div className="rounded-lg border border-border-color bg-[var(--bg-secondary)]/70 p-3">
@@ -240,7 +258,7 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)] flex items-center gap-2">
                 <span className="w-1.5 h-3 bg-teal-500 rounded-sm" />
-                Section II: Classified Intelligence Dataset ({data.results.length} records)
+                Section II: Classified Intelligence Dataset (showing {data.results.length} of {data.total} records)
               </h3>
               <span className="text-[10px] font-mono text-[var(--text-muted)]">
                 Page {currentPage} of {totalPages}
@@ -335,7 +353,7 @@ export const ReportDocumentPreview: React.FC<ReportDocumentPreviewProps> = ({
                 Section III: Cryptographic Provenance & Origin Verification
               </h4>
               <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                LIVE_DB VERIFIED
+                LIVE FEED
               </span>
             </div>
             <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">

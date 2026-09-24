@@ -51,6 +51,8 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
       ? { name: 'Realtime SSE Stream', status: 'healthy', icon: <Radio className="w-4 h-4" />, latency: 'Active' }
       : sseStatus === 'connecting'
       ? { name: 'Realtime SSE Stream', status: 'degraded', icon: <Radio className="w-4 h-4" />, latency: 'Reconnecting' }
+      : sseStatus === 'error'
+      ? { name: 'Realtime SSE Stream', status: 'down', icon: <Radio className="w-4 h-4" />, latency: 'Session expired' }
       : { name: 'Realtime SSE Stream', status: 'standby', icon: <Radio className="w-4 h-4" />, latency: 'Standby' };
 
   const refreshHealth = async () => {
@@ -64,11 +66,17 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ compact = false }) =
 
       // Only report components the readiness probe actually measures. No
       // invented per-service latency or uptime numbers.
+      const dataSource =
+        body.data_source === 'postgresql'
+          ? { name: 'Data Source', status: 'healthy' as const, icon: SOURCE_ICON, latency: body.data_source }
+          : body.data_source === 'sqlite-demo'
+          ? { name: 'Data Source', status: 'standby' as const, icon: SOURCE_ICON, latency: 'sqlite (demo-mode)' }
+          : { name: 'Data Source', status: 'standby' as const, icon: SOURCE_ICON, latency: body.data_source ?? 'unknown' };
       setServices([
         { name: 'Backend API', status: backendOk ? 'healthy' : 'degraded', icon: BACKEND_ICON, latency: `${elapsed}ms` },
         { name: 'PostgreSQL Database', status: mapBackendState(body.postgresql), icon: DB_ICON, latency: body.postgresql ?? 'unknown' },
         { name: 'Neo4j Graph Engine', status: mapBackendState(body.neo4j), icon: GRAPH_ICON, latency: body.neo4j ?? 'unknown' },
-        { name: 'Data Source', status: 'standby', icon: SOURCE_ICON, latency: body.data_source ?? 'unknown' },
+        dataSource,
         sseService,
       ]);
     } catch {

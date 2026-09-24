@@ -140,7 +140,7 @@ function App() {
   // Listen for navigation requests (cross-tab links)
   useEffect(() => {
     const handleNavigate = (e: Event) => {
-      const customEvent = e as CustomEvent<{ tab: string; targetId?: string }>;
+      const customEvent = e as CustomEvent<{ tab: string; targetId?: string; targetType?: string }>;
       if (customEvent.detail?.tab) {
         const nextTab = customEvent.detail.tab;
         setActiveTab(nextTab);
@@ -152,6 +152,11 @@ function App() {
         }
         if (customEvent.detail.targetId) {
           sessionStorage.setItem('selected_entity_id', customEvent.detail.targetId);
+          if (customEvent.detail.targetType) {
+            sessionStorage.setItem('selected_entity_type', customEvent.detail.targetType);
+          } else {
+            sessionStorage.removeItem('selected_entity_type');
+          }
         }
       }
     };

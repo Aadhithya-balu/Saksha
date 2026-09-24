@@ -8,7 +8,7 @@ import {
 } from '../../services/api';
 import { usePolling } from '../../hooks/usePolling';
 import type { CrimeCaseDetailRecord, CrimeCaseInsights } from '../../services/api';
-import { Search, Plus, Eye, Edit2, Trash2, ShieldAlert, X, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ShieldAlert, X, AlertTriangle, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeStore } from '../../store/realtimeStore';
 import CrimeInsightsBar from '../../components/crimeCases/CrimeInsightsBar';
@@ -23,12 +23,17 @@ interface CrimeCasesListProps {
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  active: 'Active',
+  'under_investigation': 'Under investigation',
+  arrested: 'Arrested',
+  chargesheeted: 'Chargesheeted',
+  convicted: 'Convicted',
+  closed: 'Closed',
   open: 'Open',
   assigned: 'Assigned',
   investigating: 'Under investigation',
   'evidence collected': 'Evidence collected',
   'charge sheet filed': 'Charge sheet filed',
-  closed: 'Closed',
 };
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -39,12 +44,17 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 const STATUS_TONE: Record<string, { color: string; background: string }> = {
+  active: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
+  'under_investigation': { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
+  arrested: { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
+  chargesheeted: { color: 'var(--accent-blue-light)', background: 'var(--accent-blue-subtle)' },
+  convicted: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
+  closed: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
   open: { color: 'var(--accent-coral-light)', background: 'var(--accent-coral-subtle)' },
   assigned: { color: 'var(--accent-cyan-light)', background: 'var(--accent-cyan-subtle)' },
   investigating: { color: 'var(--accent-purple-light)', background: 'var(--accent-purple-subtle)' },
   'evidence collected': { color: 'var(--accent-amber-light)', background: 'var(--accent-amber-subtle)' },
   'charge sheet filed': { color: 'var(--accent-blue-light)', background: 'var(--accent-blue-subtle)' },
-  closed: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
 };
 
 const PRIORITY_TONE: Record<string, { color: string; background: string }> = {
@@ -54,7 +64,10 @@ const PRIORITY_TONE: Record<string, { color: string; background: string }> = {
   low: { color: 'var(--accent-teal-light)', background: 'var(--accent-teal-subtle)' },
 };
 
-const NEEDS_ATTENTION_STATUSES = new Set(['open', 'assigned', 'investigating']);
+const NEEDS_ATTENTION_STATUSES = new Set([
+  'active', 'under_investigation', 'arrested',
+  'open', 'assigned', 'investigating', 'evidence collected',
+]);
 
 const daysSince = (iso?: string | null) =>
   iso ? Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 86400000)) : 0;
@@ -68,7 +81,9 @@ const sortAttentionFirst = (rows: CrimeCaseDetailRecord[]) =>
   );
 
 const needsAttention = (c: CrimeCaseDetailRecord) =>
-  NEEDS_ATTENTION_STATUSES.has(c.status) && (c.progress ?? 0) < 40;
+  c.progress != null &&
+  NEEDS_ATTENTION_STATUSES.has(c.status) &&
+  c.progress < 40;
 
 const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
   onSelectCase,
@@ -181,11 +196,11 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
           location_id: '',
           occurred_at: liveCase.time || new Date().toISOString(),
           reported_at: new Date().toISOString(),
-          description: `Newly registered ${liveCase.crime_type} case at ${liveCase.location}`,
+          description: null,
           mo_tags: null,
           status: liveCase.status,
           priority: liveCase.priority,
-          progress: 0,
+          progress: null,
         } as unknown as CrimeCaseDetailRecord,
         ...prev.filter((c) => c.case_number !== liveCase.case_number),
       ].slice(0, 20));
@@ -294,7 +309,7 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
       />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
@@ -311,11 +326,11 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
           className="sk-select w-full md:w-44 px-3 py-1.5 cursor-pointer"
         >
           <option value="">{t.cc_all_status}</option>
-          <option value="open">Open</option>
-          <option value="assigned">Assigned</option>
-          <option value="investigating">Under investigation</option>
-          <option value="evidence collected">Evidence collected</option>
-          <option value="charge sheet filed">Charge sheet filed</option>
+          <option value="active">Active</option>
+          <option value="under_investigation">Under investigation</option>
+          <option value="arrested">Arrested</option>
+          <option value="chargesheeted">Chargesheeted</option>
+          <option value="convicted">Convicted</option>
           <option value="closed">Closed</option>
         </select>
         <select
@@ -390,7 +405,10 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
         </div>
       ) : (
         <div className="border border-border-color rounded-card overflow-hidden bg-secondary-bg">
-          <div className="overflow-x-auto">
+          {/* Desktop full table — ≥1400px. All 8 columns fit in the content
+              area at this width, so the sticky actions column stays on-screen
+              without horizontal scrolling. */}
+          <div className="hidden min-[1400px]:block overflow-x-auto">
             <table className="w-full border-collapse font-mono text-xs text-left">
               <thead>
                 <tr className="border-b border-border-color bg-[var(--bg-secondary)]/40 text-[var(--text-muted)] uppercase select-none">
@@ -401,7 +419,9 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                   <th className="p-4 text-center">{t.cc_status}</th>
                   <th className="p-4 text-center">{t.cc_priority}</th>
                   <th className="p-4">{t.cc_progress}</th>
-                  <th className="p-4 text-right">{t.cc_actions}</th>
+                  <th className="p-4 text-right sticky right-0 bg-[var(--bg-secondary)]/90 border-l border-border-color/60 shadow-[-4px_0_8px_rgba(0,0,0,0.08)]">
+                    {t.cc_actions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color/65">
@@ -452,26 +472,40 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                       </span>
                     </td>
                     <td className="p-4 min-w-[150px]">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
-                            style={{ width: `${c.progress}%` }}
-                          />
+                      {c.progress == null ? (
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase">—</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78] transition-all duration-500"
+                              style={{ width: `${c.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-[var(--text-primary)] shrink-0">
+                            {c.progress}%
+                          </span>
                         </div>
-                        <span className="text-[10px] font-bold text-[var(--text-primary)] shrink-0">
-                          {c.progress}%
-                        </span>
-                      </div>
+                      )}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 sticky right-0 bg-[var(--bg-secondary)] border-l border-border-color/60">
                       <div className="flex items-center justify-end gap-2.5">
                         <button
-                          onClick={() => onSelectCase(c.id)}
+                          onClick={(e) => { e.stopPropagation(); onSelectCase(c.id); }}
                           title={t.cc_view}
                           className="p-1.5 hover:bg-[#1E6FD9]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#1E6FD9] transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'ai_chat', targetId: c.id } }));
+                          }}
+                          title="Ask SAKSHA AI about this case"
+                          className="p-1.5 hover:bg-[#8B5CF6]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#8B5CF6] transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
                         </button>
                         {canWrite && (
                         <button
@@ -497,6 +531,211 @@ const CrimeCasesList: React.FC<CrimeCasesListProps> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Compact list — 768px to 1399px. A slim representation with
+              Case / Category / Status / Priority / Actions only, so the action
+              buttons fit on-screen at tablet and mid-size desktop widths with
+              NO horizontal scrolling or clipped columns. */}
+          <div className="hidden md:block min-[1400px]:hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-color bg-[var(--bg-secondary)]/40 text-[10px] uppercase tracking-wider text-[var(--text-muted)] select-none">
+              <span className="flex-1 min-w-0">Case</span>
+              <span className="w-[96px] min-[1100px]:w-[120px] shrink-0">Category</span>
+              <span className="w-[92px] min-[1100px]:w-[104px] shrink-0 text-center">Status</span>
+              <span className="w-[70px] min-[1100px]:w-[80px] shrink-0 text-center">Priority</span>
+              <span className="w-[108px] min-[1100px]:w-[116px] shrink-0 text-right">Actions</span>
+            </div>
+            <div className="divide-y divide-border-color/65">
+              {cases.map((c) => (
+                <div
+                  key={c.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectCase(c.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectCase(c.id);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition-colors group cursor-pointer min-w-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold text-[var(--text-primary)] uppercase text-xs truncate">{c.case_number}</span>
+                      {needsAttention(c) && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coral)] animate-pulse shrink-0" title="Needs attention" />
+                      )}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-1">{c.description || t.cc_no_description}</div>
+                    <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">{formatCaseDate(c.occurred_at)}</div>
+                  </div>
+
+                  <div className="w-[96px] min-[1100px]:w-[120px] shrink-0">
+                    <span className="block text-[11px] text-[var(--text-secondary)] line-clamp-1">{c.category?.name || '—'}</span>
+                    <span className="block text-[9px] text-[var(--text-muted)] mt-0.5">{c.location?.district || '—'}</span>
+                  </div>
+
+                  <div className="w-[92px] min-[1100px]:w-[104px] shrink-0 flex items-center justify-center">
+                    <span className="sk-chip px-2 py-0.5" style={getStatusStyle(c.status)}>
+                      {STATUS_LABEL[c.status] || c.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  <div className="w-[70px] min-[1100px]:w-[80px] shrink-0 flex items-center justify-center">
+                    <span className="sk-chip px-2 py-0.5" style={getPriorityStyle(c.priority)}>
+                      {PRIORITY_LABEL[c.priority] || c.priority}
+                    </span>
+                  </div>
+
+                  <div className="w-[108px] min-[1100px]:w-[116px] shrink-0 flex items-center justify-end gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectCase(c.id); }}
+                      title={t.cc_view}
+                      className="p-1 hover:bg-[#1E6FD9]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#1E6FD9] transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'ai_chat', targetId: c.id } }));
+                      }}
+                      title="Ask SAKSHA AI about this case"
+                      className="p-1 hover:bg-[#8B5CF6]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#8B5CF6] transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </button>
+                    {canWrite && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditCase(c.id); }}
+                        title={t.cc_edit}
+                        className="p-1 hover:bg-[#0E9E78]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#0E9E78] transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(c); }}
+                        title={t.cc_purge}
+                        className="p-1 hover:bg-[#C94A2A]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile card list — replaces every table layout on <768px so all
+              case data and actions stay on-screen without horizontal scrolling. */}
+          <div className="md:hidden divide-y divide-border-color/65">
+            {cases.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => onSelectCase(c.id)}
+                className="p-4 space-y-3 cursor-pointer active:bg-[var(--bg-surface-hover)] transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-[var(--text-primary)] uppercase text-xs">
+                      {c.case_number}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-2">
+                      {c.description || t.cc_no_description}
+                    </div>
+                  </div>
+                  <span className="sk-chip px-2 py-0.5 shrink-0" style={getStatusStyle(c.status)}>
+                    {STATUS_LABEL[c.status] || c.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-[var(--text-secondary)]">
+                  <div>
+                    <span className="text-[var(--text-muted)]">{t.cc_district}: </span>
+                    {c.location?.district || '—'}
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)]">{t.cc_occurred_at}: </span>
+                    {formatCaseDate(c.occurred_at)}
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)]">{t.cc_category}: </span>
+                    {c.category?.name || '—'}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="sk-chip px-1.5 py-0.5 text-[9px]" style={getPriorityStyle(c.priority)}>
+                      {PRIORITY_LABEL[c.priority] || c.priority}
+                    </span>
+                    {needsAttention(c) && (
+                      <span className="flex items-center gap-1 text-[9px] text-[var(--accent-coral-light)]">
+                        <span className="w-1 h-1 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+                        {daysSince(c.reported_at)}d
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {c.progress == null ? (
+                  <div className="text-[9px] text-[var(--text-muted)] uppercase">
+                    {t.cc_progress}: —
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden border border-[var(--border-primary)]">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#1E6FD9] to-[#0E9E78]"
+                        style={{ width: `${c.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-[var(--text-primary)] shrink-0">
+                      {c.progress}%
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectCase(c.id); }}
+                    title={t.cc_view}
+                    className="p-1.5 hover:bg-[#1E6FD9]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#1E6FD9] transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'ai_chat', targetId: c.id } }));
+                    }}
+                    title="Ask SAKSHA AI about this case"
+                    className="p-1.5 hover:bg-[#8B5CF6]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#8B5CF6] transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditCase(c.id); }}
+                      title={t.cc_edit}
+                      className="p-1.5 hover:bg-[#0E9E78]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#0E9E78] transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteClick(c); }}
+                      title={t.cc_purge}
+                      className="p-1.5 hover:bg-[#C94A2A]/15 border border-border-color rounded text-[var(--text-secondary)] hover:text-[#C94A2A] transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

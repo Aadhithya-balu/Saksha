@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
-from app.auth.rbac import ALL_ROLES, require_roles
+from app.auth.rbac import ALL_ROLES, ROLE_ADMIN, ROLE_CRIME_ANALYST, require_roles
 from app.core.exceptions import NotFoundException
 from app.database.postgres import get_db
 from app.models.user import User
@@ -55,6 +55,10 @@ class ChatRequest(BaseModel):
         False,
         description="Persist the exchange to chat history (opt-in; false keeps the chat server-side-transient).",
     )
+    include_debug: bool = Field(
+        False,
+        description="Return an observability trace (intents, plan, sources, latency). Only honored for admin/crime-analyst roles.",
+    )
 
 
 class ChatCitationOut(BaseModel):
@@ -88,6 +92,7 @@ class ChatResponse(BaseModel):
     conversation_title: str | None = None
     engine: str | None = None
     provenance: ChatProvenanceOut | None = None
+    debug: dict[str, Any] | None = None
 
 
 def _resolve_conversation(db: Session, current_user: User, payload: ChatRequest):
@@ -133,6 +138,19 @@ def _ndjson(payload: dict[str, Any]) -> bytes:
     return (json.dumps(payload, default=str) + "\n").encode("utf-8")
 
 
+def _debug_enabled(current_user: User, payload: ChatRequest) -> bool:
+    """Observability trace is only emitted for admin/crime-analyst accounts.
+
+    The client can *request* it freely, but a non-privileged caller is never
+    served internal pipeline details (plan, source errors, scope resolution).
+    """
+    if not payload.include_debug:
+        return False
+    role_name = getattr(current_user, "role", None)
+    role_name = getattr(role_name, "name", None)
+    return role_name in (ROLE_ADMIN, ROLE_CRIME_ANALYST)
+
+
 @router.post("", response_model=ChatResponse)
 async def chat(
     payload: ChatRequest,
@@ -162,7 +180,9 @@ async def chat(
                         },
                     })
                 async for chunk in orch.process_message(
-                    payload.message, user_sid, db, history=llm_history, current_user=current_user,
+                    payload.message, user_sid, db, history=llm_history,
+                    current_user=current_user,
+                    include_debug=_debug_enabled(current_user, payload),
                 ):
                     yield chunk
                     try:
@@ -212,7 +232,7 @@ async def chat(
         return StreamingResponse(event_stream(), media_type="application/x-ndjson")
 
     try:
-        result = orch.process_message_sync(payload.message, user_sid, db, history=llm_history, current_user=current_user)
+        result = orch.process_message_sync(payload.message, user_sid, db, history=llm_history, current_user=current_user, include_debug=_debug_enabled(current_user, payload))
         saved_conversation = conversation
         if conversation is not None:
             if not _persist_exchange(db, current_user, conversation, payload.message, result):
@@ -243,7 +263,7 @@ async def chat_query(
 ):
     user_sid = f"user:{current_user.username}:{payload.session_id or 'default'}"
     try:
-        result = _get_orchestrator().process_message_sync(payload.message, user_sid, db, current_user=current_user)
+        result = _get_orchestrator().process_message_sync(payload.message, user_sid, db, current_user=current_user, include_debug=_debug_enabled(current_user, payload))
         return _build_response(result)
     except Exception:
         raise HTTPException(status_code=422, detail="Failed to process chat message.")
@@ -257,7 +277,7 @@ async def investigation_chat(
 ):
     user_sid = f"user:{current_user.username}:{payload.session_id or 'default'}"
     try:
-        result = _get_orchestrator().process_message_sync(payload.message, user_sid, db, current_user=current_user)
+        result = _get_orchestrator().process_message_sync(payload.message, user_sid, db, current_user=current_user, include_debug=_debug_enabled(current_user, payload))
         return _build_response(result)
     except Exception:
         raise HTTPException(status_code=422, detail="Failed to process investigation chat.")
@@ -291,4 +311,5 @@ def _build_response(result: dict[str, Any]) -> ChatResponse:
             "entities": result.get("entities", []),
         }],
         provenance=provenance,
+        debug=result.get("debug"),
     )

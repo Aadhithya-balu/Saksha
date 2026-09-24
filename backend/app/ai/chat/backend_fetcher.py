@@ -57,6 +57,32 @@ def _victim_in_district(db: Session, district: str):
     ).filter(Location.district == district)
 
 
+def _evidence_in_district(db: Session, district: str):
+    """Evidence ids whose owning case sits in ``district``."""
+    from app.models.crime import CrimeCase
+    from app.models.evidence import Evidence
+    from app.models.location import Location
+    return db.query(Evidence.id).join(
+        CrimeCase, CrimeCase.id == Evidence.case_id
+    ).join(Location, Location.id == CrimeCase.location_id).filter(Location.district == district)
+
+
+def _criminal_ids_in_district(db: Session, district: str) -> set[str]:
+    """Criminal UUID strings belonging to the caller's district (for graph post-filtering)."""
+    from app.models.crime import CrimeCase
+    from app.models.fir import FIR, FIRCriminalLink
+    from app.models.location import Location
+    rows = (
+        db.query(FIRCriminalLink.criminal_id)
+        .join(FIR, FIR.id == FIRCriminalLink.fir_id)
+        .join(CrimeCase, CrimeCase.id == FIR.crime_case_id)
+        .join(Location, Location.id == CrimeCase.location_id)
+        .filter(Location.district == district)
+        .all()
+    )
+    return {str(r[0]) for r in rows}
+
+
 def user_may_view_pii(user: Any) -> bool:
     """True when the authenticated user's role permits unredacted PII.
 
@@ -188,6 +214,10 @@ class BackendFetcher:
             return self._pg_list_notifications(db, params)
         if method == "get_victims":
             return self._pg_get_victims(db, params)
+        if method == "get_evidence_for_case":
+            return self._pg_get_evidence_for_case(db, params)
+        if method == "list_evidence":
+            return self._pg_list_evidence(db, params)
         return BackendResult(source="postgres", data_type=method, content="Method not implemented")
 
     def _pg_get_fir(self, db: Session, params: dict) -> BackendResult:
@@ -261,6 +291,79 @@ class BackendFetcher:
             content="\n---\n".join(parts),
             raw_data=[{"fir_number": f.fir_number, "id": str(f.id)} for f in firs],
             records=[{"type": "fir", "fir_number": f.fir_number, "id": str(f.id), "status": f.status} for f in firs],
+        )
+
+    def _pg_get_evidence_for_case(self, db: Session, params: dict) -> BackendResult:
+        """Evidence for a referenced case/FIR, resolved through the case record.
+
+        The case/FIR itself is looked up under the caller's district scope, so
+        evidence for records outside the authorized district never surfaces.
+        """
+        from app.models.evidence import Evidence
+
+        case_num = (params.get("case_number", "") or "").strip().rstrip(".,;:!?")
+        fir_num = (params.get("fir_number", "") or "").strip().rstrip(".,;:!?")
+        if not case_num and not fir_num:
+            return BackendResult(source="postgres", data_type="evidence", content="No case or FIR reference provided.")
+
+        case = None
+        if case_num:
+            case = self._pg_get_case(db, {"case_number": case_num})
+            if not case.success or not case.raw_data:
+                return BackendResult(source="postgres", data_type="evidence",
+                                     content=f"No authorized case matching {case_num} was found.")
+            case_id = case.raw_data["id"]
+        else:
+            from app.models.crime import CrimeCase
+            from app.models.fir import FIR
+            fir_res = self._pg_get_fir(db, {"fir_number": fir_num})
+            if not fir_res.success or not fir_res.raw_data:
+                return BackendResult(source="postgres", data_type="evidence",
+                                     content=f"No authorized FIR matching {fir_num} was found.")
+            fir = db.query(FIR).filter(FIR.id == fir_res.raw_data["id"]).first()
+            if fir is None or fir.crime_case_id is None:
+                return BackendResult(source="postgres", data_type="evidence",
+                                     content="The FIR is not linked to a case, so no evidence records are available.")
+            case_id = str(fir.crime_case_id)
+
+        from app.models.crime import CrimeCase
+        case_obj = db.query(CrimeCase).filter(CrimeCase.id == case_id).first()
+        case_num_val = case_obj.case_number if case_obj else None
+
+        evidence_items = db.query(Evidence).filter(Evidence.case_id == case_id).order_by(Evidence.created_at.desc()).all()
+        if not evidence_items:
+            return BackendResult(source="postgres", data_type="evidence",
+                                 content="No evidence records are linked to this case.")
+        parts = [f"- {e.title} ({e.evidence_type or 'item'}; status: {e.status or 'Pending'})" for e in evidence_items]
+        return BackendResult(
+            source="postgres", data_type="evidence",
+            content=f"Evidence linked to case ({len(evidence_items)} records):\n" + "\n".join(parts),
+            raw_data=[{"title": e.title, "id": str(e.id), "status": e.status, "case_number": case_num_val} for e in evidence_items],
+            records=[{"type": "evidence", "title": e.title, "id": str(e.id), "status": e.status, "case_number": case_num_val} for e in evidence_items],
+        )
+
+    def _pg_list_evidence(self, db: Session, params: dict) -> BackendResult:
+        from app.models.evidence import Evidence
+        limit = params.get("limit", 12)
+        q = db.query(Evidence)
+        d = getattr(self, "_district", None)
+        if d:
+            ids = [r[0] for r in _evidence_in_district(db, d).all()]
+            if not ids:
+                return BackendResult(source="postgres", data_type="evidence",
+                                     content="No evidence records in your authorized district.")
+            q = q.filter(Evidence.id.in_(ids))
+        items = q.order_by(Evidence.created_at.desc()).limit(limit).all()
+        if not items:
+            return BackendResult(source="postgres", data_type="evidence", content="No evidence records found.")
+        parts = [f"- {e.title} ({e.evidence_type or 'item'}; status: {e.status or 'Pending'})" for e in items]
+        return BackendResult(
+            source="postgres", data_type="evidence",
+            content=f"Recent evidence records ({len(items)} shown):\n" + "\n".join(parts),
+            raw_data=[{"title": e.title, "id": str(e.id), "status": e.status,
+                       "case_number": e.crime_case.case_number if e.crime_case else None} for e in items],
+            records=[{"type": "evidence", "title": e.title, "id": str(e.id), "status": e.status,
+                      "case_number": e.crime_case.case_number if e.crime_case else None} for e in items],
         )
 
     def _pg_get_case(self, db: Session, params: dict) -> BackendResult:
@@ -469,8 +572,15 @@ class BackendFetcher:
 
     def _pg_get_officer(self, db: Session, params: dict) -> BackendResult:
         from app.models.officer import Officer
+
+        def _scoped(q):
+            d = getattr(self, "_district", None)
+            if d:
+                q = q.filter(Officer.district == d)
+            return q
+
         name = params.get("name", "")
-        officer = db.query(Officer).filter(
+        officer = _scoped(db.query(Officer)).filter(
             Officer.name.ilike(f"%{name}%") | Officer.badge_number.ilike(f"%{name}%")
         ).first()
         if not officer:
@@ -485,7 +595,11 @@ class BackendFetcher:
     def _pg_list_officers(self, db: Session, params: dict) -> BackendResult:
         from app.models.officer import Officer
         limit = params.get("limit", 20)
-        officers = db.query(Officer).limit(limit).all()
+        q = db.query(Officer)
+        d = getattr(self, "_district", None)
+        if d:
+            q = q.filter(Officer.district == d)
+        officers = q.limit(limit).all()
         if not officers:
             return BackendResult(source="postgres", data_type="officers", content="No officers found.")
         parts = [
@@ -496,6 +610,18 @@ class BackendFetcher:
 
     def _pg_list_notifications(self, db: Session, params: dict) -> BackendResult:
         from app.models.notification import Notification
+        # Notifications have no district column and are per-user; a
+        # district-bound account must not see other users' / other districts'
+        # notifications from chat. State/system-level callers (district None)
+        # may list them; bound users are pointed at the Notifications page
+        # instead of leaking records they are not authorized to see.
+        d = getattr(self, "_district", None)
+        if d:
+            return BackendResult(
+                source="postgres", data_type="notifications",
+                content="Notifications are personal and district-bound in this chat. "
+                        "Please open the Notifications page to review them.",
+            )
         limit = params.get("limit", 20)
         notifs = db.query(Notification).order_by(Notification.created_at.desc()).limit(limit).all()
         if not notifs:
@@ -540,7 +666,10 @@ class BackendFetcher:
     def _neo4j_person_network(self, params: dict, db: Session) -> BackendResult:
         from app.services.network.network_service import get_person_network_graph
         name = params.get("name", "")
-        graph = get_person_network_graph(db, person_id=name, depth=2)
+        # ``district`` is honoured by the unified graph service on BOTH the
+        # Neo4j and SQL paths, so a district-bound caller never sees
+        # cross-district links.
+        graph = get_person_network_graph(db, person_id=name, depth=2, district=getattr(self, "_district", None))
         if not graph.nodes:
             return BackendResult(source="neo4j", data_type="network", content="No network data found.")
         parts = []
@@ -559,7 +688,10 @@ class BackendFetcher:
 
     def _neo4j_full_network(self, db: Session) -> BackendResult:
         from app.services.network.network_service import get_full_network_graph
-        graph = get_full_network_graph(db)
+        # Passing district forces the graph builder to SQL-filter by district
+        # (Neo4j holds a coarse cross-district projection and is bypassed for
+        # case-filtered queries), guaranteeing no district leak.
+        graph = get_full_network_graph(db, district=getattr(self, "_district", None))
         parts = [f"Network: {graph.total_nodes} nodes, {graph.total_edges} edges"]
         for node in graph.nodes[:20]:
             parts.append(f"  {node.name} ({node.category.value}, risk={node.riskScore})")
@@ -568,6 +700,17 @@ class BackendFetcher:
     def _neo4j_gangs(self, db: Session) -> BackendResult:
         from app.services.network.network_service import get_organization_gang_networks
         gangs = get_organization_gang_networks(db)
+        d = getattr(self, "_district", None)
+        if d:
+            allowed = _criminal_ids_in_district(db, d)
+            scoped = []
+            for g in gangs:
+                member_ids = [
+                    str(m.id).replace("criminal-", "", 1) for m in g.members
+                ]
+                if any(mid in allowed for mid in member_ids):
+                    scoped.append(g)
+            gangs = scoped
         parts = []
         for g in gangs:
             members = ", ".join(m.name for m in g.members)
@@ -575,12 +718,25 @@ class BackendFetcher:
                 f"Gang: {g.name} (Leader: {g.leader_name}, Risk: {g.risk_level}, "
                 f"Territory: {g.territory}, Members: {members})"
             )
+        if not parts:
+            return BackendResult(source="neo4j", data_type="gangs",
+                                 content="No gang networks found in your authorized district.")
         return BackendResult(source="neo4j", data_type="gangs", content="\n".join(parts))
 
     def _neo4j_shortest_path(self, params: dict, db: Session) -> BackendResult:
         from app.services.network.network_service import find_shortest_path
         source = params.get("source", "")
         target = params.get("target", "")
+        # Shortest-path traversal can hop across districts, and the underlying
+        # graph service has no district predicate. Rather than leak
+        # cross-district connectivity to a bound caller, point them at the
+        # district-scoped Network intelligence page instead of answering.
+        if getattr(self, "_district", None):
+            return BackendResult(
+                source="neo4j", data_type="shortest_path",
+                content="Shortest-path analysis is only available for state-level access in chat. "
+                        "Please use the Network intelligence page, which honours your authorized district.",
+            )
         result = find_shortest_path(db, source, target)
         if not result.found:
             return BackendResult(source="neo4j", data_type="shortest_path", content=result.explanation)
@@ -592,24 +748,23 @@ class BackendFetcher:
 
     def _neo4j_sql_fallback(self, method: str, params: dict, db: Session) -> BackendResult:
         if method == "get_person_network":
-            from app.services.analytics_service import network_person
+            from app.services.network.network_service import get_person_network_graph
             name = params.get("name", "")
             if not name:
                 return BackendResult(source="postgres", data_type="network_fallback", content="No network data.")
-            result = network_person(db, name)
-            nodes = result.get("nodes") or []
-            if not nodes:
+            graph = get_person_network_graph(db, person_id=name, depth=2, district=getattr(self, "_district", None))
+            if not graph.nodes:
                 return BackendResult(source="postgres", data_type="network_fallback", content="No network data.")
-            id_to_name = {n.get("id"): n.get("name") or "Unknown" for n in nodes}
+            id_to_name = {n.id: n.name for n in graph.nodes}
             parts = [
-                f"{id_to_name.get(e.get('source'), 'Unknown')} --[{e.get('relationship', '')}]--> {id_to_name.get(e.get('target'), 'Unknown')}"
-                for e in (result.get("edges") or [])[:20]
+                f"{id_to_name.get(e.source, 'Unknown')} --[{e.relationship}]--> {id_to_name.get(e.target, 'Unknown')}"
+                for e in graph.edges[:20]
             ]
             content = "\n".join(parts) or "No network linkages found."
             return BackendResult(source="postgres", data_type="network_fallback", content=content)
         if method == "get_full_network":
             from app.services.network.network_service import get_full_network_graph
-            graph = get_full_network_graph(db)
+            graph = get_full_network_graph(db, district=getattr(self, "_district", None))
             return BackendResult(
                 source="postgres", data_type="network_fallback",
                 content=f"Network (SQL fallback): {graph.total_nodes} nodes, {graph.total_edges} edges",

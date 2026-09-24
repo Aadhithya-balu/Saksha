@@ -101,6 +101,8 @@ export interface BackendUser {
 export interface DashboardSummary {
   total_crimes: number;
   open_crimes: number;
+  resolved_crimes: number;
+  investigating_crimes: number;
   total_firs: number;
   total_criminals: number;
   resolution_rate_percent: number;
@@ -109,6 +111,7 @@ export interface DashboardSummary {
 export interface TrendPoint {
   date: string;
   count: number;
+  solved?: number;
 }
 
 export interface CategoryPoint {
@@ -448,10 +451,23 @@ export interface AIGraphInsightData {
   timestamp: string;
 }
 
+export interface ChatSourceRecord {
+  type?: 'fir' | 'case' | 'criminal' | 'officer' | 'evidence' | 'victim' | string;
+  id?: string;
+  [key: string]: unknown;
+}
+
 export interface ChatCitation {
   source: string;
   title: string;
   score: number;
+  records?: ChatSourceRecord[] | null;
+}
+
+export interface ChatProvenance {
+  engine?: string | null;
+  source_records?: ChatSourceRecord[] | null;
+  fetched_at?: string | null;
 }
 
 export interface ChatQueryResponse {
@@ -464,6 +480,7 @@ export interface ChatQueryResponse {
   entities?: string[];
   classification?: string;
   engine?: string | null;
+  provenance?: ChatProvenance;
 }
 
 /* --- Persistent AI chat history --- */
@@ -855,8 +872,6 @@ export interface DashboardFilters {
 export interface OfficerStats {
   total_officers: number;
   active_officers: number;
-  on_duty: number;
-  off_duty: number;
   investigating_officers: number;
 }
 
@@ -868,12 +883,14 @@ export interface EvidenceStats {
 }
 
 export interface RecentIncident {
+  id?: string;
   case_number: string;
   crime_type: string;
   location: string;
+  district?: string | null;
   time: string | null;
   status: string;
-  priority: string;
+  priority: string | null;
 }
 
 export interface ForecastPoint {
@@ -885,19 +902,28 @@ export interface ForecastPoint {
 }
 
 export interface ForecastResponse {
-  next_day_forecast: number;
-  next_week_forecast: number;
+  next_day_forecast: number | null;
+  next_week_forecast: number | null;
   expected_change_percent: number;
   trend_direction: 'up' | 'down' | 'stable';
   series: ForecastPoint[];
+  available: boolean;
+  method: string;
+  method_version: string | null;
+  reason: string | null;
+  sample_size: number;
 }
 
 export interface RiskPredictionResponse {
-  crime_risk_percent: number;
-  threat_level: 'Low' | 'Medium' | 'High' | 'Critical';
-  trend: 'increasing' | 'decreasing' | 'stable';
-  confidence_score: number;
+  crime_risk_percent: number | null;
+  threat_level: 'Low' | 'Medium' | 'High' | 'Critical' | null;
+  trend: 'increasing' | 'decreasing' | 'stable' | null;
+  confidence_score: number | null;
   prediction_time: string;
+  available: boolean;
+  method: string;
+  method_version: string;
+  sample_size: number;
 }
 
 export async function getDashboardSummary(filters?: DashboardFilters) {
@@ -4713,21 +4739,7 @@ export async function getRecordLineage(
 // Dashboard Forecast (Task DSH-01)
 // ============================================================================
 
-export interface ForecastSeriesPoint {
-  day: string;
-  value: number;
-  type: 'historical' | 'today' | 'predicted';
-  color: number;
-  hexColor: string;
-}
-
-export interface ForecastResponse {
-  next_day_forecast: number;
-  next_week_forecast: number;
-  expected_change_percent: number;
-  trend_direction: 'up' | 'down' | 'stable';
-  series: ForecastSeriesPoint[];
-}
+export type ForecastSeriesPoint = ForecastPoint;
 
 export async function getDashboardForecast(district?: string | null): Promise<ForecastResponse> {
   return apiRequest<ForecastResponse>(`/dashboard/forecast${buildQueryString({ district })}`);

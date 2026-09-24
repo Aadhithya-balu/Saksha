@@ -482,7 +482,7 @@ export const CommandCenter: React.FC = () => {
                 <li key={idx} className="py-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-semibold text-[var(--accent-blue-light)] truncate">{inc.case_number}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-mono uppercase ${sevChip(inc.priority)}`}>{inc.priority}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-mono uppercase ${inc.priority ? sevChip(inc.priority) : ''}`}>{inc.priority ?? '—'}</span>
                   </div>
                   <div className="text-[9px] text-[var(--text-secondary)] mt-0.5 truncate">{inc.crime_type} · {inc.location}</div>
                   <div className="text-[8px] font-mono text-[var(--text-muted)] mt-0.5 flex items-center gap-2">

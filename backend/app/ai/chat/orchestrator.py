@@ -12,8 +12,11 @@ Issue #189 hardening:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
+import time
 from typing import Any, AsyncIterator
 
 from sqlalchemy.orm import Session
@@ -59,6 +62,45 @@ class ChatOrchestrator:
         self.context_builder = ContextBuilder()
         self.llm_generator = LLMGenerator()
         self.response_validator = ResponseValidator()
+
+    def _apply_history_context(self, intents: list, entities: Any, message: str, hist: list[dict[str, str]]) -> bool:
+        """Carry the most recent case/FIR reference forward for follow-ups.
+
+        A follow-up like "what evidence is linked to it?" carries no identifier
+        of its own. When the current message has no case_id/fir_number but
+        clearly references the prior topic (pronouns, "the case/FIR/evidence",
+        linkage words), copy the identifier from the newest prior assistant turn
+        that mentioned one. This keeps lookups authorized (they are re-run
+        against the DB) rather than reusing a stale cached answer.
+        """
+        ev = entities.to_dict()
+        if ev.get("case_id") or ev.get("fir_number"):
+            return False
+
+        from app.ai.chat.intent_router import Intent
+        ev_intent = any(i == Intent.EVIDENCE_LOOKUP or i == Intent.SIMILAR_CASES for i in intents)
+        ref_re = re.compile(
+            r"\b(it|this|that|this case|that case|the case|the fir|the evidence|"
+            r"linked|related|attached|connected|tied|for it|on it|about it)\b",
+            re.I,
+        )
+        if not ev_intent and not ref_re.search(message):
+            return False
+
+        for turn in reversed(hist):
+            content = str(turn.get("content", ""))
+            if not content:
+                continue
+            from app.ai.chat.entity_extractor import ExtractedEntities
+            prior = self.entity_extractor.extract(content)
+            prior_map = prior.to_dict()
+            if prior_map.get("case_id"):
+                entities.case_id = prior_map["case_id"]
+                return True
+            if prior_map.get("fir_number"):
+                entities.fir_number = prior_map["fir_number"]
+                return True
+        return False
 
     def _retrieve(
         self,
@@ -118,6 +160,7 @@ class ChatOrchestrator:
         db: Session,
         history: list[dict[str, str]] | None = None,
         current_user: Any = None,
+        include_debug: bool = False,
     ) -> AsyncIterator[bytes]:
         sid = session_id or "default"
         external_history = history is not None
@@ -129,6 +172,14 @@ class ChatOrchestrator:
 
         intent_result = self.intent_router.detect(message)
         entities = self.entity_extractor.extract(message)
+        carried = self._apply_history_context(intent_result.intents, entities, message, hist)
+        debug_trace: dict[str, Any] = {
+            "message": message,
+            "intents": [i.value for i in intent_result.intents],
+            "entities": {k: v for k, v in entities.to_dict().items() if v is not None},
+            "carried_from_history": carried,
+            "district": self._scope_label(current_user, db),
+        }
 
         yield self._ndjson({
             "type": "status",
@@ -141,7 +192,24 @@ class ChatOrchestrator:
         )
 
         plan = self.query_planner.plan(intent_result.intents, entities)
+        debug_trace["plan"] = [
+            {"service": c.service, "method": c.method, "params": c.params}
+            for c in plan.backend_calls
+        ]
+        t0 = time.perf_counter()
         results = self._retrieve(message, plan, db, is_platform_q, current_user)
+        debug_trace["retrieval_ms"] = round((time.perf_counter() - t0) * 1000)
+        debug_trace["sources"] = [
+            {
+                "source": r.source,
+                "method": r.data_type,
+                "success": r.success,
+                "content_chars": len(r.content or ""),
+                "records": len(r.records or []),
+                "error": r.error,
+            }
+            for r in results
+        ]
 
         successful = [r for r in results if r.success]
         failed = [r for r in results if not r.success]
@@ -168,6 +236,7 @@ class ChatOrchestrator:
         await asyncio.sleep(0.01)
 
         full_response = ""
+        t_gen = time.perf_counter()
         try:
             async for chunk in self.llm_generator.generate(
                 message=message,
@@ -181,6 +250,9 @@ class ChatOrchestrator:
             logger.warning("LLM generation failed in streaming path", exc_info=True)
             full_response = _PROVIDER_FAILURE_ANSWER
             yield self._ndjson({"type": "token", "content": _PROVIDER_FAILURE_ANSWER})
+        debug_trace["generation_ms"] = round((time.perf_counter() - t_gen) * 1000)
+        debug_trace["context_chars"] = len(built_context.context_block or "")
+        debug_trace["engine"] = self._engine_label()
 
         validated_response = self.response_validator.validate(full_response, results, skip_grounding=is_platform_q)
         provenance = self.response_validator.get_provenance(full_response, results)
@@ -211,6 +283,8 @@ class ChatOrchestrator:
                 },
             },
         }
+        if include_debug:
+            final_payload["content"]["debug"] = debug_trace
         yield self._ndjson(final_payload)
 
     def process_message_sync(
@@ -220,6 +294,7 @@ class ChatOrchestrator:
         db: Session,
         history: list[dict[str, str]] | None = None,
         current_user: Any = None,
+        include_debug: bool = False,
     ) -> dict[str, Any]:
         """Synchronous wrapper around the chat pipeline.
 
@@ -232,13 +307,38 @@ class ChatOrchestrator:
 
         intent_result = self.intent_router.detect(message)
         entities = self.entity_extractor.extract(message)
+        carried = self._apply_history_context(intent_result.intents, entities, message, hist)
+        debug_trace: dict[str, Any] = {
+            "message": message,
+            "intents": [i.value for i in intent_result.intents],
+            "entities": {k: v for k, v in entities.to_dict().items() if v is not None},
+            "carried_from_history": carried,
+            "district": self._scope_label(current_user, db),
+        }
         plan = self.query_planner.plan(intent_result.intents, entities)
+        debug_trace["plan"] = [
+            {"service": c.service, "method": c.method, "params": c.params}
+            for c in plan.backend_calls
+        ]
 
         is_platform_q = any(
             i.value == "platform_general" for i in intent_result.intents
         )
 
+        t0 = time.perf_counter()
         results = self._retrieve(message, plan, db, is_platform_q, current_user)
+        debug_trace["retrieval_ms"] = round((time.perf_counter() - t0) * 1000)
+        debug_trace["sources"] = [
+            {
+                "source": r.source,
+                "method": r.data_type,
+                "success": r.success,
+                "content_chars": len(r.content or ""),
+                "records": len(r.records or []),
+                "error": r.error,
+            }
+            for r in results
+        ]
 
         built_context = self.context_builder.build(results, entities, message, current_user=current_user)
 
@@ -255,6 +355,7 @@ class ChatOrchestrator:
                 chunks.append(chunk)
             return "".join(chunks)
 
+        t_gen = time.perf_counter()
         try:
             try:
                 loop = asyncio.get_running_loop()
@@ -270,13 +371,16 @@ class ChatOrchestrator:
         except Exception:
             logger.warning("LLM generation failed in sync path", exc_info=True)
             full_response = _PROVIDER_FAILURE_ANSWER
+        debug_trace["generation_ms"] = round((time.perf_counter() - t_gen) * 1000)
+        debug_trace["context_chars"] = len(built_context.context_block or "")
+        debug_trace["engine"] = self._engine_label()
 
         validated_response = self.response_validator.validate(full_response, results, skip_grounding=is_platform_q)
         provenance = self.response_validator.get_provenance(full_response, results)
         if not external_history:
             memory.add(sid, message, validated_response)
 
-        return {
+        payload = {
             "answer": validated_response,
             "summary": built_context.summary,
             "entities": [str(v) for v in entities.to_dict().values() if v is not None],
@@ -296,6 +400,20 @@ class ChatOrchestrator:
                 "refusal_issued": provenance.refusal_issued,
             },
         }
+        if include_debug:
+            payload["debug"] = debug_trace
+        return payload
+
+    def _scope_label(self, current_user: Any, db: Session) -> str | None:
+        """Human-readable district scope for observability (the caller's own)."""
+        if current_user is None:
+            return None
+        try:
+            from app.auth.scope import enforce_district_scope
+            d = enforce_district_scope(current_user, None, db)
+            return d if d else "GLOBAL"
+        except Exception:
+            return _NO_DISTRICT_SENTINEL
 
     def _engine_label(self) -> str:
         """Reports the engine that ACTUALLY produced the last answer.

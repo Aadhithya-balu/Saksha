@@ -37,6 +37,26 @@ from app.services.ttl_cache import invalidate_ttl_cache_prefix, ttl_cached
 router = APIRouter(prefix="/crime-cases", tags=["Crime Case Management"], dependencies=[Depends(require_roles(*ALL_ROLES))])
 
 
+def _status_bucket(status: str) -> list[str]:
+    """Map a legacy or canonical status to every equivalent stored value.
+
+    Keeps filters honest when the database mixes pre-canonicalization legacy
+    values with the current canonical set (see ``case_status.py``).
+    """
+    canonical = status.strip().lower()
+    if canonical in ("active", "open", "assigned", "unsolved"):
+        return ["active", "open", "assigned", "unsolved"]
+    if canonical in ("under_investigation", "investigating", "evidence collected"):
+        return ["under_investigation", "investigating", "evidence collected"]
+    if canonical in ("chargesheeted", "charge sheet filed"):
+        return ["chargesheeted", "charge sheet filed"]
+    if canonical == "arrested":
+        return ["arrested"]
+    if canonical == "convicted":
+        return ["convicted"]
+    return [canonical]
+
+
 # --- Schemas ---
 
 class InvestigationNoteCreate(BaseModel):
@@ -144,7 +164,7 @@ def list_cases(
         .order_by(CrimeCase.reported_at.desc())
     )
     if status:
-        query = query.filter(CrimeCase.status == status)
+        query = query.filter(CrimeCase.status.in_(_status_bucket(status)))
     if category_id:
         query = query.filter(CrimeCase.category_id == category_id)
     if priority:
@@ -321,7 +341,7 @@ def crime_case_insights(
     """
     base = db.query(CrimeCase)
     if status:
-        base = base.filter(CrimeCase.status == status)
+        base = base.filter(CrimeCase.status.in_(_status_bucket(status)))
     if category_id:
         base = base.filter(CrimeCase.category_id == category_id)
     if priority:
@@ -345,9 +365,9 @@ def crime_case_insights(
         return sum(1 for r in rows if (r.priority or "").lower() == value)
 
     total = len(rows)
-    open_count = s("open", "assigned")
-    investigating_count = s("investigating", "evidence collected")
-    charge_sheet = s("charge sheet filed")
+    open_count = s("active", "open", "assigned", "unsolved")
+    investigating_count = s("under_investigation", "investigating", "evidence collected")
+    charge_sheet = s("chargesheeted", "charge sheet filed")
     closed = s("closed")
 
     total_progress = sum(r.progress or 0 for r in rows)
@@ -487,6 +507,12 @@ def create_case(
     """Create a new crime case in PostgreSQL."""
     data = payload.model_dump()
     data.pop("found_by_police", None)
+    # Enforce district scope on creation (server-side): a district-bound user may
+    # only file cases into a location belonging to their own district.
+    created_location = db.query(Location).filter(Location.id == data["location_id"]).first()
+    enforce_record_district(
+        current_user, created_location.district if created_location else None, db
+    )
     # Validate initial status (creation path — no current status)
     initial_status = data.get("status", "active")
     try:

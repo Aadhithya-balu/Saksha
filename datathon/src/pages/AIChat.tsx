@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAuditStore } from '../store/auditStore';
+import { useUserScope } from '../hooks/useUserScope';
 import {
   chatQueryStream,
   listConversations,
@@ -9,8 +10,13 @@ import {
   updateConversation,
   deleteConversation,
   deleteAllConversations,
+  getCrimeCase,
+  getReportDetail,
   type ChatCitation,
+  type ChatSourceRecord,
   type ConversationSummary,
+  type CrimeCaseDetailRecord,
+  type ReportDetail,
 } from '../services/api';
 import { MarkdownRenderer } from '../components/chat/MarkdownRenderer';
 import { CitationBadge } from '../components/chat/CitationBadge';
@@ -18,7 +24,8 @@ import {
   Send, Trash2, Copy, MessageSquare, Plus, FileText, Check,
   ShieldAlert, ArrowRight, RefreshCw, Search, Brain,
   Bot, User, TrendingUp, MapPin, MoreVertical, Pencil, EyeOff,
-  Bookmark, X, Loader2, PanelLeft, AlertTriangle,
+  Bookmark, X, Loader2, PanelLeft, PanelRight, ShieldCheck,
+  ExternalLink, AlertTriangle,
 } from 'lucide-react';
 
 interface UiMessage {
@@ -55,12 +62,12 @@ const FOLLOW_UPS: Record<string, string[]> = {
 };
 
 const PROMPTS = [
-  { text: "Show case CR-2026-MYS-001", icon: FileText, cat: "Cases", q: "Tell me about case CR-2026-MYS-001" },
-  { text: "Crime statistics overview", icon: TrendingUp, cat: "Analytics", q: "Show me crime statistics and trends across Karnataka" },
-  { text: "Find criminal Ramu Swamy", icon: Search, cat: "Criminal", q: "Tell me about criminal Ramu Swamy and his network" },
-  { text: "Show FIR-789/MYS/2026", icon: ShieldAlert, cat: "FIR", q: "Show me FIR-789/MYS/2026 details and suspects" },
-  { text: "Identify crime hotspots", icon: MapPin, cat: "Hotspots", q: "What are the current crime hotspots in Karnataka?" },
-  { text: "Predict district risk", icon: Brain, cat: "Predict", q: "Risk assessment for Bengaluru Urban district?" },
+  { text: 'Investigate a case', icon: FileText, cat: 'Case', q: 'Show me the recent open cases in my authorized area' },
+  { text: 'Review an FIR', icon: ShieldAlert, cat: 'FIR', q: 'Show me the latest FIRs in my authorized area' },
+  { text: 'Find a person', icon: Search, cat: 'Criminal', q: 'What persons are linked to my authorized cases?' },
+  { text: 'Crime statistics', icon: TrendingUp, cat: 'Analytics', q: 'Show me crime statistics and trends for my authorized area' },
+  { text: 'Identify hotspots', icon: MapPin, cat: 'Hotspots', q: 'What are the current crime hotspots in my authorized area?' },
+  { text: 'Assess district risk', icon: Brain, cat: 'Prediction', q: 'What is the latest crime risk assessment for my district?' },
 ];
 
 const GROUP_LABELS: Array<{ key: GroupKey; label: string }> = [
@@ -99,9 +106,57 @@ function relTime(iso: string): string {
   return d === 1 ? 'yesterday' : `${d}d ago`;
 }
 
+function recordLabel(r: ChatSourceRecord): string {
+  if (typeof r.fir_number === 'string') return `FIR ${r.fir_number}`;
+  if (typeof r.case_number === 'string') return `Case ${r.case_number}`;
+  if (typeof r.name === 'string') return String(r.name);
+  if (typeof r.badge === 'string') return `Officer ${r.badge}`;
+  if (typeof r.type === 'string') return String(r.type).toUpperCase();
+  return 'Source record';
+}
+
+function recordKindLabel(r: ChatSourceRecord): string {
+  switch (r.type) {
+    case 'fir': return 'FIR';
+    case 'case': return 'CASE';
+    case 'criminal': return 'PERSON';
+    case 'officer': return 'OFFICER';
+    case 'evidence': return 'EVIDENCE';
+    case 'victim': return 'VICTIM';
+    default: return 'RECORD';
+  }
+}
+
+function recordTabForKind(kind: string | null | undefined): string | null {
+  switch (kind) {
+    case 'fir': return 'fir';
+    case 'case': return 'crime_cases';
+    case 'criminal': return 'criminals';
+    case 'evidence': return 'evidence';
+    case 'victim': return 'victims';
+    default: return null;
+  }
+}
+
+function formatDateIso(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
 export const AIChat: React.FC = () => {
   const { user } = useAuthStore();
   const { addLog } = useAuditStore();
+  const { scopeLabel, canSelectDistrict, personaDescriptor } = useUserScope();
+
+  const [focusCase, setFocusCase] = useState<CrimeCaseDetailRecord | null>(null);
+  const [focusReport, setFocusReport] = useState<ReportDetail | null>(null);
+  const [ctxOpen, setCtxOpen] = useState(false);
 
   const [convos, setConvos] = useState<ConversationSummary[] | null>(null);
   const [listError, setListError] = useState('');
@@ -134,10 +189,86 @@ export const AIChat: React.FC = () => {
   const endRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
   const bootstrapped = useRef(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const entityChatStarted = useRef(false);
+
+  useEffect(() => {
+    const consumeStoredEntity = () => {
+      const stored = sessionStorage.getItem('selected_entity_id');
+      if (!stored || !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(stored)) return;
+      const entityType = sessionStorage.getItem('selected_entity_type') || 'case';
+      sessionStorage.removeItem('selected_entity_id');
+      sessionStorage.removeItem('selected_entity_type');
+
+entityChatStarted.current = true;
+      const key = `d-${Date.now()}`;
+      const thread: Thread = { key, serverId: null, title: 'New Chat', messages: [], temporary: false, streaming: false };
+      setThreads(p => {
+        threadsRef.current = { ...threadsRef.current, [key]: thread };
+        return { ...p, [key]: thread };
+      });
+      setActiveKey(key);
+      setSideOpen(false); setBanner(null); setFocusCase(null); setFocusReport(null); setInput('');
+
+      if (entityType === 'report') {
+        void getReportDetail(stored)
+          .then(r => setFocusReport(r))
+          .catch(() => { setFocusReport(null); });
+        return;
+      }
+      void getCrimeCase(stored)
+        .then(c => {
+          setFocusCase(c);
+          setInput(`Analyze case ${c.case_number}. Review its linked FIRs, evidence, and involved persons, and summarize what is known from SAKSHA records.`);
+          inputRef.current?.focus();
+        })
+        .catch(() => { /* record may be outside scope or no longer accessible */ });
+    };
+    const onNav = (e: Event) => {
+      const ev = e as CustomEvent<{ tab: string; targetId?: string }>;
+      if (ev.detail?.tab === 'ai_chat' && ev.detail.targetId) consumeStoredEntity();
+    };
+    consumeStoredEntity();
+    window.addEventListener('navigate-tab', onNav);
+    return () => window.removeEventListener('navigate-tab', onNav);
+  }, []);
 
   const cur = activeKey ? threads[activeKey] || null : null;
   const loading = !!(cur && cur.streaming);
   const listLoading = convos === null;
+
+  const ctxSources = useMemo(() => {
+    const openable: Array<{ key: string; label: string; kind: string | null; kindLabel: string; id?: string }> = [];
+    const seen = new Set<string>();
+    for (const m of cur?.messages || []) {
+      if (m.sender !== 'ai') continue;
+      for (const c of m.citations || []) {
+        for (const r of c.records || []) {
+          const k = r.id ? `id:${r.id}` : `label:${recordLabel(r)}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          openable.push({
+            key: k,
+            label: recordLabel(r),
+            kind: typeof r.type === 'string' ? r.type : null,
+            kindLabel: recordKindLabel(r),
+            id: r.id,
+          });
+        }
+      }
+    }
+    return openable.slice(0, 24);
+  }, [cur]);
+
+  const openCase = (id: string) =>
+    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'crime_cases', targetId: id } }));
+
+  const openRecord = (kind: string | null, id?: string) => {
+    const tab = recordTabForKind(kind);
+    if (tab && id) {
+      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab, targetId: id } }));
+    }
+  };
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cur?.messages.length, loading, status]);
 
@@ -207,13 +338,14 @@ export const AIChat: React.FC = () => {
   };
 
   useEffect(() => {
-    if (bootstrapped.current || convos === null || listError) return;
+    if (bootstrapped.current || convos === null || listError || entityChatStarted.current) return;
     bootstrapped.current = true;
     const last = localStorage.getItem(LAST_CONV_KEY);
     if (last && convos.some(c => c.id === last)) openConversation(last);
   }, [convos, listError]);
 
   useEffect(() => {
+    if (activeKey === null) return;
     setThreads(prev => {
       const next: Record<string, Thread> = {};
       for (const t of Object.values(prev)) {
@@ -234,7 +366,7 @@ export const AIChat: React.FC = () => {
       return { ...p, [key]: thread };
     });
     setActiveKey(key);
-    setBanner(null); setInput(''); setSideOpen(false);
+    setBanner(null); setInput(''); setSideOpen(false); setFocusCase(null); setFocusReport(null);
   };
 
   const dismissThread = (key: string) => {
@@ -631,10 +763,43 @@ export const AIChat: React.FC = () => {
             <PanelLeft size={16} />
           </button>
           <span className="chat-topbar-title">
-            {cur ? cur.title : 'SAKSHA AI'}
+            {cur ? cur.title : 'SAKSHA AI Intelligence'}
             {cur?.temporary && <span className="chat-temp-chip">TEMPORARY</span>}
           </span>
+          {focusCase && (
+            <span className="chat-scope-chip chat-case-chip" title={`Investigating ${focusCase.case_number}`}>
+              <Bookmark size={12} />
+              {focusCase.case_number}
+            </span>
+          )}
+          <div className="chat-topbar-right">
+            <span
+              className="chat-scope-chip"
+              title={personaDescriptor || (canSelectDistrict ? 'All authorized districts' : `Authorized district: ${scopeLabel}`)}
+            >
+              <ShieldCheck size={12} />
+              <span className="chat-scope-chip-text">{canSelectDistrict ? 'STATE SCOPE' : scopeLabel.toUpperCase()}</span>
+            </span>
+            <button onClick={() => setCtxOpen(o => !o)} className="chat-ctx-toggle" title="Conversation context">
+              <PanelRight size={16} />
+            </button>
+          </div>
         </div>
+
+        {focusCase && (
+          <div className="chat-case-ribbon">
+            <Bookmark size={13} className="shrink-0" />
+            <span className="min-w-0 truncate">
+              <b>Case context</b>
+              <em> · {focusCase.case_number}</em>
+              {focusCase.category?.name ? <em> · {focusCase.category.name}</em> : null}
+              <span className="chat-case-ribbon-note"> — ask about its FIR, evidence, or persons</span>
+            </span>
+            <button onClick={() => setFocusCase(null)} title="Clear case focus" className="chat-case-ribbon-x">
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         <div className="chat-scroll custom-scrollbar">
           {loadingConv && !cur ? (
@@ -642,11 +807,11 @@ export const AIChat: React.FC = () => {
           ) : !cur || cur.messages.length === 0 ? (
             <div className="chat-welcome">
               <div className="chat-welcome-icon"><Bot size={28} /></div>
-              <h2 className="chat-welcome-title">How can I help you today?</h2>
+              <h2 className="chat-welcome-title">How can I help you?</h2>
               <p className="chat-welcome-sub">
                 {cur?.temporary
                   ? 'This is a temporary chat. Messages stay in this session only until you save it.'
-                  : "I'm SAKSHA AI — ask me about cases, criminals, FIRs, statistics, or predictions."}
+                  : 'SAKSHA AI answers from your authorized records only — cases, FIRs, persons, evidence, statistics, or predictions.'}
               </p>
               <div className="chat-prompts">
                 {PROMPTS.map((p, i) => {
@@ -684,13 +849,16 @@ export const AIChat: React.FC = () => {
                       {u ? <User size={16} /> : <Bot size={16} />}
                     </div>
                     <div className="chat-msg-body">
-                      <span className="chat-msg-name">{u ? 'You' : 'SAKSHA AI'}</span>
+                      <span className="chat-msg-name">{u ? 'You' : 'SAKSHA AI Intelligence'}</span>
                       {u ? (
                         <p className="chat-msg-user-text">{m.text}</p>
                       ) : (
                         <div className="chat-msg-ai-content">
                           <MarkdownRenderer content={m.text} />
-                          {m.citations?.length ? <CitationBadge citations={m.citations} /> : m.sources?.length ? (
+                          {m.citations?.length ? <CitationBadge
+                              citations={m.citations}
+                              onOpenSource={r => openRecord(typeof r.type === 'string' ? r.type : null, r.id)}
+                            /> : m.sources?.length ? (
                             <div className="chat-sources">
                               <span className="chat-sources-hdr">Sources</span>
                               <div className="chat-sources-row">
@@ -736,7 +904,7 @@ export const AIChat: React.FC = () => {
             <div className="chat-msg msg-a">
               <div className="chat-avatar av-a"><Bot size={16} /></div>
               <div className="chat-msg-body">
-                <span className="chat-msg-name">SAKSHA AI</span>
+                <span className="chat-msg-name">SAKSHA AI Intelligence</span>
                 <div className="chat-thinking">
                   <span className="chat-thinking-dot" /><span className="chat-thinking-dot" /><span className="chat-thinking-dot" />
                   <span className="chat-thinking-text">{status || 'Thinking...'}</span>
@@ -768,6 +936,7 @@ export const AIChat: React.FC = () => {
         <div className="chat-input-wrap">
           <div className="chat-input-box">
             <textarea
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
@@ -780,6 +949,89 @@ export const AIChat: React.FC = () => {
           <p className="chat-input-note">Enter to send · Shift+Enter for newline</p>
         </div>
       </main>
+
+      {/* Context panel */}
+      <aside className={`chat-ctx${ctxOpen ? ' open' : ''}`}>
+        <div className="chat-ctx-head">
+          <span className="chat-ctx-title"><Brain size={14} /> Context</span>
+          <button onClick={() => setCtxOpen(false)} className="chat-ctx-close" title="Close context"><X size={16} /></button>
+        </div>
+        <div className="chat-ctx-body custom-scrollbar">
+          <div className="chat-ctx-scope-line" title={personaDescriptor || undefined}>
+            <ShieldCheck size={13} className="chat-ctx-scope-ic" />
+            <span>{canSelectDistrict ? 'All authorized districts' : `Authorized district: ${scopeLabel}`}</span>
+          </div>
+
+          {focusReport ? (
+            <div className="chat-ctx-card">
+              <div className="chat-ctx-card-hdr">
+                <span className="chat-ctx-card-name">{focusReport.title || focusReport.report_type.toUpperCase()}</span>
+                <span className="chat-ctx-status">{focusReport.status.toUpperCase()}</span>
+              </div>
+              <div className="chat-ctx-card-meta">TYPE · {focusReport.report_type.toUpperCase()}</div>
+              <div className="chat-ctx-card-meta">DISTRICT · {focusReport.district || 'STATE-WIDE'}</div>
+              <div className="chat-ctx-card-meta">
+                VERSION · v{focusReport.version}
+                {typeof focusReport.snapshot_row_count === 'number'
+                  ? ` · ${focusReport.snapshot_row_count} captured record${focusReport.snapshot_row_count === 1 ? '' : 's'}`
+                  : ''}
+              </div>
+              <div className="chat-ctx-card-meta">SOURCES · {focusReport.source_record_count} linked</div>
+            </div>
+          ) : focusCase ? (
+            <div className="chat-ctx-card">
+              <div className="chat-ctx-card-hdr">
+                <span className="chat-ctx-card-name">{focusCase.case_number}</span>
+                <span className="chat-ctx-status">{focusCase.status.toUpperCase()}</span>
+              </div>
+              {focusCase.category?.name && (
+                <div className="chat-ctx-card-meta">CATEGORY · {focusCase.category.name}</div>
+              )}
+              <div className="chat-ctx-card-meta">PRIORITY · {(focusCase.priority ?? 'medium').toUpperCase()}</div>
+              <div className="chat-ctx-card-meta">DISTRICT · {focusCase.location?.district || '—'}</div>
+              <div className="chat-ctx-card-meta">REPORTED · {formatDateIso(focusCase.reported_at)}</div>
+              <div className="chat-ctx-card-meta">OCCURRED · {formatDateIso(focusCase.occurred_at)}</div>
+              {focusCase.description ? (
+                <div className="chat-ctx-card-desc">{focusCase.description}</div>
+              ) : null}
+              <button onClick={() => openCase(focusCase.id)} className="chat-ctx-open">
+                <ExternalLink size={13} /> Open case
+              </button>
+            </div>
+          ) : (
+            <div className="chat-ctx-empty">
+              Connect a case or report from elsewhere (Crime Cases → Ask AI, Reports → Ask AI) to focus this session on its records.
+            </div>
+          )}
+
+          {ctxSources.length > 0 && (
+            <>
+              <div className="chat-ctx-sub">Referenced records</div>
+              <div className="chat-ctx-records">
+                {ctxSources.map(s => s.id && recordTabForKind(s.kind) ? (
+                  <button key={s.key} onClick={() => openRecord(s.kind, s.id)} className="chat-ctx-record" title={`Open ${s.label}`}>
+                    <span className="chat-ctx-record-kind">{s.kindLabel}</span>
+                    <span className="chat-ctx-record-label">{s.label}</span>
+                    <ExternalLink size={12} className="chat-ctx-record-go" />
+                  </button>
+                ) : (
+                  <div key={s.key} className="chat-ctx-record">
+                    <span className="chat-ctx-record-kind">{s.kindLabel}</span>
+                    <span className="chat-ctx-record-label">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {cur && !cur.streaming && !focusCase && !focusReport && ctxSources.length === 0 && (
+            <div className="chat-ctx-empty">
+              Sources retrieved by SAKSHA AI will surface here with one-click navigation to the originating records.
+            </div>
+          )}
+        </div>
+      </aside>
+      {ctxOpen && <div className="chat-ctx-overlay" onClick={() => setCtxOpen(false)} />}
 
       {/* Confirm dialogs */}
       {confirmDlg && (

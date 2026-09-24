@@ -28,26 +28,12 @@ const DOW_FULL_TO_SHORT: Record<string, string> = {
 };
 
 const buildCellsFromDemographics = (temporal?: TemporalDemographic | null): HeatmapCell[] => {
+  // Honest derivation from real observed marginal distributions only
+  // (issue #282 §20): with no backend data there is NO synthetic baseline —
+  // the UI renders an empty state instead.
+  if (!temporal) return [];
   const cells: HeatmapCell[] = [];
-  if (!temporal) {
-    // Deterministic baseline distribution derived from Karnataka policing telemetry
-    const defaultDistribution: Record<string, number> = {
-      'Mon': 28, 'Tue': 32, 'Wed': 35, 'Thu': 38, 'Fri': 55, 'Sat': 68, 'Sun': 48
-    };
-    const hourMultipliers: Record<string, number> = {
-      '00:00': 1.4, '04:00': 0.6, '08:00': 0.9, '12:00': 1.2, '16:00': 1.35, '20:00': 1.6
-    };
-    DAYS.forEach(day => {
-      HOURS.forEach(hour => {
-        const base = (defaultDistribution[day] ?? 30) * (hourMultipliers[hour] ?? 1.0);
-        const cases = Math.round(base);
-        cells.push({ day, hour, intensity: cases, cases });
-      });
-    });
-    return cells;
-  }
 
-  // Derive real cells by combining day_of_week and hourly distributions
   const dayMap: Record<string, number> = {};
   if (Array.isArray(temporal?.day_of_week_distribution)) {
     temporal.day_of_week_distribution.forEach(d => {
@@ -63,10 +49,11 @@ const buildCellsFromDemographics = (temporal?: TemporalDemographic | null): Heat
     });
   }
 
-  const totalHourCounts = Object.values(hourMap).reduce((a, b) => a + b, 0) || 1;
+  const totalHourCounts = Object.values(hourMap).reduce((a, b) => a + b, 0);
+  if (totalHourCounts <= 0) return [];
 
   DAYS.forEach(day => {
-    const dayTotal = dayMap[day] ?? 10;
+    const dayTotal = dayMap[day] ?? 0;
     HOURS.forEach(hour => {
       // Find 4-hour window sum around this anchor hour
       const hourNum = parseInt(hour.split(':')[0], 10);
@@ -76,7 +63,7 @@ const buildCellsFromDemographics = (temporal?: TemporalDemographic | null): Heat
         windowSum += hourMap[hKey] ?? 0;
       }
       const hourRatio = windowSum / totalHourCounts;
-      const cases = Math.max(1, Math.round(dayTotal * hourRatio * 4));
+      const cases = Math.round(dayTotal * hourRatio * 4);
       cells.push({ day, hour, intensity: cases, cases });
     });
   });
@@ -132,10 +119,6 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
   const [hoveredCell, setHoveredCell] = useState<{ day: string; hour: string; cases: number } | null>(null);
   const [temporalData, setTemporalData] = useState<TemporalDemographic | null>(null);
   const [matrixData, setMatrixData] = useState<TemporalMatrixResponse | null>(null);
-  // Issue 161 §20/§32: track whether backend data actually arrived so the
-  // deterministic baseline can never masquerade as database-backed output.
-  const [backendFailed, setBackendFailed] = useState(false);
-  void backendFailed;
 
   useEffect(() => {
     if (propData && propData.length > 0) return;
@@ -150,9 +133,7 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
           .then(res => {
             if (isMounted) setTemporalData(res);
           })
-          .catch(() => {
-            if (isMounted) setBackendFailed(true);
-          });
+          .catch(() => undefined);
       });
     return () => { isMounted = false; };
   }, [propData]);
@@ -164,7 +145,7 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
     return buildCellsFromDemographics(temporalData);
   }, [propData, temporalData, matrixData]);
 
-  const usingDemoBaseline = !propData?.length && !buildCellsFromMatrix(matrixData).length && !temporalData;
+  const usingData = Boolean(propData?.length || buildCellsFromMatrix(matrixData).length || temporalData);
 
   return (
     <div className="w-full h-full bg-[var(--bg-secondary)]/80 border border-[var(--border-primary)] p-4 rounded-lg flex flex-col justify-between select-none font-mono relative overflow-hidden group">
@@ -176,17 +157,17 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
             Spatiotemporal Incident Heatmap
           </h4>
           <span className="text-[9px] text-[var(--text-secondary)] uppercase font-semibold">
-            Day x Hour Crime Density Grid {usingDemoBaseline ? '(Demo Baseline)' : '(Database-Backed)'}
+            Day x Hour Crime Density Grid {usingData ? '(Database-Backed)' : '(No Data)'}
           </span>
         </div>
-        {usingDemoBaseline && (
+        {!usingData && (
           <span
-            title="Backend heatmap endpoints are unavailable — this grid shows a static illustrative baseline, NOT recorded incidents."
-            aria-label="Demo data: static illustrative baseline, not recorded incidents"
+            title="Observed incident data is not available for this scope, so no grid is rendered — nothing is estimated."
+            aria-label="No recorded incident data available"
             role="status"
             className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded border bg-amber-500/15 border-amber-500/40 text-amber-400 font-mono text-[8.5px] font-bold uppercase tracking-wide cursor-help"
           >
-            Demo Data
+            No Data
           </span>
         )}
         {selectedHour !== null && selectedHour !== undefined && (
@@ -198,6 +179,17 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
 
       {/* Heatmap Grid */}
       <div className="flex-grow w-full flex flex-col justify-center">
+        {!usingData ? (
+          <div className="h-full w-full flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-[11px] font-bold text-[var(--text-primary)] uppercase tracking-wider">No recorded incident data</p>
+              <p className="text-[9px] font-mono text-[var(--text-muted)] mt-1.5 max-w-[280px]">
+                The day x hour heatmap needs observed incident records. Real data will appear here as it is tracked — nothing is synthesized.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Hour labels header */}
         <div className="flex items-center mb-1">
           <div className="w-[44px] shrink-0" />
@@ -248,6 +240,8 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
             </div>
           </div>
         ))}
+          </>
+        )}
       </div>
 
       {/* Hover Tooltip */}
@@ -268,8 +262,8 @@ export const SpatiotemporalHeatmap: React.FC<SpatiotemporalHeatmapProps> = ({ da
       )}
 
       {/* Legend & Footer */}
-      <div className="flex justify-between text-[9px] text-[var(--text-primary)] font-bold uppercase tracking-widest pt-2 border-t border-[var(--border-primary)] select-none mt-2">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-[9px] text-[var(--text-primary)] font-bold uppercase tracking-widest pt-2 border-t border-[var(--border-primary)] select-none mt-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'rgba(201, 74, 42, 0.85)' }} /> High (&gt;75)</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'rgba(212, 130, 10, 0.8)' }} /> Elevated (60-75)</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'rgba(108, 67, 204, 0.7)' }} /> Moderate (45-60)</span>

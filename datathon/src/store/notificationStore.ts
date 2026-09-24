@@ -38,6 +38,7 @@ interface NotificationState {
   loadingRecent: boolean;
   loadingDashboard: boolean;
   error: string | null;
+  countsError: boolean;
   pollIntervalId: ReturnType<typeof setInterval> | null;
   informModalOpen: boolean;
 
@@ -94,6 +95,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   loadingRecent: false,
   loadingDashboard: false,
   error: null,
+  countsError: false,
   pollIntervalId: null,
   informModalOpen: false,
 
@@ -129,9 +131,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchCounts: async () => {
     try {
       const counts = await getNotificationCount();
-      set({ counts });
-    } catch {
-      // Silently fail for polling
+      set({ counts, countsError: false, error: null });
+    } catch (err: any) {
+      // Keep the last-known counts instead of collapsing to zeros: a dash of 0
+      // would wrongly claim there are no unread/critical messages (issue #282).
+      set({ countsError: true, error: err?.message || 'Failed to refresh notification counts' });
     }
   },
 
@@ -139,9 +143,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ loadingRecent: true });
     try {
       const recent = await getRecentNotifications(5);
-      set({ recentNotifications: recent, loadingRecent: false });
-    } catch {
-      set({ loadingRecent: false });
+      set({ recentNotifications: recent, loadingRecent: false, error: null });
+    } catch (err: any) {
+      set({ loadingRecent: false, error: err?.message || 'Failed to load recent notifications' });
     }
   },
 
@@ -149,9 +153,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ loadingDashboard: true });
     try {
       const dashboard = await getNotificationDashboard();
-      set({ dashboard, loadingDashboard: false });
-    } catch {
-      set({ loadingDashboard: false });
+      set({ dashboard, loadingDashboard: false, error: null });
+    } catch (err: any) {
+      set({ loadingDashboard: false, error: err?.message || 'Failed to load dashboard summary' });
     }
   },
 

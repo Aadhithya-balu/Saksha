@@ -114,8 +114,11 @@ export const LiveEventTimeline: React.FC<LiveEventTimelineProps> = ({
           <h3 className="text-[11px] font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">
             Live Event Timeline
           </h3>
-          <span className="px-1.5 py-0.5 bg-[#0E9E78]/10 border border-[#0E9E78]/20 rounded text-[7px] text-[#0E9E78] font-bold font-mono">
-            {autoRefresh ? 'LIVE' : 'PAUSED'}
+          <span
+            className="px-1.5 py-0.5 rounded text-[7px] font-bold font-mono bg-[#0E9E78]/10 border border-[#0E9E78]/20 text-[#0E9E78]"
+            title="This feed refreshes from the activity timeline on a 60s poll — it is not a push stream."
+          >
+            {autoRefresh ? 'POLLING·60S' : 'PAUSED'}
           </span>
         </div>
         <div className="flex items-center gap-1">

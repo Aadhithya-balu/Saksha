@@ -67,6 +67,7 @@ import {
   Download,
   X,
   ArrowRight,
+  HelpCircle,
 } from 'lucide-react';
 import { PageSkeleton } from '../components/ui/Skeleton';
 
@@ -259,12 +260,14 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
         let incidents: RecentIncidentType[] = [];
         if (casesRes.status === 'fulfilled' && casesRes.value?.results?.length) {
           incidents = casesRes.value.results.map((c) => ({
+            id: (c as any).id,
             case_number: c.case_number,
-            crime_type: (c as any).crime_type || (c as any).category?.name || (c as any).category || 'Case Incident',
-            location: (c as any).location?.station || (c as any).location?.district || (c as any).location || 'Statewide Area',
-            time: c.occurred_at || (c as any).time || new Date().toISOString(),
-            status: c.status || 'open',
-            priority: (c as any).priority || 'medium',
+            crime_type: (c as any).crime_type || (c as any).category?.name || (c as any).category || 'Unclassified',
+            location: (c as any).location?.station || (c as any).location?.district || (c as any).location || 'Unlocated',
+            district: (c as any).location?.district || null,
+            time: c.occurred_at || (c as any).time || null,
+            status: c.status ?? 'unknown',
+            priority: (c as any).priority ?? null,
           }));
         } else if (recentRes.status === 'fulfilled' && Array.isArray(recentRes.value) && recentRes.value.length > 0) {
           incidents = recentRes.value;
@@ -340,12 +343,14 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
       let incidents: RecentIncidentType[] = [];
       if (casesRes.status === 'fulfilled' && casesRes.value?.results?.length) {
         incidents = casesRes.value.results.map((c) => ({
+          id: (c as any).id,
           case_number: c.case_number,
-          crime_type: (c as any).crime_type || (c as any).category?.name || (c as any).category || 'Case Incident',
-          location: (c as any).location?.station || (c as any).location?.district || (c as any).location || 'Statewide Area',
-          time: c.occurred_at || (c as any).time || new Date().toISOString(),
-          status: c.status || 'open',
-          priority: (c as any).priority || 'medium',
+          crime_type: (c as any).crime_type || (c as any).category?.name || (c as any).category || 'Unclassified',
+          location: (c as any).location?.station || (c as any).location?.district || (c as any).location || 'Unlocated',
+          district: (c as any).location?.district || null,
+          time: c.occurred_at || (c as any).time || null,
+          status: c.status ?? 'unknown',
+          priority: (c as any).priority ?? null,
         }));
       } else if (recentRes.status === 'fulfilled' && Array.isArray(recentRes.value) && recentRes.value.length > 0) {
         incidents = recentRes.value;
@@ -396,12 +401,14 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
 
       setRecentIncidents((prev) => {
         const item: RecentIncidentType = {
+          id: liveCase.id,
           case_number: liveCase.case_number,
           crime_type: liveCase.crime_type,
-          location: (liveCase as any).station || (liveCase as any).district || 'Statewide',
-          time: (liveCase as any).occurred_at || new Date().toISOString(),
-          status: liveCase.status,
-          priority: (liveCase as any).priority || 'medium',
+          location: liveCase.location || 'Unlocated',
+          district: null,
+          time: liveCase.time ?? null,
+          status: liveCase.status ?? 'unknown',
+          priority: (liveCase as any).priority ?? null,
         };
         return [item, ...prev.slice(0, 7)];
       });
@@ -421,16 +428,18 @@ const [adminStats, setAdminStats] = useState<{ users?: number; roles?: number; a
 
 const totalCrimes = summary?.total_crimes ?? 0;
 const openCrimes = summary?.open_crimes ?? 0;
-const solvedCrimes = Math.max(totalCrimes - openCrimes, 0);
+const solvedCrimes = summary?.resolved_crimes ?? 0;
 const totalFirs = summary?.total_firs ?? 0;
 const crimeHotspotCount = hotspots.length;
 const highRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 70).length : 0;
 const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.filter((item) => item.risk_score >= 80).length : 0;
 
+  // Solved figures come straight from the backend's status counts; the line
+  // never estimates a resolved value from a percentage (issue #282 §18).
   const trendChartData = trends.map((point) => ({
     month: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     totalCrimes: point.count,
-    solvedCrimes: Math.max(Math.round(point.count * ((summary?.resolution_rate_percent ?? 0) / 100)), 0),
+    solvedCrimes: point.solved ?? 0,
   }));
 
   const donutChartData = categories.map((point) => ({
@@ -481,10 +490,11 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
       openCases: summary?.open_crimes ?? 0,
       totalRegisteredFirs: summary?.total_firs ?? 0,
       totalTrackedOffenders: summary?.total_criminals ?? 0,
-      caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : '0%',
+      caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : 'Unavailable',
       activeHotspotsCount: hotspots.length,
-      onDutyOfficers: officerStats?.on_duty ?? 0,
-      threatLevel: riskPrediction?.threat_level ?? 'Unknown'
+      activeOfficers: officerStats?.active_officers ?? 0,
+      officersOnOpenCases: officerStats?.investigating_officers ?? 0,
+      threatLevel: riskPrediction?.threat_level ?? 'Unavailable'
     }, `CONFIDENTIAL-REPORT-${badgeId}`, format);
   };
 
@@ -572,10 +582,11 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           openCases: summary?.open_crimes ?? 0,
           totalRegisteredFirs: summary?.total_firs ?? 0,
           totalTrackedOffenders: summary?.total_criminals ?? 0,
-          caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : '0%',
+          caseResolutionRate: summary ? `${summary.resolution_rate_percent}%` : 'Unavailable',
           activeHotspotsCount: hotspots.length,
-          onDutyOfficers: officerStats?.on_duty ?? 0,
-          threatLevel: riskPrediction?.threat_level ?? 'Unknown'
+          activeOfficers: officerStats?.active_officers ?? 0,
+          officersOnOpenCases: officerStats?.investigating_officers ?? 0,
+          threatLevel: riskPrediction?.threat_level ?? 'Unavailable'
         }, `CONFIDENTIAL-REPORT-${badgeId}`);
         break;
 
@@ -584,7 +595,8 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           documentTitle: 'Beat Patrol Allocation Log',
           details: {
             activeSectorsCount: hotspots.length,
-            officersOnDuty: officerStats?.on_duty ?? 'Unavailable'
+            activeOfficers: officerStats?.active_officers ?? 'Unavailable',
+            officersOnOpenCases: officerStats?.investigating_officers ?? 'Unavailable'
           }
         }, `ALLOCATION-LOG-${badgeId}`);
         break;
@@ -645,12 +657,13 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     roles: { title: 'Roles & Permissions', value: adminStats.roles ?? 0, icon: <Settings className="w-4 h-4" />, trend: 'stable', trendValue: 'Defined', subtext: 'access roles', glowColor: 'teal', tab: 'admin' },
     audit_events: { title: 'Audit Events', value: adminStats.audit ?? 0, icon: <Bookmark className="w-4 h-4" />, trend: 'stable', trendValue: 'Recorded', subtext: 'accountable actions', glowColor: 'purple', tab: 'admin' },
   };
-  const visibleKpis = kpiOrder.map((key) => kpiCards[key]);
+  // AT A GLANCE — role-ordered KPI selection, capped at 4 for a compact strip.
+  const visibleKpis = kpiOrder.map((key) => kpiCards[key]).slice(0, 4);
 
   // NEEDS YOUR ATTENTION — derived strictly from live-fetched records.
   const attentionItems = useMemo(() => {
     if (!summary) return [];
-    const items: Array<{ key: string; tone: string; title: string; when: string; why: string; action: string; tab: string }> = [];
+    const items: Array<{ key: string; tone: string; title: string; when: string; why: string; action: string; tab: string; targetId?: string }> = [];
     recentIncidents
       .filter((i) => i.priority === 'critical' || i.priority === 'high')
       .filter((i) => i.status === 'open' || i.status === 'investigating')
@@ -664,6 +677,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           why: i.priority === 'critical' ? 'Critical priority · open case' : 'High priority · open case',
           action: 'Open dossier',
           tab: 'crime_cases',
+          targetId: i.id,
         }),
       );
     const threat = riskPrediction?.threat_level;
@@ -692,8 +706,12 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
     return items.slice(0, 4);
   }, [summary, recentIncidents, riskPrediction, evidenceStats, scopeDistrict]);
 
-  const navigate = (tab: string) =>
-    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab } }));
+  const navigate = (tab: string, targetId?: string) =>
+    window.dispatchEvent(
+      new CustomEvent('navigate-tab', {
+        detail: targetId ? { tab, targetId } : { tab },
+      })
+    );
 
   return (
     <div className="flex flex-col gap-6">
@@ -734,19 +752,19 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
 
       {/* For your job — deterministic persona guidance */}
       {personaDescriptor && (
-        <div className="sk-panel sk-panel-pad !py-3 flex items-center gap-3">
+        <div className="sk-panel sk-panel-pad !py-2.5 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[var(--accent-blue)] bg-[var(--accent-blue-subtle)]">
             <ArrowRight className="w-4 h-4" />
           </div>
-          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+          <p className="text-[13px] leading-snug text-[var(--text-secondary)] min-w-0">
             <span className="font-semibold text-[var(--text-primary)]">For you · {personaDescriptor} workspace.</span>{' '}
             {PERSONA_GUIDANCE[persona] || PERSONA_GUIDANCE.viewer}
           </p>
         </div>
       )}
 
-      {/* Filter console */}
-      <div className="sk-panel sk-panel-pad !p-4 flex flex-wrap items-end gap-x-4 gap-y-3">
+      {/* Filter console — compact bar scoped to the operator's district */}
+      <div className="sk-panel sk-panel-pad !p-3 flex flex-wrap items-end gap-x-3 gap-y-2">
         {canSelectDistrict ? (
           <div className="sk-field min-w-[140px]">
             <label className="sk-label">District</label>
@@ -826,28 +844,10 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           <label className="sk-label">To</label>
           <input type="date" className="sk-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </div>
-
-        {user && (
-          <div className="ml-auto flex items-center gap-2 pl-4 border-l border-[var(--border-primary)] self-center">
-            <div className="text-right leading-tight">
-              <span className="block text-[13px] font-semibold text-[var(--text-primary)]">{user.name}</span>
-              <span className="text-xs text-[var(--text-muted)] capitalize">{user.role}</span>
-            </div>
-            <div className="w-9 h-9 rounded-full bg-[var(--accent-blue-subtle)] border border-[var(--accent-blue)]/20 flex items-center justify-center text-[var(--accent-blue)] font-bold text-xs uppercase">
-              {user.role.slice(0, 2)}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* AT A GLANCE — role-ordered, non-congested */}
-      <div className="flex items-baseline justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">At a glance</span>
-          <span className="h-px w-16 bg-[var(--border-secondary)] hidden sm:inline-block" />
-        </div>
-      </div>
-      <div className={visibleKpis.length > 5 ? 'grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3' : 'grid grid-cols-2 sm:grid-cols-4 gap-3'}>
+      {/* KPI STRIP — role-ordered, capped to a compact four-card strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {visibleKpis.map((kpi) => (
           <StatCard
             key={kpi.title}
@@ -861,54 +861,6 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
             onClick={() => navigate(kpi.tab)}
           />
         ))}
-      </div>
-
-      {/* NEEDS YOUR ATTENTION — what / when / why / action */}
-      <div className="sk-panel sk-panel-pad !p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-4 h-4 text-[var(--accent-coral)] shrink-0" />
-          <h4 className="sk-panel-title !mb-0">Needs your attention</h4>
-          {attentionItems.length > 0 && (
-            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coral)] animate-pulse" />
-              Live — from the records
-            </span>
-          )}
-        </div>
-        {attentionItems.length === 0 ? (
-          <div className="flex items-center gap-2 px-3 py-3 rounded-lg bg-[var(--bg-tertiary)]/40 border border-dashed border-[var(--border-secondary)] text-[13px] text-[var(--text-muted)]">
-            <CheckCircle2 className="w-4 h-4 text-[var(--accent-teal)] shrink-0" />
-            Nothing urgent right now — current filters show no critical or high-priority open cases.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {attentionItems.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center gap-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 px-3 py-2.5"
-              >
-                <span
-                  className="w-1.5 self-stretch rounded-full shrink-0"
-                  style={{ background: item.tone === 'coral' ? 'var(--accent-coral)' : item.tone === 'amber' ? 'var(--accent-amber)' : 'var(--accent-purple)' }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">{item.title}</div>
-                  <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] mt-0.5">
-                    <span className="whitespace-nowrap">{item.when}</span>
-                    <span className="text-[var(--border-strong)]">·</span>
-                    <span className="truncate">{item.why}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate(item.tab)}
-                  className="sk-btn sk-btn-secondary cursor-pointer shrink-0 !h-8 whitespace-nowrap"
-                >
-                  {item.action} <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* DISTRICT ACTIVITY — one strong paired view for the home posture */}
@@ -936,21 +888,23 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
         </div>
       </div>
 
-      {/* Incidents + forecast */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      {/* OPERATIONS — recent cases + alerts & attention */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[360px]">
         {/* Recent incidents */}
-        <div className="lg:col-span-7 sk-panel sk-panel-pad min-h-[320px] flex flex-col">
+        <div className="lg:col-span-7 sk-panel sk-panel-pad min-h-[360px] flex flex-col">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-[var(--accent-blue)] shrink-0" />
             <h4 className="sk-panel-title">Recent Activity</h4>
             <span
               className={`ml-auto inline-flex items-center gap-1.5 text-xs font-medium ${
-                realtimeStatus === 'connected' ? 'text-[var(--tone-success-text)]' : 'text-[var(--text-muted)]'
+                realtimeStatus === 'connected' ? 'text-[var(--tone-success-text)]' : realtimeStatus === 'error' ? 'text-[var(--tone-error-text)]' : 'text-[var(--text-muted)]'
               }`}
               title={
                 realtimeStatus === 'connected'
                   ? 'Real-time stream connected — new cases appear instantly'
-                  : `Real-time stream ${realtimeStatus}`
+                  : realtimeStatus === 'error'
+                    ? 'Real-time stream failed authentication — reconnect to continue receiving live cases'
+                    : `Real-time stream ${realtimeStatus}`
               }
             >
               <span
@@ -959,101 +913,130 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
                     ? 'bg-[var(--accent-teal)] animate-pulse'
                     : realtimeStatus === 'connecting'
                       ? 'bg-[var(--accent-amber)] animate-pulse'
-                      : 'bg-[var(--border-secondary)]'
+                      : realtimeStatus === 'error'
+                        ? 'bg-[var(--accent-coral)]'
+                        : 'bg-[var(--border-secondary)]'
                 }`}
               />
               {realtimeStatus === 'connected' ? 'Live' : realtimeStatus}
             </span>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1 min-w-0">
             {recentIncidents.length === 0 ? (
               <EmptyState
                 icon={<FileText className="w-7 h-7 text-[var(--text-muted)]" />}
                 title="No recent activity"
                 description="Case activity for the current scope will appear here as it is recorded."
-                className="py-10"
+                className="py-6"
               />
             ) : (
-              <table className="sk-table">
-                <thead>
-                  <tr>
-                    <th>Case Number</th>
-                    <th>Crime Type</th>
-                    <th>Location</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th className="text-right">Priority</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentIncidents.map((incident, idx) => (
-                      <tr key={idx}>
-                        <td className="font-semibold text-[var(--accent-blue)] whitespace-nowrap">{incident.case_number}</td>
-                        <td className="text-[var(--text-primary)]">{incident.crime_type}</td>
-                        <td className="text-[var(--text-secondary)] max-w-[180px] truncate">{incident.location}</td>
-                        <td className="text-[var(--text-muted)] whitespace-nowrap">
-                          {incident.time ? new Date(incident.time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '—'}
-                        </td>
-                        <td>
-                          <span className={`sk-chip ${incident.status === 'open' ? 'sk-chip-error' : incident.status === 'investigating' ? 'sk-chip-info' : 'sk-chip-success'}`}>
-                            <span className="sk-dot" />
-                            {incident.status === 'open' ? 'Open' : incident.status === 'closed' ? 'Closed' : 'Under investigation'}
-                          </span>
-                        </td>
-                        <td className="text-right">
-                          <span className={`sk-chip ${incident.priority === 'critical' ? 'sk-chip-error' : incident.priority === 'high' ? 'sk-chip-warning' : 'sk-chip-neutral'}`}>
-                            {incident.priority === 'critical' ? 'Critical' : incident.priority === 'high' ? 'High' : incident.priority === 'medium' ? 'Medium' : 'Low'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <div className="divide-y divide-border-color/65">
+                {recentIncidents.map((incident, idx) => (
+                  <button
+                    key={incident.id || incident.case_number || idx}
+                    onClick={() => incident.id && navigate('crime_cases', incident.id)}
+                    title={incident.id ? 'Open case dossier' : undefined}
+                    className="w-full text-left flex items-center gap-3 px-1 py-2.5 hover:bg-[var(--bg-tertiary)]/40 transition-colors cursor-pointer min-w-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-[var(--accent-blue)] text-xs uppercase truncate">{incident.case_number}</div>
+                      <div className="text-[var(--text-primary)] text-[11px] mt-0.5 truncate">
+                        {incident.crime_type}
+                        {incident.location ? <span className="text-[var(--text-muted)]"> · {incident.location}</span> : null}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                        {incident.time ? new Date(incident.time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '—'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {incident.status === 'open' ? (
+                        <span className="sk-chip sk-chip-error"><span className="sk-dot" />Open</span>
+                      ) : incident.status === 'closed' ? (
+                        <span className="sk-chip sk-chip-success"><span className="sk-dot" />Closed</span>
+                      ) : incident.status === 'investigating' ? (
+                        <span className="sk-chip sk-chip-info"><span className="sk-dot" />Under investigation</span>
+                      ) : (
+                        <span className="sk-chip sk-chip-neutral"><span className="sk-dot" />Unknown</span>
+                      )}
+                      <span className={`sk-chip ${incident.priority === 'critical' ? 'sk-chip-error' : incident.priority === 'high' ? 'sk-chip-warning' : 'sk-chip-neutral'}`}>
+                        {incident.priority === 'critical' ? 'Critical' : incident.priority === 'high' ? 'High' : incident.priority === 'medium' ? 'Medium' : incident.priority === 'low' ? 'Low' : '—'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Forecast */}
-        <div className="lg:col-span-5 flex flex-col gap-5">
-          <div className="sk-panel sk-panel-pad">
+        {/* Right rail — needs attention + active alerts */}
+        <div className="lg:col-span-5 flex flex-col gap-5 min-h-[360px]">
+          <div className="sk-panel sk-panel-pad !p-4 flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4 text-[var(--accent-purple)]" />
-              <h4 className="sk-panel-title">Outlook — next incidents</h4>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
-                <span className="block text-xs text-[var(--text-muted)] mb-1">Next 24h</span>
-                <span className="text-lg font-bold text-[var(--text-primary)]">{forecastData?.next_day_forecast ?? 0}</span>
-              </div>
-              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
-                <span className="block text-xs text-[var(--text-muted)] mb-1">Next 7 days</span>
-                <span className="text-lg font-bold text-[var(--text-primary)]">{forecastData?.next_week_forecast ?? 0}</span>
-              </div>
-              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
-                <span className="block text-xs text-[var(--text-muted)] mb-1">Weekly change</span>
-                <span className={`text-lg font-bold ${(forecastData?.expected_change_percent ?? 0) >= 0 ? 'text-[var(--tone-success-text)]' : 'text-[var(--tone-error-text)]'}`}>
-                  {forecastData && forecastData.expected_change_percent >= 0 ? '+' : ''}{forecastData?.expected_change_percent ?? 0}%
+              <AlertTriangle className="w-4 h-4 text-[var(--accent-coral)] shrink-0" />
+              <h4 className="sk-panel-title !mb-0">Needs your attention</h4>
+              {attentionItems.length > 0 && (
+                <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coral)] animate-pulse" />
+                  Live
                 </span>
-              </div>
+              )}
             </div>
+            {attentionItems.length === 0 ? (
+              <div className="flex items-start gap-2 px-3 py-3 rounded-lg bg-[var(--bg-tertiary)]/40 border border-dashed border-[var(--border-secondary)] text-[13px] text-[var(--text-muted)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--accent-teal)] shrink-0" />
+                Nothing urgent right now — current filters show no critical or high-priority open cases.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {attentionItems.map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => navigate(item.tab, item.targetId)}
+                    className="flex items-center gap-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 px-3 py-2.5 text-left hover:bg-[var(--bg-tertiary)]/50 transition-colors cursor-pointer"
+                  >
+                    <span
+                      className="w-1.5 self-stretch rounded-full shrink-0"
+                      style={{ background: item.tone === 'coral' ? 'var(--accent-coral)' : item.tone === 'amber' ? 'var(--accent-amber)' : 'var(--accent-purple)' }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">{item.title}</div>
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] mt-0.5">
+                        <span className="whitespace-nowrap">{item.when}</span>
+                        <span className="text-[var(--border-strong)]">·</span>
+                        <span className="truncate">{item.why}</span>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex-1 min-h-[220px]">
-            <ForecastChart data={forecastData} />
+          <div className="sk-panel sk-panel-pad min-h-[240px] flex flex-col">
+            <h4 className="sk-panel-title mb-2">Active Alerts</h4>
+            <ActiveAlerts3D alertRows={alertRows} anomalies={anomalies} />
           </div>
         </div>
       </div>
 
-      {/* Risk / alerts / actions */}
+      {/* SECONDARY ANALYTICS — risk outlook / forecast / quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-5 items-stretch">
         {/* Predictive risk ranking */}
         <div className="xl:col-span-4 sk-panel sk-panel-pad min-h-[280px] flex flex-col">
           <h4 className="sk-panel-title mb-2">Risk Outlook — next 7 days</h4>
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)] pb-2.5 mb-3">
-            <span>Confidence <b className="text-[var(--text-primary)]">{riskPrediction ? `${Math.round(riskPrediction.confidence_score * 100)}%` : '—'}</b></span>
+            <span title={riskPrediction ? `Deterministic rule-based score from ${riskPrediction.sample_size} in-scope records` : ''}>
+              Confidence <b className="text-[var(--text-primary)]">{riskPrediction?.confidence_score != null ? `${Math.round(riskPrediction.confidence_score * 100)}%` : '—'}</b>
+            </span>
             <span>Threat <b className="uppercase text-[var(--tone-warning-text)]">{riskPrediction?.threat_level ?? '—'}</b></span>
             <span>Trend <b className="uppercase text-[var(--text-primary)]">{riskPrediction?.trend ?? '—'}</b></span>
+          </div>
+          <div className="flex items-center gap-2 pb-3 -mt-1 text-[10px] font-mono text-[var(--text-muted)]">
+            <HelpCircle className="w-3 h-3" />
+            {riskPrediction ? `${riskPrediction.method_version} · ${riskPrediction.sample_size} records scoped` : 'Rule-based estimate — computed from live records'}
           </div>
 
           <div className="flex-1 flex flex-col gap-3.5 justify-center">
@@ -1079,10 +1062,39 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
           </div>
         </div>
 
-        {/* Active alerts */}
-        <div className="xl:col-span-4 sk-panel sk-panel-pad min-h-[280px] flex flex-col">
-          <h4 className="sk-panel-title mb-2">Active Alerts</h4>
-          <ActiveAlerts3D alertRows={alertRows} anomalies={anomalies} />
+        {/* Outlook — next incidents */}
+        <div className="xl:col-span-4 flex flex-col gap-5">
+          <div className="sk-panel sk-panel-pad">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-[var(--accent-purple)]" />
+              <h4 className="sk-panel-title">Outlook — next incidents</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
+                <span className="block text-xs text-[var(--text-muted)] mb-1">Next 24h</span>
+                <span className="text-lg font-bold text-[var(--text-primary)]">{forecastData?.available ? (forecastData.next_day_forecast ?? '—') : '—'}</span>
+              </div>
+              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
+                <span className="block text-xs text-[var(--text-muted)] mb-1">Next 7 days</span>
+                <span className="text-lg font-bold text-[var(--text-primary)]">{forecastData?.available ? (forecastData.next_week_forecast ?? '—') : '—'}</span>
+              </div>
+              <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] text-center">
+                <span className="block text-xs text-[var(--text-muted)] mb-1">Weekly change</span>
+                <span className={`text-lg font-bold ${(forecastData?.expected_change_percent ?? 0) >= 0 ? 'text-[var(--tone-success-text)]' : 'text-[var(--tone-error-text)]'}`}>
+                  {forecastData ? `${forecastData.expected_change_percent >= 0 ? '+' : ''}${forecastData.expected_change_percent}%` : '—'}
+                </span>
+              </div>
+            </div>
+            {forecastData && !forecastData.available && (
+              <p className="mt-2 text-[10px] font-mono text-[var(--text-muted)]">
+                {forecastData.reason ?? 'Forecast unavailable'} — real data only, no estimates are shown.
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 min-h-[220px]">
+            <ForecastChart data={forecastData} />
+          </div>
         </div>
 
         {/* Quick actions */}
@@ -1158,7 +1170,7 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
             <Users className="w-4 h-4 text-[var(--accent-blue)]" />
             <h4 className="sk-panel-title">Force readiness</h4>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/40 border border-[var(--border-primary)] text-center">
               <span className="block text-xs text-[var(--text-muted)]">Total force</span>
               <span className="text-lg font-bold text-[var(--text-primary)]">{officerStats?.total_officers ?? 0}</span>
@@ -1168,22 +1180,17 @@ const hotRiskCount = riskScores?.grid_predictions ? riskScores.grid_predictions.
               <span className="text-lg font-bold text-[var(--tone-success-text)]">{officerStats?.active_officers ?? 0}</span>
             </div>
             <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/40 border border-[var(--border-primary)] text-center">
-              <span className="block text-xs text-[var(--tone-info-text)]">On duty</span>
-              <span className="text-lg font-bold text-[var(--tone-info-text)]">{officerStats?.on_duty ?? 0}</span>
-            </div>
-            <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/40 border border-[var(--border-primary)] text-center">
-              <span className="block text-xs text-[var(--text-muted)]">Off duty</span>
-              <span className="text-lg font-bold text-[var(--text-muted)]">{officerStats?.off_duty ?? 0}</span>
-            </div>
-            <div className="rounded-lg p-3 bg-[var(--bg-tertiary)]/40 border border-[var(--border-primary)] text-center">
               <span className="block text-xs text-[var(--tone-warning-text)]">Assigned</span>
               <span className="text-lg font-bold text-[var(--tone-warning-text)]">{officerStats?.investigating_officers ?? 0}</span>
             </div>
           </div>
           <div className="mt-4 px-3 py-2 rounded-lg bg-[var(--bg-tertiary)]/30 border border-[var(--border-secondary)] flex justify-between items-center text-xs text-[var(--text-muted)]">
-            <span>Deployment rate: <b className="text-[var(--text-primary)]">{officerStats && officerStats.active_officers ? `${Math.round((officerStats.on_duty / officerStats.active_officers) * 100)}%` : '0%'}</b></span>
-            <span>Active force: <b className="text-[var(--text-primary)]">{officerStats?.active_officers ?? 0}</b></span>
+            <span>Assigned share: <b className="text-[var(--text-primary)]">{officerStats && officerStats.total_officers ? `${Math.round((officerStats.investigating_officers / officerStats.total_officers) * 100)}%` : '—'}</b></span>
+            <span title="Officers with an active-assignment to at least one open case">Active force with open cases: <b className="text-[var(--text-primary)]">{officerStats?.investigating_officers ?? '—'}</b></span>
           </div>
+          <p className="mt-2 text-[10px] font-mono text-[var(--text-muted)]">
+            Duty-state (on/off duty) is not tracked by the officer registry, so it is never estimated or displayed.
+          </p>
         </div>
 
         {/* Evidence stats */}

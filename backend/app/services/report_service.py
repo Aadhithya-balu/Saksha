@@ -20,6 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.auth.rbac import ROLE_ADMIN
+from app.auth.scope import enforce_district_scope
 from app.core.exceptions import ConflictException, ForbiddenException, NotFoundException
 from app.models.crime import CrimeCase
 from app.models.criminal import Criminal
@@ -288,15 +289,24 @@ def validate_references(
 # Access control
 # --------------------------------------------------------------------------- #
 def can_access_report(current_user: User, report: Report) -> bool:
-    """Admins access everything; other users only their own reports (§20/§32)."""
+    """Admins access everything; other users only their own reports (20/32)."""
     if current_user.role.name == ROLE_ADMIN:
         return True
     return report.requested_by_id == current_user.id
 
 
-def require_report_access(current_user: User, report: Report) -> None:
+def require_report_access(current_user: User, report: Report, db: Session | None = None) -> None:
     if not can_access_report(current_user, report):
         raise ForbiddenException("You do not have access to this report")
+    # District scoping: a district-bound caller may only operate on reports
+    # whose stored district matches their authorized scope. Records without a
+    # district (legacy) fail closed rather than leaking content.
+    if db is not None:
+        effective_district = enforce_district_scope(current_user, None, db)
+        if effective_district:
+            report_district = (report.district or "").strip().lower()
+            if report_district != effective_district.strip().lower():
+                raise ForbiddenException("Report is not within your authorized district")
 
 
 def get_report_or_404(db: Session, report_id: UUID) -> Report:
@@ -313,13 +323,18 @@ def create_report(db: Session, user: User, payload: dict) -> Report:
     report_type = payload.get("report_type") or REPORT_TYPE_CASES
     if report_type not in REPORT_TYPES:
         raise ConflictException(f"Unsupported report type '{report_type}'")
+    # District is bound server-side to the caller's enforced scope. A
+    # district-bound user can never file a report labeled for another district;
+    # the client-supplied value is only honoured for state-level callers.
+    effective_district = enforce_district_scope(user, None, db)
+    district = effective_district or payload.get("district")
     report = Report(
         template=f"{report_type}_report",
         report_type=report_type,
         title=payload.get("title"),
         requested_by_id=user.id,
         case_id=payload.get("case_id"),
-        district=payload.get("district"),
+        district=district,
         format=payload.get("format") or "pdf",
         provenance=payload.get("provenance") or PROVENANCE_UNKNOWN,
         ai_reported=bool(payload.get("ai_reported")),
