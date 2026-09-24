@@ -33,9 +33,12 @@ interface DemoProfile {
    the app. */
 const DEMO_PROFILES: DemoProfile[] = [
   { badge: 'admin', pin: '564738', title: 'Administrator', rank: 'System Administration', initials: 'AD', tone: 'blue' },
-  { badge: 'SP-0088', pin: '987654', title: 'Superintendent', rank: 'District Command · SP', initials: 'SP', tone: 'amber' },
-  { badge: 'IO-3921', pin: '456789', title: 'Investigator', rank: 'Investigation Officer · DSP', initials: 'IO', tone: 'green' },
-  { badge: 'SCRB-7740', pin: '123456', title: 'Analyst', rank: 'Intelligence Analyst · SCRB', initials: 'AN', tone: 'teal' },
+  { badge: 'SP-0088', pin: '987654', title: 'Superintendent', rank: 'State Command - SP', initials: 'SP', tone: 'amber' },
+  { badge: 'IO-3921', pin: '456789', title: 'Investigator', rank: 'Investigation Officer - IO', initials: 'IO', tone: 'green' },
+  { badge: 'SCRB-7740', pin: '123456', title: 'Analyst', rank: 'Intelligence Analyst - SCRB', initials: 'AN', tone: 'teal' },
+  { badge: 'INS-2110', pin: '112233', title: 'Inspector', rank: 'Police Inspector - Inspector', initials: 'IN', tone: 'blue' },
+  { badge: 'FSL-9033', pin: '445566', title: 'Forensic Analyst', rank: 'Forensic Services - FSL', initials: 'FS', tone: 'amber' },
+  { badge: 'VIEW-5522', pin: '778899', title: 'Observer', rank: 'Read-only Observer - Viewer', initials: 'VW', tone: 'teal' },
 ];
 
 const TONE_STYLES: Record<DemoProfile['tone'], { color: string; bg: string; border: string }> = {

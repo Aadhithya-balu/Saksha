@@ -14,7 +14,7 @@ class OfficerBase(BaseModel):
     designation: str | None = Field(default=None, max_length=100)
     phone: str | None = Field(default=None, max_length=20)
     email: EmailStr | None = None
-    status: str = Field(default="active", pattern="^(active|inactive|suspended)$")
+    status: str = Field(default="active", pattern="^(active|inactive|suspended|retired|transferred)$")
     image_url: str | None = None
 
 
@@ -31,7 +31,7 @@ class OfficerUpdate(BaseModel):
     designation: str | None = Field(default=None, max_length=100)
     phone: str | None = Field(default=None, max_length=20)
     email: EmailStr | None = None
-    status: str | None = Field(default=None, pattern="^(active|inactive|suspended)$")
+    status: str | None = Field(default=None, pattern="^(active|inactive|suspended|retired|transferred)$")
 
 
 class OfficerOut(OfficerBase):

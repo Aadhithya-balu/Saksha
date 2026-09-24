@@ -11,6 +11,7 @@ from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
+from app.core.data_mode import allows_demo_fallback
 from app.core.logging_config import configure_logging, logger
 
 configure_logging()
@@ -91,14 +92,25 @@ engine = _create_engine()
 engine_kind: str = "sqlite" if settings.DATABASE_URL.startswith("sqlite") else "postgresql"
 
 if not settings.DATABASE_URL.startswith("sqlite") and not _try_connect(engine):
-    logger.warning(
-        "PostgreSQL unreachable — falling back to local SQLite demo database. "
-        "Real-time data will be unavailable until the DB is reachable."
-    )
-    engine.dispose()
-    settings.DATABASE_URL = "sqlite:///./saksha.db"
-    engine = _create_engine("sqlite:///./saksha.db")
-    engine_kind = "sqlite"
+    if allows_demo_fallback():
+        logger.warning(
+            "PostgreSQL unreachable - falling back to local SQLite demo database. "
+            "Real-time data will be unavailable until the DB is reachable."
+        )
+        engine.dispose()
+        settings.DATABASE_URL = "sqlite:///./saksha.db"
+        engine = _create_engine("sqlite:///./saksha.db")
+        engine_kind = "sqlite"
+    else:
+        # Production/test must never silently serve an empty or stale local
+        # database as if it were the configured Supabase project. Keep the
+        # PostgreSQL engine so request paths return an honest database error
+        # and can recover once the upstream connection is available.
+        logger.error(
+            "PostgreSQL unreachable in %s mode; keeping PostgreSQL engine and "
+            "disabling local SQLite fallback.",
+            settings.SAKSHA_DATA_MODE,
+        )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
