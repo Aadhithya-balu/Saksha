@@ -1,6 +1,6 @@
 import { API_BASE_URL, getStoredTokens } from './api';
 
-export type RealtimeStatus = 'disconnected' | 'connecting' | 'connected';
+export type RealtimeStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface RealtimeEvent {
   type: string;
@@ -66,7 +66,9 @@ export function connectRealtime(handlers: RealtimeHandlers): () => void {
       });
 
       if (response.status === 401) {
-        setStatus('disconnected');
+        // Auth expired is a terminal state for this user, not an idle stream:
+        // surface it honestly instead of collapsing into "disconnected".
+        setStatus('error');
         handleSessionExpired();
         return;
       }

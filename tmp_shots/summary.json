@@ -1,0 +1,344 @@
+[
+  {
+    "route": "/dashboard",
+    "vp": "1400x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1400,
+      "overflowPx": 0,
+      "mainWidestRight": 1368,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 292,
+      "actionBtnMaxRight": 1368
+    }
+  },
+  {
+    "route": "/dashboard",
+    "vp": "1440x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1440,
+      "overflowPx": 0,
+      "mainWidestRight": 1407,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 292,
+      "actionBtnMaxRight": 1408
+    }
+  },
+  {
+    "route": "/dashboard",
+    "vp": "1280x800",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1280,
+      "overflowPx": 0,
+      "mainWidestRight": 1247,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 292,
+      "actionBtnMaxRight": 1248
+    }
+  },
+  {
+    "route": "/dashboard",
+    "vp": "1024x768",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1024,
+      "overflowPx": 0,
+      "mainWidestRight": 992,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 291,
+      "actionBtnMaxRight": 993
+    }
+  },
+  {
+    "route": "/dashboard",
+    "vp": "768x1024",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 768,
+      "overflowPx": 0,
+      "mainWidestRight": 745,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 283,
+      "actionBtnMaxRight": 745
+    }
+  },
+  {
+    "route": "/dashboard",
+    "vp": "390x844",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 390,
+      "overflowPx": 0,
+      "mainWidestRight": 379,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 11,
+      "actionBtnInView": 11,
+      "actionBtnMinLeft": 11,
+      "actionBtnMaxRight": 379
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "1400x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1400,
+      "overflowPx": 0,
+      "mainWidestRight": 1367,
+      "overflowElsInMain": 0,
+      "desktopTableActive": true,
+      "tableRows": 20,
+      "compactActive": false,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 1368
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "1440x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1440,
+      "overflowPx": 0,
+      "mainWidestRight": 1407,
+      "overflowElsInMain": 0,
+      "desktopTableActive": true,
+      "tableRows": 20,
+      "compactActive": false,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 1408
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "1280x800",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1280,
+      "overflowPx": 0,
+      "mainWidestRight": 1231,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 20,
+      "compactActive": true,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 1248
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "1024x768",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1024,
+      "overflowPx": 0,
+      "mainWidestRight": 977,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 20,
+      "compactActive": true,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 993
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "768x1024",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 768,
+      "overflowPx": 0,
+      "mainWidestRight": 728,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 20,
+      "compactActive": true,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 745
+    }
+  },
+  {
+    "route": "/crime-cases",
+    "vp": "390x844",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 390,
+      "overflowPx": 0,
+      "mainWidestRight": 379,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 20,
+      "compactActive": false,
+      "compactRowCount": 20,
+      "actionBtnTotal": 244,
+      "actionBtnInView": 244,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 379
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "1400x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1400,
+      "overflowPx": 0,
+      "mainWidestRight": 1087,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 17,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 1087
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "1440x900",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1440,
+      "overflowPx": 0,
+      "mainWidestRight": 1127,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 17,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 1127
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "1280x800",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1280,
+      "overflowPx": 0,
+      "mainWidestRight": 967,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 17,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 967
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "1024x768",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 1024,
+      "overflowPx": 0,
+      "mainWidestRight": 726,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 17,
+      "actionBtnMinLeft": 0,
+      "actionBtnMaxRight": 712
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "768x1024",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 768,
+      "overflowPx": 0,
+      "mainWidestRight": 728,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 16,
+      "actionBtnMinLeft": 24,
+      "actionBtnMaxRight": 1032
+    }
+  },
+  {
+    "route": "/ai-chat",
+    "vp": "390x844",
+    "ok": true,
+    "metrics": {
+      "innerWidth": 390,
+      "overflowPx": 0,
+      "mainWidestRight": 362,
+      "overflowElsInMain": 0,
+      "desktopTableActive": false,
+      "tableRows": 0,
+      "compactActive": false,
+      "compactRowCount": 0,
+      "actionBtnTotal": 17,
+      "actionBtnInView": 9,
+      "actionBtnMinLeft": -248,
+      "actionBtnMaxRight": 666
+    }
+  }
+]

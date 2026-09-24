@@ -13,6 +13,7 @@ import NotificationDetailModal from '../../components/notifications/Notification
 import ActivityFeed from '../../components/notifications/ActivityFeed';
 import SystemHealth from '../../components/notifications/SystemHealth';
 import { useRealtimeStore } from '../../store/realtimeStore';
+import { useRBAC } from '../../hooks/useRBAC';
 import { TableSkeleton } from '../../components/ui/Skeleton';
 
 type TabView = 'messages' | 'timeline' | 'activity' | 'health';
@@ -21,6 +22,8 @@ const NotificationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabView>('messages');
   const [detailNotification, setDetailNotification] = useState<NotificationRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const { isNotificationWriter } = useRBAC();
 
   const {
     notifications, total, page, pageSize, loading, error, counts, dashboard,
@@ -77,7 +80,7 @@ const NotificationsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(dashboard?.broadcast_messages ?? 0) > 0 && (
+          {isNotificationWriter && (dashboard?.broadcast_messages ?? 0) > 0 && (
             <button
               onClick={() => {
                 if (window.confirm('Remove ALL broadcast notifications? This cannot be undone.')) {
@@ -99,13 +102,15 @@ const NotificationsPage: React.FC = () => {
               Mark All Read
             </button>
           )}
-          <button
-            onClick={() => setInformModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/90 text-white rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-          >
-            <Radio className="w-3.5 h-3.5" />
-            Inform Station
-          </button>
+          {isNotificationWriter && (
+            <button
+              onClick={() => setInformModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/90 text-white rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              Inform Station
+            </button>
+          )}
         </div>
       </div>
 

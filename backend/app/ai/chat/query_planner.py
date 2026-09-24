@@ -66,6 +66,8 @@ class QueryPlanner:
             return self._plan_hotspot(entities)
         if intent == Intent.CRIMINAL_NETWORK:
             return self._plan_network(entities)
+        if intent == Intent.EVIDENCE_LOOKUP:
+            return self._plan_evidence(entities)
         if intent == Intent.SIMILAR_CASES:
             return self._plan_similar(entities)
         if intent == Intent.PREDICTIONS:
@@ -131,6 +133,20 @@ class QueryPlanner:
             calls.append(BackendCall("neo4j", "get_full_network", {}, 1))
         calls.append(BackendCall("neo4j", "get_gangs", {}, 2))
         return calls
+
+    def _plan_evidence(self, e: ExtractedEntities) -> list[BackendCall]:
+        """Evidence lookups resolve against the referenced case/FIR.
+
+        Follow-up questions ("what evidence is linked to it?") rely on the
+        orchestrator's history carry-forward to populate ``case_id`` /
+        ``fir_number`` from an earlier turn, so a fresh authorized query runs
+        against the database instead of reusing an old response.
+        """
+        if e.case_id:
+            return [BackendCall("postgres", "get_evidence_for_case", {"case_number": e.case_id}, 1)]
+        if e.fir_number:
+            return [BackendCall("postgres", "get_evidence_for_case", {"fir_number": e.fir_number}, 1)]
+        return [BackendCall("postgres", "list_evidence", {"limit": 12}, 1)]
 
     def _plan_similar(self, e: ExtractedEntities) -> list[BackendCall]:
         calls: list[BackendCall] = []

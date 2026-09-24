@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { FileText, ShieldAlert, User, Database, X, BookOpen } from 'lucide-react';
-import type { ChatCitation } from '../../services/api';
+import { FileText, ShieldAlert, User, Database, X, BookOpen, ExternalLink } from 'lucide-react';
+import type { ChatCitation, ChatSourceRecord } from '../../services/api';
 
-interface CitationBadgeProps { citations: ChatCitation[]; }
+interface CitationBadgeProps {
+  citations: ChatCitation[];
+  onOpenSource?: (record: ChatSourceRecord) => void;
+}
 
 const srcCfg = (s: string) => {
   const l = s.toLowerCase();
@@ -13,7 +16,15 @@ const srcCfg = (s: string) => {
   return { icon: Database, color: '#0e9e78', label: 'Record' };
 };
 
-export const CitationBadge: React.FC<CitationBadgeProps> = ({ citations }) => {
+const recordTitle = (r: ChatSourceRecord): string => {
+  if (typeof r.fir_number === 'string') return `FIR ${r.fir_number}`;
+  if (typeof r.case_number === 'string') return `Case ${r.case_number}`;
+  if (typeof r.name === 'string') return String(r.name);
+  if (typeof r.badge === 'string') return `Officer ${r.badge}`;
+  return typeof r.type === 'string' ? String(r.type).toUpperCase() : 'Source record';
+};
+
+export const CitationBadge: React.FC<CitationBadgeProps> = ({ citations, onOpenSource }) => {
   const [active, setActive] = useState<ChatCitation | null>(null);
   if (!citations?.length) return null;
 
@@ -50,6 +61,22 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({ citations }) => {
               </div>
               <span className="chat-cite-modal-pct">{Math.round(active.score * 100)}%</span>
             </div>
+            {active.records?.length ? (
+              <div className="chat-cite-records">
+                <div className="chat-cite-records-hdr">Referenced SAKSHA records</div>
+                {active.records.map((r, j) => (
+                  <button
+                    key={j}
+                    className="chat-cite-record"
+                    disabled={!onOpenSource}
+                    onClick={() => { if (onOpenSource) { onOpenSource(r); setActive(null); } }}
+                  >
+                    <span className="chat-cite-record-title">{recordTitle(r)}</span>
+                    {onOpenSource ? <ExternalLink size={12} className="chat-cite-record-go" /> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <button onClick={() => setActive(null)} className="chat-cite-modal-close">Close</button>
           </div>
         </div>

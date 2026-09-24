@@ -1162,7 +1162,6 @@
   text-overflow: ellipsis;
 }
 .sk-app .sk-header-search {
-  display: flex;
   align-items: center;
   gap: 8px;
   width: 220px;
@@ -1180,7 +1179,6 @@
   border-color: var(--border-focus);
 }
 .sk-app .sk-header-chip {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;

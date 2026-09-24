@@ -279,9 +279,9 @@ export const GlobalAIAssistant: React.FC = () => {
                   </div>
                   <div className="space-y-2 w-full max-w-xs">
                     {[
-                      "Show case CR-2026-MYS-001",
-                      "Crime statistics overview",
-                      "Tell me about Ramu Swamy"
+                      "Show crime statistics and trends",
+                      "List recent authorized cases",
+                      "What are the current crime hotspots?"
                     ].map((q, i) => (
                       <button
                         key={i}

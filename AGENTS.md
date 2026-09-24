@@ -145,3 +145,88 @@ button level). Gates: tsc + eslint + `npm run build` green; Landing/Login
 SHA-256 unchanged; backend batches (alert findings/policy/health + phase5
 scoping/district/RBAC/hardening) green, plus the earlier chat regression suites.
 Pre-existing `test_chat_history.py` streaming failures remain out of scope.
+
+## Recent sessions summary (Dashboard + Crime Cases + AI Chat production redesign)
+
+Completed: **Backend honesty/security** — `crime_cases.py` `create_case` now
+enforces server-side district scope via `enforce_record_district` (district-bound
+users can only file cases into their own district; fails closed, 403 for
+district-less accounts); `_status_bucket()` added so status filters match both
+canonical (`active`, `under_investigation`, `chargesheeted`, …) and legacy
+(`open`, `assigned`, `investigating`, …) stored values on the case list AND the
+`/insights` endpoint (which now also counts canonical statuses). **Crime Cases
+UI** — canonical statuses wired through `STATUS_LABEL`/`STATUS_TONE`/
+needs-attention set, filter dropdown, and the details-page status select
+(previously `active` cases rendered blank); details controls (status/priority/
+progress/assignee/notes/link-FIR/delete-note + Modify Dossier) RBAC-gated via
+the existing `canWrite` heuristic (ADMIN/IO/SCRB); SSE optimistic row no longer
+fabricates a description and shows `—` progress until real data lands; Ask AI
+row action + details button dispatch `navigate-tab` → `ai_chat` with
+`selected_entity_id` = case UUID. **AI Chat redesign** — standalone page is now
+a 3-pane workspace (history sidebar / conversation / context panel): demo
+PROMPTS replaced with generic scope-honest capability cards (no fake
+`CR-2026-MYS-001` / `Ramu Swamy` data anywhere in production UI, incl.
+`GlobalAIAssistant` quick prompts); persistent "SAKSHA AI Intelligence" header
+with a scope chip (state vs. district from `useUserScope`); right context panel
+shows deep-linked case focus card (reads `selected_entity_id` on mount and on
+`navigate-tab` to `ai_chat`, consumed + removed like other pages) plus
+"Referenced records" built from `Citation.records`, each with one-click
+navigation to FIR/Case/Criminal/Evidence/Victim tabs (`chat-ctx` / `chat-ctx.open`
+drawer on ≤760px, overlay + toggle; note citizen pages that read
+`selected_entity_id` are crime_cases/fir/criminals/evidence/victims/investigation).
+**api.ts** — `ChatCitation.records`, new `ChatSourceRecord`/`ChatProvenance`;
+`CitationBadge` gained `onOpenSource` (opens record) and lists referenced
+records in its modal. Gates: `tsc -p tsconfig.app.json --noEmit` + eslint +
+`npm run build` green (only pre-existing chunk/dynamic-import warnings);
+backend batches `test_case_status`, `test_district_scoping_endpoints`,
+`test_district_scope`, `test_final_validation_v2`, `test_multi_authority`,
+`test_dashboard_honesty_282` + `test_notification_delete_clear` all green.
+Landing/Login untouched. Stash `stash@{0}` `session-work-pending-pull` still
+present on `V3-enhance-1` — keep until user confirms.
+
+Notes for next runs: `CrimeCaseDetailRecord.progress`/`description` are nullable
+in practice (SSE row + DB) — render `—` and skip needs-attention when null;
+`_status_bucket` lives in `crime_cases.py` (do not duplicate in other routers);
+leaving the pre-existing `test_chat_history.py` streaming failures out of scope
+still applies.
+
+## Recent sessions summary (production brief §1–§81 final delivery)
+
+Completed: **Crime Cases responsive rebuild** — `CrimeCasesList.tsx` renders
+mobile cards on ≤767px (case number/description/district/category/status+
+priority chips/progress bar/days-open marker/actions) in an `md:hidden` block,
+while desktop keeps the table in a `hidden md:block overflow-x-auto` wrapper with
+a **sticky right actions column** (Eye/Ask-AI/Edit/Delete) so actions never leave
+the viewport — this also sidesteps the global `@media (max-width:767px) main
+table { display:block }` rule in `index.css`. Relabeled "Avg Velocity"→"Avg
+Progress" in `CrimeInsightsBar.tsx` (the value is `avg_progress`); removed dead
+`chargeSheet` mapping + `EMPTY_METRICS`. **Live-Supabase AI chat verification** —
+1-day temp in-process script (`SessionLocal` + real `User` rows + real roles,
+run from `backend/`, deleted after) hit `orchestrator.process_message_sync(…,
+include_debug=True)` live: 11/11 checks green covering in-district evidence
+lookup (real records, grounding=1.0), cross-district zero-leak for bound users
++ honest refusal, `debug.district` labels, multi-district GLOBAL scope, and
+scoped analytics; all answers honestly reported `local-template` (sandbox can't
+reach hosted LLMs). Two fixes from those runs: linkage words (`linked`/`link`/
+`related`/`associated`/`attached`/`connected`/`tied`/…) added to `_NAME_NOISE`
+in `llm_generator.py` (stops "evidence is linked to…" refusing as if `linked`
+were a person name — `_PERSON_HINT_BEFORE` contains "is"), and evidence records
+in `backend_fetcher._pg_get_evidence_for_case`/`_pg_list_evidence` now carry the
+owning `case_number` so the response validator can verify case numbers cited in
+evidence titles (kills a strict-detector false "fabricated" flag).
+**§81 final report** — `docs/validation/FINAL_REPORT_V3_ENHANCE.md`. Gates:
+frontend tsc/eslint clean; backend exits 0 across `test_case_status`,
+`test_ai_chat_conversational`, `test_phase5_chat_scoping`, and
+`tests/ai/{test_chat_safety,test_chat_evaluation,test_chat_context,
+test_chat_orchestrator,test_query_planner,test_rag_retriever,test_temporal}`.
+Pre-existing/unrelated and confirmed unchanged: `test_llm_generator.py` 2
+failures (async-gen iteration test + explicit "FIR 77" ID-miss) reproduce on the
+clean tree; `tests/ai/test_chat_rag.py` is a standalone RBAC script, not pytest
+(exit 5); `test_chat_history.py` still out of scope.
+
+Notes for future runs: verify chat edits with live-DB scripting when the sandbox
+has no hosted-LLM egress — engine honesty (`last_engine`) and provenance flags
+are the acceptance signals; `IDR-*` style case numbers are NOT captured by the
+entity extractor's `case_id` regex (only `CR-*`/`FIR` patterns) — planner falls
+back to district-scoped `list_evidence`, broadening the ID regex is a candidate
+follow-up.

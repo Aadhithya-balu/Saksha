@@ -39,8 +39,10 @@ def test_dashboard_trends_and_breakdown_contract(client, crime_dataset, analyst_
     trend_rows = trends.json()
     assert isinstance(trend_rows, list) and len(trend_rows) >= 2
     for row in trend_rows:
-        assert set(row) == {"date", "count"}
+        assert set(row) == {"date", "count", "solved"}
         assert isinstance(row["count"], int)
+        assert isinstance(row["solved"], int)
+        assert 0 <= row["solved"] <= row["count"]
 
     breakdown = client.get("/api/v2/dashboard/category-breakdown", headers=analyst_headers)
     assert breakdown.status_code == 200

@@ -25,7 +25,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
-from app.auth.rbac import ALL_ROLES, require_roles
+from app.auth.rbac import (
+    ROLE_ADMIN,
+    ROLE_CRIME_ANALYST,
+    ROLE_INSPECTOR,
+    ROLE_INVESTIGATOR,
+    ALL_ROLES,
+    require_roles,
+)
 from app.database.postgres import get_db
 from app.models.user import User
 from app.schemas.notification import (
@@ -44,6 +51,11 @@ from app.services.notifications import (
 from app.services.ttl_cache import ttl_cached
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"], dependencies=[Depends(require_roles(*ALL_ROLES))])
+
+# Roles allowed to broadcast to all stations and to permanently remove or
+# bulk-clear notifications (issue #282 §26 — destructive/global actions must
+# not be available to read-only roles such as VIEWER).
+_BROADCAST_ROLES = (ROLE_ADMIN, ROLE_CRIME_ANALYST, ROLE_INVESTIGATOR, ROLE_INSPECTOR)
 
 
 @router.get("", response_model=NotificationListOut)
@@ -138,6 +150,12 @@ def create_notification(
     payload.sender_id = current_user.id
 
     if payload.is_broadcast:
+        role_name = current_user.role.name if current_user.role else None
+        if role_name not in _BROADCAST_ROLES:
+            raise HTTPException(
+                status_code=403,
+                detail="Broadcast requires an authorized review role",
+            )
         # Store a copy for the sender too so the broadcast is never lost when
         # no other stations are active.
         notifications = notification_service.create_broadcast_notification(db, payload)
@@ -188,7 +206,7 @@ def mark_all_notifications_read(
     )
 
 
-@router.delete("/clear", response_model=NotificationActionOut)
+@router.delete("/clear", response_model=NotificationActionOut, dependencies=[Depends(require_roles(*_BROADCAST_ROLES))])
 def clear_notifications(
     scope: str = Query("broadcasts", description="broadcasts only"),
     db: Session = Depends(get_db),
@@ -250,7 +268,7 @@ def dismiss_notification(
     return NotificationActionOut(success=True, message="Notification dismissed")
 
 
-@router.delete("/{notification_id}/remove", response_model=NotificationActionOut)
+@router.delete("/{notification_id}/remove", response_model=NotificationActionOut, dependencies=[Depends(require_roles(*_BROADCAST_ROLES))])
 def remove_notification(
     notification_id: uuid.UUID,
     db: Session = Depends(get_db),

@@ -143,6 +143,13 @@ _NAME_NOISE = {
     "many", "much", "number", "count", "total", "compare", "comparison",
     "saksha", "crimecases", "northregion", "regarding", "called", "named",
     "about", "involving", "against",
+    # graph/relationship vocabulary — "evidence LINKED to case", "CRIMINALS
+    # associated with …": linkage words must never be captured as person names
+    # (the local template used to refuse "what evidence is linked to case X…?"
+    # as if "linked" were a named person).
+    "linked", "link", "links", "linkage", "linkages", "related", "relationship",
+    "associated", "associates", "association", "attached", "attachment",
+    "connected", "connection", "connections", "tied", "linking", "relates",
     # generic attributive adjectives/nouns — common in "…and key details?"
     # style prompts; must never be captured as a person's name
     "key", "such", "various", "important", "certain", "specific", "relevant",
@@ -286,6 +293,27 @@ def _is_platform_question(message: str) -> bool:
     if _PLATFORM_Q_LEAD.match(lower):
         return any(w in lower for w in _PLATFORM_WORDS)
     return False
+
+
+_CASE_ID_RE = re.compile(r"CR-\d{4}-[A-Z]{2,4}-\d+", re.I)
+_FIR_ID_RE = re.compile(
+    r"FIR[-\s]*:?\s*("
+    r"\d{1,4}/[A-Z]{1,20}/\d{4}"
+    r"|[A-Z]{1,16}-?\d{1,6}[A-Z0-9-]*/\d{4}"
+    r"|\d{1,4}/\d{4}"
+    r")",
+    re.I,
+)
+
+
+def _has_concrete_reference(message: str) -> bool:
+    """True when the message names a concrete record (case/FIR number).
+
+    A user who cites a specific case or FIR is querying data — never asking
+    about the platform itself — so those messages must not fall back to
+    platform-knowledge framing when referencing an actual record.
+    """
+    return bool(_CASE_ID_RE.search(message)) or bool(_FIR_ID_RE.search(message))
 
 
 def _extract_platform_knowledge(system_prompt: str) -> str:
@@ -529,7 +557,7 @@ class LLMGenerator:
         if not sections:
             # No database records — try to answer from system prompt knowledge
             # (project overview, general Saksha info).
-            if _is_platform_question(message):
+            if _is_platform_question(message) and not _has_concrete_reference(message):
                 platform_knowledge = _extract_platform_knowledge(system)
                 if platform_knowledge:
                     answer = (
@@ -1438,7 +1466,7 @@ class LLMGenerator:
     @staticmethod
     def _list_intro(message: str, count: int) -> list[str]:
         lower = message.lower()
-        if _is_platform_question(message):
+        if _is_platform_question(message) and not _has_concrete_reference(message):
             return ["Here's what I found about Saksha:", ""]
         if any(w in lower for w in _TEMPORAL_WORDS):
             return [f"Here's what the Saksha database shows for that period ({count} details):", ""]

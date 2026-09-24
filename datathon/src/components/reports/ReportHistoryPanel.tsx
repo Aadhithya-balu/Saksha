@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -256,6 +257,16 @@ export const ReportHistoryPanel: React.FC<ReportHistoryPanelProps> = ({
 
                 {/* Report Actions */}
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'ai_chat', targetId: report.id, targetType: 'report' } }))}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-xs text-purple-300 transition-colors"
+                    title="Ask SAKSHA AI about this report"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Ask AI</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleOpenDetail(report.id)}

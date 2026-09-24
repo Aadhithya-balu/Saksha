@@ -51,6 +51,11 @@ const OFFICER_READ_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'
 
 const REPORT_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR', 'SP'];
 
+// Owners who may broadcast to all stations and permanently remove/clear
+// notifications. Mirrors backend notification broadcast gates (admin,
+// crime_analyst, investigator, inspector).
+export const NOTIFICATION_WRITE_ROLES: UserRole[] = ['ADMIN', 'SCRB', 'IO', 'INSPECTOR'];
+
 export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   // ---- Read-only insight modules (all roles, VIEWER included) ----
   '/dashboard':      { allowedRoles: INSIGHT_ROLES, moduleName: 'Analytics Dashboard' },
@@ -144,5 +149,6 @@ export const useRBAC = () => {
     isCourt,
     isLawEnforcement: !isCourt && user?.role !== 'FORENSIC',
     hasCapability: (cap: string) => user?.capabilities?.includes(cap) ?? false,
+    isNotificationWriter: user?.role ? NOTIFICATION_WRITE_ROLES.includes(user.role) : false,
   };
 };

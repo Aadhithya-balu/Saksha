@@ -9,6 +9,7 @@ import {
   Layers,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import {
   archiveReport,
@@ -201,7 +202,9 @@ export const ManagedReportLifecycle: React.FC<{ role: string }> = ({ role }) => 
                 </span>
                 <span className="inline-flex items-center gap-1 text-[var(--text-muted)]"><Layers className="h-3 w-3" /> v{r.version}</span>
                 {r.ai_reported && <span className="inline-flex items-center gap-1 text-purple-300"><ShieldCheck className="h-3 w-3" /> AI</span>}
-                <span className="text-[var(--text-muted)]">{r.source_record_count} sources · {r.evidence_count} evidence</span>
+                <span className="text-[var(--text-muted)]">
+                  {r.source_record_count > 0 ? `${r.source_record_count} sources` : 'No linked sources'} · {r.evidence_count} evidence
+                </span>
               </div>
             </button>
           ))}
@@ -218,6 +221,13 @@ export const ManagedReportLifecycle: React.FC<{ role: string }> = ({ role }) => 
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: { tab: 'ai_chat', targetId: selected.id, targetType: 'report' } }))}
+                className="inline-flex items-center gap-1 rounded border border-purple-400/35 bg-purple-500/15 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white"
+                title="Ask SAKSHA AI about this report"
+              >
+                <Sparkles className="h-3 w-3 text-purple-300" /> Ask AI
+              </button>
               <button onClick={() => void run('dl', () => downloadManaged(selected.id))} disabled={busy !== null} className="inline-flex items-center gap-1 rounded border border-[var(--accent-teal)]/35 bg-[var(--accent-teal)]/15 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white disabled:opacity-40">
                 <Download className="h-3 w-3" /> Download
               </button>
@@ -259,7 +269,7 @@ export const ManagedReportLifecycle: React.FC<{ role: string }> = ({ role }) => 
                 <Row label="Provenance" value={selected.provenance} />
                 <Row label="Generation" value={selected.generation_method ?? '—'} />
                 <Row label="Version" value={`v${selected.version}`} />
-                <Row label="Sources" value={`${selected.source_record_count} record(s)`} />
+                <Row label="Sources" value={selected.source_record_count > 0 ? `${selected.source_record_count} record(s)` : 'None linked'} />
                 <Row label="Evidence" value={`${selected.evidence_count} record(s)`} />
                 <Row label="Reviewed by" value={selected.reviewed_by ?? '—'} />
                 <Row label="Finalized by" value={selected.finalized_by ?? '—'} />
